@@ -14,9 +14,9 @@ import com.sbancuz.plannh.gui.node.NEIRecipeWidgetAccessor;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.HandlerInfo;
-import codechicken.nei.recipe.NEIRecipeWidget;
+import codechicken.nei.recipe.widget.RecipeWidget;
 
-@Mixin(value = NEIRecipeWidget.class, remap = false)
+@Mixin(value = RecipeWidget.class, remap = false)
 public abstract class NEIRecipeWidgetMixin implements NEIRecipeWidgetAccessor {
 
     @Shadow
@@ -29,13 +29,11 @@ public abstract class NEIRecipeWidgetMixin implements NEIRecipeWidgetAccessor {
     @Unique
     private List<PositionedStack> plannh$inputs;
 
-    @Inject(method = "getInputs", at = @At("TAIL"), cancellable = true)
+    @Inject(method = "getCyclingStacks", at = @At("HEAD"), cancellable = true)
     private void plannh$getInputs(CallbackInfoReturnable<List<PositionedStack>> cir) {
-        if (plannh$inputs == null) {
-            cir.cancel();
-            return;
+        if (plannh$inputs != null) {
+            cir.setReturnValue(plannh$inputs);
         }
-        cir.setReturnValue(plannh$inputs);
     }
 
     @Override

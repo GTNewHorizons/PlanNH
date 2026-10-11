@@ -25,8 +25,8 @@ import com.sbancuz.plannh.gui.common.IFlowchartDraggable;
 import com.sbancuz.plannh.mixins.GTNEIDefaultHandlerAccessor;
 
 import codechicken.nei.PositionedStack;
-import codechicken.nei.recipe.NEIRecipeWidget;
 import codechicken.nei.recipe.RecipeHandlerRef;
+import codechicken.nei.recipe.widget.RecipeWidget;
 import it.unimi.dsi.fastutil.ints.IntIntPair;
 import lombok.Getter;
 
@@ -35,10 +35,10 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
     // needed for proper positioning of the recipe
     private static final int WIDGET_OFFSET_X = 2;
     private static final Map<RecipeHandlerRef, Integer> handlers = new HashMap<>();
-    private static final Set<NEIRecipeWidget> widgets = new HashSet<>();
+    private static final Set<RecipeWidget> widgets = new HashSet<>();
 
     private final NodeWidget parent;
-    private final NEIRecipeWidget neiWidget;
+    private final RecipeWidget neiWidget;
     private final RecipeHandlerRef handlerRef;
     // second index is used to differentiate duplicate item ports
     private final Map<IntIntPair, PortWidget> inputPortWidgets = new HashMap<>();
@@ -64,7 +64,7 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
                     .asWidget());
             return;
         }
-        neiWidget = new NEIRecipeWidget(handlerRef);
+        neiWidget = new RecipeWidget(handlerRef);
         neiWidget.showAsWidget(true);
         neiWidget.x = WIDGET_OFFSET_X;
 
