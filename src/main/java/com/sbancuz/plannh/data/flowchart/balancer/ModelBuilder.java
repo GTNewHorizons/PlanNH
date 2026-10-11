@@ -54,9 +54,8 @@ public final class ModelBuilder {
         m.options.time_suffice = limit;
         // One branch-and-bound worker, so the node order is a property of the model, not of thread
         // interleaving, and the same chart answers the same on every machine.
-        m.options.integer(
-            IntegerStrategy.DEFAULT.withGapTolerance(NumberContext.of(12, 8))
-                .withParallelism(() -> 1));
+        m.options.integer(IntegerStrategy.DEFAULT.withGapTolerance(NumberContext.of(12, 8)));
+        m.options.parallelism(1);
         m.options.feasibility = NumberContext.of(12, 10);
     }
 

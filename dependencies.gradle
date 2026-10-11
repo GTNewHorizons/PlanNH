@@ -34,10 +34,10 @@
  * For more details, see https://docs.gradle.org/8.0.1/userguide/java_library_plugin.html#sec:java_library_configurations_graph
  */
 dependencies {
-    api("com.github.GTNewHorizons:NotEnoughItems:2.8.124-GTNH:dev")
     api("com.github.GTNewHorizons:GTNHLib:0.11.37:dev")
     api("com.github.GTNewHorizons:ModularUI2:2.3.85-1.7.10:dev")
     api("com.github.GTNewHorizons:waila:1.19.31:dev")
+    api("com.github.GTNewHorizons:NotEnoughItems:2.8.158-GTNH:dev")
 
     // implementation for testing and dev purposes, revert to compileOnly when complete
     compileOnly("com.github.GTNewHorizons:EnderIO:2.10.39:dev")
@@ -78,7 +78,7 @@ dependencies {
     annotationProcessor('org.projectlombok:lombok:1.18.46')
 
     // ILP solver
-    shadowImplementation('org.ojalgo:ojalgo:57.1.0')
+    shadowImplementation('org.ojalgo:ojalgo:57.3.1')
 
     // Opt-in GTNH pack recipes for the dev client: `./gradlew runClient -PgtnhRecipes`.
     // Loads the GTNH coremod (dreamcraft) so NEI shows the pack's recipe tweaks in dev.

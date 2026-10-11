@@ -52,13 +52,11 @@ public final class PlanAPI {
      * tooltip with a bookmark prompt.
      */
     public static void shareGraph(final Graph graph) {
-        final String encoded = Serializer.encodeGraph(graph);
-        // final ItemStack stack = createShareStack();
-        // stack.getTagCompound()
-        // .setString(PLANNH_DATA_KEY, encoded);
-        NBTTagCompound message = new NBTTagCompound();
-        message.setString(PLANNH_DATA_KEY, encoded);
-        NEIClientUtils.sendChatItemLink(message);
+        final String encoded = Serializer.encode(graph);
+        final ItemStack stack = createShareStack();
+        stack.getTagCompound()
+            .setString(PLANNH_DATA_KEY, encoded);
+        NEIClientUtils.sendChatItemLink(stack.writeToNBT(new NBTTagCompound()));
     }
 
     /** Copies the serialised graph to the system clipboard. */

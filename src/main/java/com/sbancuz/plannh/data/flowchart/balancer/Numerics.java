@@ -33,8 +33,13 @@ public final class Numerics {
     public final double tieRel = 1e-6;
     /** Relative slack on the stage-2 quantity cap in stage 3. */
     public final double qtyEps = 1e-7;
-    /** How many equally-good supports the stage-3 tie enumeration gets to choose between. */
-    public final int maxTiedSupports = 5;
+    /**
+     * Ceiling on the stage-3 tie enumeration, NOT scaled by effort: cutting the ties short lets the
+     * same chart answer differently.
+     */
+    public final int maxTiedSupports = 64;
+    /** How many supports the LP may refute before a gate MILP gives up; see {@link Solver#gateMILP}. */
+    public final int maxRefutedSupports = 16;
     /** Ceiling on any ONE model's model time, scaled by effort. */
     public final long stageTimeLimitMillis = 15_000;
 

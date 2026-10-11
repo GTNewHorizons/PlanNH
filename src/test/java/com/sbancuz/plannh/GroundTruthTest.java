@@ -434,6 +434,18 @@ class GroundTruthTest {
     }
 
     @Test
+    void platline230_atMostTwoGates() {
+        // The sink/source pair on one machine balances it with two gates, so a third means a gate
+        // certificate the LP never confirmed.
+        // FIXME: one gate (a source alone) is feasible; big-M sized from the filter's scale cuts it off.
+        final LoadedChart chart = GtnhFlowLoader.load("230_platline");
+        final SolutionView s = solve(chart);
+
+        assertAllMachinesRun(chart, s);
+        assertTrue(s.openGates <= 2, "at most 2 externals, got " + s.openGates);
+    }
+
+    @Test
     void nanocircuits_zeroGates_fastPath() {
         // 394 machines, fully balanced chain: zero gates. The zero-gate LP fast path must keep
         // this well under budget despite the model size.

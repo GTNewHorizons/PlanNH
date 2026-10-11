@@ -35,8 +35,8 @@ import codechicken.nei.PositionedStack;
 import codechicken.nei.drawable.DrawableBuilder;
 import codechicken.nei.drawable.DrawableResource;
 import codechicken.nei.recipe.GuiCraftingRecipe;
-import codechicken.nei.recipe.NEIRecipeWidget;
 import codechicken.nei.recipe.RecipeHandlerRef;
+import codechicken.nei.recipe.widget.RecipeWidget;
 import lombok.Getter;
 
 public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Interactable, RecipeViewerIngredientProvider {
@@ -135,7 +135,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     @Nullable
     private RecipeHandlerRef handlerRef;
     @Nullable
-    private NEIRecipeWidget neiWidget;
+    private RecipeWidget neiWidget;
     private String recipeName = "";
     private boolean handlerInitFailed = false;
     private long lastHandlerUpdate = 0;
@@ -248,7 +248,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         }
 
         this.handlerRef = ref;
-        this.neiWidget = new NEIRecipeWidget(ref);
+        this.neiWidget = new RecipeWidget(ref);
         this.neiWidget.showAsWidget(true);
         this.neiWidget.x = CONTENT_INSET;
         this.neiWidget.y = CONTENT_TOP;

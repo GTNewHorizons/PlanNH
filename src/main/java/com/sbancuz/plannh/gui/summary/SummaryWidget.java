@@ -37,14 +37,14 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
     private static final int TITLE_INSET_X = 4;
     private static final int BUTTON_GAP = 2;
     private static final int SCROLLBAR_GAP = 4;
-    private static final int SCREEN_MARGIN = 10;
     private static final int MIN_VIEWPORT_H = 45;
-    private static final int PANEL_CHROME = SummaryHeader.HEADER_H + 1 + SECTION_GAP * 4 + SCREEN_MARGIN;
+    private static final int PANEL_CHROME = SummaryHeader.HEADER_H + 1 + SECTION_GAP * 4;
 
     protected final CanvasWidget canvas;
     protected final Summary data;
 
     private Graph lastGraph;
+    private final FlowchartList sectionsList;
     private boolean moving = false;
     private int dragStartMouseX, dragStartMouseY;
     private int dragStartX, dragStartY;
@@ -64,11 +64,10 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
             .crossAxisAlignment(Alignment.CrossAxis.START)
             .scrollDirection(new VerticalScrollData())
             .setEnabledIf(_ -> !data.isSummaryFold(Summary.Section.ALL))
-            .maxSize(
-                () -> Math.max(
-                    MIN_VIEWPORT_H,
-                    this.canvas.getArea().height / this.canvas.getGraph()
-                        .getZoom() - PANEL_CHROME));
+            .maxSize(() -> {
+                final Area a = this.canvas.getArea();
+                return Math.max(MIN_VIEWPORT_H, a.ry + a.height - data.getY() - minHeight());
+            });
 
         sectionsList.onMove(children -> {
             final int[] order = new int[children.size()];
@@ -156,6 +155,12 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
             }))
             .stateOverlay(Summary.Mode.CYCLES, IKey.lang("plannh.summary.mode.cycles.short"))
             .stateOverlay(Summary.Mode.THROUGHPUT, IKey.lang("plannh.summary.mode.throughput.short"));
+    }
+
+    private int minHeight() {
+        final int list = sectionsList.getArea().height;
+        final int panel = getArea().height;
+        return list > 0 && panel > list ? panel - list : PANEL_CHROME;
     }
 
     @Override
