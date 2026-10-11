@@ -12,12 +12,12 @@ import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
-import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.effect.steps.CoFHCompat;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
+import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
@@ -57,8 +57,8 @@ public class EnderIOProvider implements PropertyProvider {
 
         MachineProfileRegistry.register(
             MachineProfile.builder(PROFILE_ID, "EnderIO")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.TICK_MODIFIER.def())
+                .setting(Settings.MACHINES)
+                .setting(Settings.TICK_MODIFIER)
                 .effect(
                     Effects.durationFromHandler()
                         .withCostPerT(CoFHCompat.RF_PER_T, (current, s, ctx) -> (long) RF_PER_TICK)
@@ -129,8 +129,10 @@ public class EnderIOProvider implements PropertyProvider {
         if (MILL_OUTPUT_CHANCE == null) return;
         try {
             final float[] chances = (float[]) MILL_OUTPUT_CHANCE.get(r);
-            for (int i = 0; i < chances.length && i < node.outputs.size(); i++) {
-                node.outputs.get(i)
+            for (int i = 0; i < chances.length && i < node.getOutputs()
+                .size(); i++) {
+                node.getOutputs()
+                    .get(i)
                     .setChance(chances[i]);
             }
         } catch (final Exception ignored) {}

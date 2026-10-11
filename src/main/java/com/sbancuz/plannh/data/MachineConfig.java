@@ -7,71 +7,93 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.sbancuz.plannh.data.effect.EffectResult;
-import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.flowchart.balancer.Pin;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
+import com.sbancuz.plannh.data.setting.CopyCountTarget;
+import com.sbancuz.plannh.data.setting.OutputRateTarget;
+import com.sbancuz.plannh.data.setting.SettingDef;
+import com.sbancuz.plannh.data.setting.Settings;
 
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 public class MachineConfig {
 
-    public String profileId;
-    public final Map<String, Object> settings = new HashMap<>();
+    private String profileId;
+    @Getter(AccessLevel.NONE)
+    private final Map<SettingDef<?>, Object> settings;
+
+    /** The targets this machine is held to. Values here, and one of them is what counts. */
+    private final CopyCountTarget copies = new CopyCountTarget();
+    private final OutputRateTarget rates = new OutputRateTarget();
+    private Pin targetKind = Pin.NONE;
+
     // todo make these functional
-    public final Map<Integer, Float> inputConsumption = new HashMap<>();
-    public final Map<Integer, Float> outputProductivity = new HashMap<>();
+    private final Map<Integer, Float> inputConsumption = new HashMap<>();
+    private final Map<Integer, Float> outputProductivity = new HashMap<>();
 
-    private final Node parentRef;
-
-    public MachineConfig(final Node parentRef) {
-        this(parentRef, MachineProfileRegistry.get(MachineProfileRegistry.defaultId()));
+    public MachineConfig() {
+        this(MachineProfileRegistry.get(MachineProfileRegistry.defaultId()));
     }
 
-    public MachineConfig(final Node parentRef, @Nullable final MachineProfile requested) {
-        this.parentRef = parentRef;
+    public MachineConfig(@Nullable final MachineProfile requested) {
+        this(requested, Map.of());
+    }
+
+    /**
+     * @param settings the values that differ from the profile's, e.g. as read back from a save.
+     *                 Every profile default is filled in here, so a config is whole from the moment
+     *                 it exists and reading a setting never has to invent one.
+     */
+    public MachineConfig(@Nullable final MachineProfile requested, final Map<SettingDef<?>, Object> settings) {
         // An unknown profile id means the chart was saved with a mod (or a mod version) that is
         // not present now. That is a chart to degrade, not a save to lose: fall back to the
         // default profile, exactly as getProfile() does for the same reason.
-        final MachineProfile profile = requested != null ? requested
+        MachineProfile profile = requested != null ? requested
             : MachineProfileRegistry.get(MachineProfileRegistry.defaultId());
-        this.profileId = profile.id();
-        for (final SettingDef<?> def : profile.settings()) {
-            settings.putIfAbsent(def.key, def.defaultValue);
-        }
-        settings.putIfAbsent(Settings.MACHINES.key(), Settings.MACHINES.def().defaultValue);
+        profileId = profile.id();
+
+        this.settings = new HashMap<>(settings);
+
+        for (final SettingDef<?> def : profile.defs()) this.settings.putIfAbsent(def, def.getDefaultValue());
+        this.settings.putIfAbsent(Settings.MACHINES, Settings.MACHINES.getDefaultValue());
+    }
+
+    /** The copies target is the one that stands in for {@link Settings#MACHINES} as a row. */
+    public boolean isCopiesTargeted() {
+        return targetKind == Pin.FIXED_COPIES;
+    }
+
+    /**
+     * How many copies of this machine the chart runs - the copies target when one is pinned, and the
+     * machine setting otherwise. The physical answer either way, which is why it is neither name.
+     */
+    public int configuredCopies() {
+        return isCopiesTargeted() ? copies.copies() : get(Settings.MACHINES);
     }
 
     @Nonnull
     public MachineProfile getProfile() {
         final MachineProfile p = MachineProfileRegistry.get(profileId);
+        // TODO
         return p != null ? p : MachineProfileRegistry.get(MachineProfileRegistry.defaultId());
     }
 
-    public int getInt(final String key) {
-        final Object v = settings.get(key);
-        return v instanceof final Number n ? n.intValue() : 0;
+    @SuppressWarnings("unchecked")
+    public <T> T get(final SettingDef<T> setting) {
+        return (T) settings.computeIfAbsent(setting, SettingDef::getDefaultValue);
     }
 
-    public boolean getBoolean(final String key) {
-        final Object v = settings.get(key);
-        return v instanceof final Boolean b && b;
+    public <T> void set(final SettingDef<T> setting, T value) {
+        settings.put(setting, value);
     }
 
-    public String getString(final String key) {
-        final Object v = settings.get(key);
-        return v instanceof final String s ? s : "";
-    }
-
-    public void setInt(final String key, final int value) {
-        settings.put(key, value);
-        parentRef.refresh();
-    }
-
-    public void setBoolean(final String key, final boolean value) {
-        settings.put(key, value);
-        parentRef.refresh();
-    }
-
-    public void setString(final String key, final String value) {
-        settings.put(key, value);
-        parentRef.refresh();
+    /** Seeds the values that are still unset. A default never overwrites a choice already made. */
+    public void applyDefaults(final Map<SettingDef<?>, Object> defaults) {
+        defaults.forEach(settings::putIfAbsent);
     }
 
     /**
@@ -79,27 +101,15 @@ public class MachineConfig {
      * machines) to the settings. Only values still at the profile default are overridden, so a
      * user's explicit choice is never clobbered.
      */
-    public void seedRouteDefaults() {
-        final RecipeContext ctx = new RecipeContext(parentRef.properties);
-        final MachineProfile profile = getProfile();
-        final Map<String, Object> defaults = profile.effectComputer()
-            .routeDefaults(ctx);
+    public void seedRouteDefaults(Map<RecipeProperty<?>, Object> properties) {
+        final Map<SettingDef<?>, Object> defaults = getProfile().effectComputer()
+            .routeDefaults(new RecipeContext(properties));
         if (defaults.isEmpty()) return;
-        for (final Map.Entry<String, Object> e : defaults.entrySet()) {
-            final Object current = settings.get(e.getKey());
-            if (current == null) {
-                settings.put(e.getKey(), e.getValue());
-                continue;
-            }
-            final Object profileDefault = profile.settings()
-                .stream()
-                .filter(def -> def.key.equals(e.getKey()))
-                .map(def -> def.defaultValue)
-                .findFirst()
-                .orElse(null);
-            if (profileDefault != null && current.equals(profileDefault)) {
-                settings.put(e.getKey(), e.getValue());
-            }
+
+        for (final Map.Entry<SettingDef<?>, Object> e : defaults.entrySet()) {
+            final SettingDef<?> def = e.getKey();
+            final Object current = settings.get(def);
+            if (current == null || current.equals(def.getDefaultValue())) settings.put(def, e.getValue());
         }
     }
 
@@ -107,8 +117,8 @@ public class MachineConfig {
     public EffectResult computeEffect(final Map<RecipeProperty<?>, Object> properties) {
         final MachineProfile profile = getProfile();
         EffectResult result = profile.effectComputer()
-            .compute(settings, new RecipeContext(properties));
-        final int tickMod = MachineProfile.getInt(settings, Settings.TICK_MODIFIER.key(), 100);
+            .compute(this, new RecipeContext(properties));
+        final int tickMod = get(Settings.TICK_MODIFIER);
         if (tickMod > 0 && tickMod != 100) {
             final double factor = 100.0 / tickMod;
             final int newDuration = Math.max(1, (int) Math.round(result.durationTicks() * factor));
@@ -120,22 +130,17 @@ public class MachineConfig {
 
     /**
      * Takes another node's machine settings, for the members of a machine group: they are one
-     * machine, so they run at one tier with one set of upgrades. The machine count is left alone -
-     * it is how much of that machine each recipe asks for, not part of what the machine is.
+     * machine, so they run at one tier with one set of upgrades. What each recipe asks for is left
+     * alone - the machine count, and the targets with it - because a plan belongs to the recipe that
+     * made it and not to the machine they share.
      */
     public void copySettingsFrom(final MachineConfig other) {
-        final Object count = settings.get(Settings.MACHINES.key());
+        final int machines = get(Settings.MACHINES);
+        final Pin kind = targetKind;
         settings.clear();
         settings.putAll(other.settings);
-        if (count != null) settings.put(Settings.MACHINES.key(), count);
-    }
-
-    public int getMachineCount() {
-        return getInt(Settings.MACHINES.key());
-    }
-
-    public void setMachineCount(final int count) {
-        settings.put(Settings.MACHINES.key(), count);
+        set(Settings.MACHINES, machines);
+        targetKind = kind;
     }
 
     public float inputMultiplier(final int inputIndex) {
@@ -144,16 +149,5 @@ public class MachineConfig {
 
     public float outputMultiplier(final int outputIndex) {
         return outputProductivity.getOrDefault(outputIndex, 1.0f);
-    }
-
-    public boolean hasAnyBoost() {
-        if (!MachineProfileRegistry.defaultId()
-            .equals(profileId)) return true;
-        final MachineProfile p = getProfile();
-        for (final SettingDef<?> def : p.settings()) {
-            final Object val = settings.get(def.key);
-            if (val != null && !val.equals(def.defaultValue)) return true;
-        }
-        return !inputConsumption.isEmpty() || !outputProductivity.isEmpty();
     }
 }

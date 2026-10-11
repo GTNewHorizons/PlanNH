@@ -223,10 +223,10 @@ public final class Balancer {
         PlanNH.LOG.info(
             "{} balance: {} machines, {} open gates, {}ms",
             mode,
-            view.machineCounts.size(),
+            view.copyCounts.size(),
             view.openGates,
             view.wallMillis);
-        return buildResultFractional(graph, view.machineCounts, view.notes, view, solved.alternatives());
+        return buildResultFractional(graph, view.copyCounts, view.notes, view, solved.alternatives());
     }
 
     /**
@@ -236,8 +236,12 @@ public final class Balancer {
     @Nonnull
     private static Map<UUID, Double> configuredCounts(final Graph graph) {
         final Map<UUID, Double> counts = new HashMap<>();
-        for (final Node node : graph.getNodes()) {
-            counts.put(node.id, (double) node.machineConfig.getMachineCount());
+        for (final Node node : graph.getNodes()
+            .values()) {
+            counts.put(
+                node.getId(),
+                (double) node.getMachineConfig()
+                    .configuredCopies());
         }
         return counts;
     }
@@ -245,23 +249,24 @@ public final class Balancer {
     /**
      * Builds the balance result from (possibly fractional) machine counts. Every displayed
      * number derives from the exact fractional count; rounding up for placement is left to the
-     * reader. A machine missing from {@code machineCounts} reads zero - the way a chart with no
+     * reader. A node missing from {@code copyCounts} reads zero - the way a chart with no
      * solve-derived quantities is presented.
      */
     @Nonnull
-    private static BalanceResult buildResultFractional(final Graph graph, final Map<UUID, Double> machineCounts,
+    private static BalanceResult buildResultFractional(final Graph graph, final Map<UUID, Double> copyCounts,
         final List<Note> notes, @Nullable final SolutionView auto, @Nullable final Alternatives alternatives) {
         final Map<UUID, NodeBalance> nodeBalances = new HashMap<>();
         final Map<RecipeProperty<?>, Long> propertyTotals = new HashMap<>();
         double totalOps = 0;
         int totalDuration = 0;
 
-        for (final Node node : graph.getNodes()) {
-            final double count = machineCounts.getOrDefault(node.id, 0.0);
+        for (final Node node : graph.getNodes().values()) {
+            if (node.getExtractor() == null) continue; // incorrectly loaded node
+            final double count = copyCounts.getOrDefault(node.getId(), 0.0);
             totalOps += count;
 
-            final MachineConfig cfg = node.machineConfig;
-            final var eff = cfg.computeEffect(node.properties);
+            final MachineConfig cfg = node.getMachineConfig();
+            final var eff = cfg.computeEffect(node.getProperties());
             final long eutPerOp = eff.energyPerT();
             final int durPerOp = eff.durationTicks();
             final int throughputFactor = eff.throughputFactor();
@@ -269,9 +274,9 @@ public final class Balancer {
             final long totalEnergy = Math.round(eutPerOp * durPerOp * count);
             if (durPerOp > totalDuration) totalDuration = durPerOp;
 
-            final Map<Integer, Float> effOuts = new HashMap<>(node.outputs.size());
-            for (int i = 0; i < node.outputs.size(); i++) {
-                final var outStack = node.outputs.get(i);
+            final Map<Integer, Float> effOuts = new HashMap<>(node.getOutputs().size());
+            for (int i = 0; i < node.getOutputs().size(); i++) {
+                final var outStack = node.getOutputs().get(i);
                 final int stackSize = outStack.getAmount();
                 if (stackSize <= 0) continue;
                 final float total = (float) (count * stackSize * outStack.getChance()
@@ -281,9 +286,9 @@ public final class Balancer {
                 effOuts.put(i, total);
             }
 
-            final Map<Integer, Float> effIns = new HashMap<>(node.inputs.size());
-            for (int i = 0; i < node.inputs.size(); i++) {
-                final var inStack = node.inputs.get(i);
+            final Map<Integer, Float> effIns = new HashMap<>(node.getInputs().size());
+            for (int i = 0; i < node.getInputs().size(); i++) {
+                final var inStack = node.getInputs().get(i);
                 final int stackSize = inStack.getAmount();
                 if (stackSize <= 0) continue;
                 final float total = (float) (count * stackSize * inStack.getChance()
@@ -293,9 +298,9 @@ public final class Balancer {
                 effIns.put(i, total);
             }
 
-            nodeBalances.put(node.id, new NodeBalance(count, durPerOp, totalEnergy, durPerOp, effOuts, effIns));
+            nodeBalances.put(node.getId(), new NodeBalance(count, totalEnergy, durPerOp, effOuts, effIns));
 
-            for (final Map.Entry<RecipeProperty<?>, Object> entry : node.properties.entrySet()) {
+            for (final Map.Entry<RecipeProperty<?>, Object> entry : node.getProperties().entrySet()) {
                 if (entry.getValue() instanceof final Number num) {
                     propertyTotals.merge(entry.getKey(), Math.round(num.longValue() * count), Long::sum);
                 }
@@ -309,7 +314,7 @@ public final class Balancer {
     }
 
     /** One machine's share of a solved balance, for the node widget and the machine-count panel. */
-    public record NodeBalance(double operations, int totalDurationTicks, long totalEnergy, int durationPerOp,
+    public record NodeBalance(double operations, long totalEnergy, int durationPerOp,
         Map<Integer, Float> effectiveOutputs, Map<Integer, Float> effectiveInputs) {}
 
 }

@@ -20,8 +20,8 @@ import net.minecraft.util.StatCollector;
 
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Plan;
-import com.sbancuz.plannh.data.flowchart.Serializer;
 import com.sbancuz.plannh.data.flowchart.UndoHistory;
+import com.sbancuz.plannh.data.serialization.Serializer;
 
 import codechicken.nei.NEIClientConfig;
 import codechicken.nei.NEIClientUtils;
@@ -31,18 +31,16 @@ public final class PlanAPI {
     /** NBT key used to store the encoded graph in the share ItemStack. */
     public static final String PLANNH_DATA_KEY = "plannh_data";
 
-    @Nonnull
-    public static Graph getActiveGraph() {
-        return Plan.getActiveGraph();
-    }
+    private static final boolean DEBUG_MODE = true;
 
     public static UndoHistory undoHistory() {
-        return getActiveGraph().undoHistory;
+        return Plan.getActiveGraph()
+            .getUndoHistory();
     }
 
     /** Runs {@code edit} as one undo step; no-op edits leave no trace. */
     public static void recordEdit(final Graph graph, final Runnable edit) {
-        final UndoHistory history = graph.undoHistory;
+        final UndoHistory history = graph.getUndoHistory();
         final String before = history.beginEdit(graph);
         edit.run();
         history.commitEdit(before, graph);
@@ -63,7 +61,7 @@ public final class PlanAPI {
 
     /** Copies the serialised graph to the system clipboard. */
     public static void copyToClipboard(final Graph graph) {
-        GuiScreen.setClipboardString(Serializer.encode(graph));
+        GuiScreen.setClipboardString(Serializer.encodeGraph(graph));
     }
 
     /**
@@ -77,7 +75,7 @@ public final class PlanAPI {
         final String data = GuiScreen.getClipboardString();
         if (data.isEmpty()) return null;
         try {
-            return Serializer.decode(data);
+            return Serializer.decodeGraph(data);
         } catch (final Exception e) {
             return null;
         }
@@ -95,10 +93,10 @@ public final class PlanAPI {
     public static Graph importFromNBT(final String nbtString) {
         try {
             final NBTTagCompound nbt = (NBTTagCompound) JsonToNBT.func_150315_a(nbtString);
-            if (!nbt.hasKey("tag")) return null;
-            final NBTTagCompound tag = nbt.getCompoundTag("tag");
-            if (!tag.hasKey(PLANNH_DATA_KEY)) return null;
-            return Serializer.decode(tag.getString(PLANNH_DATA_KEY));
+            // if (!nbt.hasKey("tag")) return null;
+            // final NBTTagCompound tag = nbt.getCompoundTag("tag");
+            if (!nbt.hasKey(PLANNH_DATA_KEY)) return null;
+            return Serializer.decodeGraph(nbt.getString(PLANNH_DATA_KEY));
         } catch (final NBTException e) {
             return null;
         }
@@ -158,12 +156,13 @@ public final class PlanAPI {
             saveFile.getParentFile()
                 .mkdirs();
             Files.writeString(saveFile.toPath(), Serializer.encodePlan(Plan.getInstance()), StandardCharsets.UTF_8);
-
-            saveFile = getDebugSaveFile();
-            saveFile.getParentFile()
-                .mkdirs();
-            Files
-                .writeString(saveFile.toPath(), Serializer.encodePlanDebug(Plan.getInstance()), StandardCharsets.UTF_8);
+            if (DEBUG_MODE) {
+                saveFile = getDebugSaveFile();
+                Files.writeString(
+                    saveFile.toPath(),
+                    Serializer.encodePlanDebug(Plan.getInstance()),
+                    StandardCharsets.UTF_8);
+            }
         } catch (final Exception ignored) {}
     }
 

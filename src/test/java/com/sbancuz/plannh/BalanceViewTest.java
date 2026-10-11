@@ -14,7 +14,6 @@ import java.util.function.Predicate;
 import org.junit.jupiter.api.Test;
 
 import com.sbancuz.plannh.data.flowchart.Graph;
-import com.sbancuz.plannh.data.flowchart.Serializer;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceView;
@@ -25,6 +24,7 @@ import com.sbancuz.plannh.data.flowchart.balancer.Note;
 import com.sbancuz.plannh.data.flowchart.balancer.SolverMessage;
 import com.sbancuz.plannh.data.flowchart.balancer.alternatives.Alternative;
 import com.sbancuz.plannh.data.flowchart.balancer.alternatives.Alternatives;
+import com.sbancuz.plannh.data.serialization.Serializer;
 import com.sbancuz.plannh.harness.GtnhFlowLoader;
 
 /**
@@ -229,7 +229,7 @@ class BalanceViewTest {
 
         assertEquals(
             alternative.key(),
-            Serializer.decode(Serializer.encode(graph))
+            Serializer.decodeGraph(Serializer.encodeGraph(graph))
                 .getExcessChoice(),
             "and the pick survives a save");
     }

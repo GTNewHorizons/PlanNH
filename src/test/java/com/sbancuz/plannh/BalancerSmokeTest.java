@@ -1,7 +1,6 @@
 package com.sbancuz.plannh;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -16,7 +15,9 @@ import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
+import com.sbancuz.plannh.data.flowchart.balancer.Pin;
 import com.sbancuz.plannh.data.flowchart.balancer.SolverMessage;
+import com.sbancuz.plannh.data.setting.Settings;
 import com.sbancuz.plannh.harness.GtnhFlowLoader;
 import com.sbancuz.plannh.harness.GtnhFlowLoader.LoadedChart;
 
@@ -44,8 +45,8 @@ class BalancerSmokeTest {
         for (final Node node : chart.machines()) {
             assertTrue(
                 result.nodeBalances()
-                    .containsKey(node.id),
-                "missing balance for " + node.machineName);
+                    .containsKey(node.getId()),
+                "missing balance for " + node.getMachineName());
         }
     }
 
@@ -69,8 +70,8 @@ class BalancerSmokeTest {
         for (final Node node : chart.machines()) {
             assertTrue(
                 result.nodeBalances()
-                    .containsKey(node.id),
-                "missing balance for " + node.machineName);
+                    .containsKey(node.getId()),
+                "missing balance for " + node.getMachineName());
         }
     }
 
@@ -83,16 +84,25 @@ class BalancerSmokeTest {
     void autoModeReportsExactFractionalCounts_andDoesNotWriteThemBack() {
         final LoadedChart chart = GtnhFlowLoader.load("loopGraph");
         final Node lcr = chart.machine(1);
-        assertFalse(lcr.isMachineCountFixed());
-        lcr.machineConfig.setMachineCount(3);
+        // NONE, not null: "no target" is a pin the chart carries, not an absent field.
+        assertEquals(
+            Pin.NONE,
+            lcr.getMachineConfig()
+                .getTargetKind());
+        lcr.getMachineConfig()
+            .set(Settings.MACHINES, 3);
 
         final BalanceResult result = Balancer.balance(chart.graph(), BalanceMode.AUTO);
 
-        assertEquals(3, lcr.machineConfig.getMachineCount(), "configured count must survive viewing");
+        assertEquals(
+            3,
+            lcr.getMachineConfig()
+                .get(Settings.MACHINES),
+            "configured count must survive viewing");
         assertEquals(
             8.0 / 15.0,
             result.nodeBalances()
-                .get(lcr.id)
+                .get(lcr.getId())
                 .operations(),
             1e-6,
             "the exact fractional machine count, not a ceiling");
@@ -112,14 +122,14 @@ class BalancerSmokeTest {
 
         for (final Node node : chart.machines()) {
             final double ops = result.nodeBalances()
-                .get(node.id)
+                .get(node.getId())
                 .operations();
             assertEquals(
                 ops,
                 Math.rint(ops),
                 1e-6,
-                name + ": " + node.machineName + " must show a whole machine count, got " + ops);
-            assertTrue(ops >= 1, name + ": " + node.machineName + " solved to " + ops + " machines");
+                name + ": " + node.getMachineName() + " must show a whole machine count, got " + ops);
+            assertTrue(ops >= 1, name + ": " + node.getMachineName() + " solved to " + ops + " machines");
         }
     }
 
@@ -139,14 +149,14 @@ class BalancerSmokeTest {
         assertEquals(0.0, result.totalOperations(), 1e-9);
         for (final Node node : chart.machines()) {
             final var nb = result.nodeBalances()
-                .get(node.id);
-            assertEquals(0.0, nb.operations(), 1e-9, node.machineName + " must show no count");
+                .get(node.getId());
+            assertEquals(0.0, nb.operations(), 1e-9, node.getMachineName() + " must show no count");
             assertTrue(
                 nb.effectiveOutputs()
                     .isEmpty()
                     && nb.effectiveInputs()
                         .isEmpty(),
-                node.machineName + " must show no rates");
+                node.getMachineName() + " must show no rates");
         }
         assertTrue(
             result.notes()
@@ -185,9 +195,9 @@ class BalancerSmokeTest {
         assertNotNull(result);
         for (final Node node : chart.machines()) {
             final double ops = result.nodeBalances()
-                .get(node.id)
+                .get(node.getId())
                 .operations();
-            assertTrue(ops >= 1, node.machineName + " solved to " + ops + " machines");
+            assertTrue(ops >= 1, node.getMachineName() + " solved to " + ops + " machines");
         }
     }
 }

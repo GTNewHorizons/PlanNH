@@ -83,12 +83,14 @@ public final class BalanceView {
      */
     private static List<Boundary> configuredBoundary(final Graph graph) {
         final Set<PortRef> wired = new HashSet<>();
-        for (final Edge edge : graph.getEdges()) {
-            wired.add(new PortRef(edge.sourceNodeId, edge.sourceOutputIndex, false));
-            wired.add(new PortRef(edge.targetNodeId, edge.targetInputIndex, true));
+        for (final Edge edge : graph.getEdges()
+            .values()) {
+            wired.add(new PortRef(edge.getSourceNodeId(), edge.getSourceOutputItemIndex(), false));
+            wired.add(new PortRef(edge.getTargetNodeId(), edge.getTargetInputItemIndex(), true));
         }
         final List<Boundary> out = new ArrayList<>();
-        for (final Node node : graph.getNodes()) {
+        for (final Node node : graph.getNodes()
+            .values()) {
             collectConfigured(node, wired, false, out);
             collectConfigured(node, wired, true, out);
         }
@@ -98,16 +100,16 @@ public final class BalanceView {
     /** One {@link Boundary} per unwired port of {@code node}, rated by its configured count. */
     private static void collectConfigured(final Node node, final Set<PortRef> wired, final boolean input,
         final List<Boundary> out) {
-        final MachineConfig cfg = node.machineConfig;
-        final double count = cfg.getMachineCount();
+        final MachineConfig cfg = node.getMachineConfig();
+        final double count = cfg.configuredCopies();
         if (count <= 0) return;
-        final var eff = cfg.computeEffect(node.properties);
+        final var eff = cfg.computeEffect(node.getProperties());
         final int durTicks = Math.max(1, eff.durationTicks());
         final int tf = eff.throughputFactor();
-        final List<Port<?>> ports = input ? node.inputs : node.outputs;
+        final List<Port<?>> ports = input ? node.getInputs() : node.getOutputs();
         for (int i = 0; i < ports.size(); i++) {
             final Port<?> port = ports.get(i);
-            if (wired.contains(new PortRef(node.id, i, input))) continue;
+            if (wired.contains(new PortRef(node.getId(), i, input))) continue;
             final double qty = Math.max(0, port.getAmount()) * port.getChance()
                 * (input ? cfg.inputMultiplier(i) : cfg.outputMultiplier(i))
                 * tf;
@@ -115,7 +117,7 @@ public final class BalanceView {
             final double rate = count * qty * GuiHelper.TICKS_PER_SECOND / (double) durTicks;
             out.add(
                 new Boundary(
-                    new PortRef(node.id, i, input),
+                    new PortRef(node.getId(), i, input),
                     input ? Kind.SUPPLY : Kind.PRODUCT,
                     rate,
                     port.getDisplayName(),
@@ -282,12 +284,13 @@ public final class BalanceView {
     }
 
     private static Port<?> portOf(final Graph graph, final External external) {
-        final Node node = graph.nodes.get(
-            external.port()
-                .nodeId());
+        final Node node = graph.getNodes()
+            .get(
+                external.port()
+                    .nodeId());
         if (node == null) return null;
         final List<Port<?>> ports = external.port()
-            .input() ? node.inputs : node.outputs;
+            .input() ? node.getInputs() : node.getOutputs();
         final int index = external.port()
             .portIndex();
         return index < 0 || index >= ports.size() ? null : ports.get(index);
