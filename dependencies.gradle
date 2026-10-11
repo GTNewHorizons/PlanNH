@@ -77,9 +77,9 @@ dependencies {
     compileOnly('org.projectlombok:lombok:1.18.46')
     annotationProcessor('org.projectlombok:lombok:1.18.46')
 
+    devOnlyNonPublishable(files("libs/offscreen-0.3-alpha-dev.jar"))
     // ILP solver
     shadowImplementation('org.ojalgo:ojalgo:57.3.1')
-
     // Opt-in GTNH pack recipes for the dev client: `./gradlew runClient -PgtnhRecipes`.
     // Loads the GTNH coremod (dreamcraft) so NEI shows the pack's recipe tweaks in dev.
     if (project.hasProperty('gtnhRecipes')) {

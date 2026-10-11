@@ -58,7 +58,7 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
         name("summary");
         coverChildren();
 
-        final FlowchartList sectionsList = new FlowchartList().name("summary.sections")
+        sectionsList = new FlowchartList().name("summary.sections")
             .fullWidth()
             .paddingRight(SCROLLBAR_GAP)
             .crossAxisAlignment(Alignment.CrossAxis.START)

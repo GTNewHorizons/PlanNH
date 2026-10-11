@@ -52,7 +52,7 @@ public final class PlanAPI {
      * tooltip with a bookmark prompt.
      */
     public static void shareGraph(final Graph graph) {
-        final String encoded = Serializer.encode(graph);
+        final String encoded = Serializer.encodeGraph(graph);
         final ItemStack stack = createShareStack();
         stack.getTagCompound()
             .setString(PLANNH_DATA_KEY, encoded);
