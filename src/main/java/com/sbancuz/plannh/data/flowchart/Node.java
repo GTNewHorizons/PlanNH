@@ -6,135 +6,146 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import net.minecraft.tileentity.TileEntityFurnace;
+import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidStack;
 
+import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
-import com.sbancuz.plannh.data.PropertyProvider;
-import com.sbancuz.plannh.data.RecipeProperty;
-import com.sbancuz.plannh.data.Settings;
-import com.sbancuz.plannh.nei.NEIPlanConfig;
+import com.sbancuz.plannh.data.properties.PropertyProvider;
+import com.sbancuz.plannh.data.properties.RecipeProperty;
+import com.sbancuz.plannh.data.properties.ResourceProperty;
+import com.sbancuz.plannh.data.provider.DefaultProvider;
+import com.sbancuz.plannh.mixins.PositionedStackAccessor;
 
-import codechicken.nei.NEIClientConfig;
-import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.Recipe;
 import codechicken.nei.recipe.RecipeHandlerRef;
+import gregtech.api.util.GTUtility;
 import lombok.Getter;
 import lombok.Setter;
 
-public class Node {
+@Getter
+public class Node extends GraphData {
 
-    public final UUID id;
-    public int x;
-    public int y;
+    public static final String TYPE = "node";
 
-    public final List<Port<?>> inputs = new ArrayList<>();
-    public final List<Port<?>> outputs = new ArrayList<>();
+    // cant be final because of transient deserialization resulting in null
+    private transient List<Port<?>> inputs;
+    private transient List<Port<?>> outputs;
+    private final Map<Integer, ItemStack> inputConfigurations = new HashMap<>();
 
-    public String machineName;
-    public int durationTicks = 0;
+    // needed for coloring to be machine specific
+    private final String machineName;
+    private final Recipe.RecipeId recipeId;
 
-    public Recipe.RecipeId recipeId;
-    public int handlerRecipeIndex;
+    private final MachineConfig machineConfig;
+    private transient Map<RecipeProperty<?>, Object> properties;
 
-    public final MachineConfig machineConfig;
-    public final Map<RecipeProperty<?>, Object> properties = new HashMap<>();
+    @Setter
+    private transient boolean settingsOpen = true;
 
+    /** Whether the target rows are showing. Transient, like {@link #settingsOpen}. */
+    @Setter
     @Getter
+    private transient boolean targetOpen = true;
+
+    /** Whether the throughput rows are showing. Transient, like {@link #targetOpen}. */
+    @Setter
+    @Getter
+    private transient boolean throughputOpen = true;
+
+    /** Whether the properties rows are showing. Transient, like {@link #throughputOpen}. */
+    @Setter
+    @Getter
+    private transient boolean propertiesOpen = true;
+
     private transient PropertyProvider extractor;
-    @Getter
-    private transient List<PropertyProvider> availableExtractors = List.of();
-    @Getter
+    private transient List<PropertyProvider> availableExtractors;
     @Setter
     private int extractorIndex;
 
-    public Node(final IRecipeHandler handler, final int recipeIndex, final int x, final int y) {
-        this.id = UUID.randomUUID();
-        this.x = x;
-        this.y = y;
+    public Node(IRecipeHandler handler, int recipeIndex) {
+        super(UUID.randomUUID());
 
-        this.machineName = handler.getRecipeName()
+        recipeId = Recipe.RecipeId.of(handler, recipeIndex);
+        machineName = handler.getRecipeName()
             .trim();
-        this.recipeId = Recipe.RecipeId.of(handler, recipeIndex);
-        this.handlerRecipeIndex = recipeIndex;
+        header = machineName;
 
-        this.availableExtractors = RecipePropertyAPI.getExtractors(handler.getOverlayIdentifier());
+        availableExtractors = RecipePropertyAPI.getExtractors(handler.getClass());
+        extractorIndex = 0;
         if (availableExtractors.isEmpty()) {
-            this.extractor = null;
-            this.machineConfig = new MachineConfig(this);
-            return;
+            extractor = DefaultProvider.INSTANCE;
+        } else {
+            extractor = pickBestExtractor(handler, recipeIndex);
         }
-        this.extractorIndex = 0;
-        this.extractor = pickBestExtractor(handler, recipeIndex);
 
-        final String pid = this.extractor.getProfileId(handler, recipeIndex);
+        String pid = extractor.getProfileId(handler, recipeIndex);
         if (pid != null && !MachineProfileRegistry.defaultId()
             .equals(pid)) {
-            this.machineConfig = new MachineConfig(this, MachineProfileRegistry.get(pid));
+            machineConfig = new MachineConfig(MachineProfileRegistry.get(pid));
         } else {
-            this.machineConfig = new MachineConfig(this);
+            machineConfig = new MachineConfig();
         }
 
-        refresh();
+        refresh(false);
     }
 
-    public void refresh() {
+    private void refresh(boolean init) {
         if (extractor == null) return;
-        final RecipeHandlerRef ref = RecipeHandlerRef.of(recipeId);
-        final IRecipeHandler handler = ref.handler;
-        final int recipeIndex = ref.recipeIndex;
+        RecipeHandlerRef ref = RecipeHandlerRef.of(recipeId);
+        IRecipeHandler handler = ref.handler;
+        int recipeIndex = ref.recipeIndex;
+
+        if (inputs == null) inputs = new ArrayList<>();
         inputs.clear();
+        if (outputs == null) outputs = new ArrayList<>();
         outputs.clear();
+        if (properties == null) properties = new HashMap<>();
         properties.clear();
+        if (!init) inputConfigurations.clear();
 
-        final List<PositionedStack> ins = handler.getIngredientStacks(recipeIndex);
-        for (final PositionedStack ps : ins) {
-            if (ps != null && ps.item != null && ps.item.stackSize > 0) {
-                this.inputs.add(new Port<>(RecipePropertyAPI.ITEM, ps.item.copy(), 1.f));
-            }
-        }
-
-        final PositionedStack result = handler.getResultStack(recipeIndex);
-        if (result != null && result.item != null) {
-            this.outputs.add(new Port<>(RecipePropertyAPI.ITEM, result.item.copy(), 1.f));
-        }
-        final List<PositionedStack> others = handler.getOtherStacks(recipeIndex);
-        for (final PositionedStack ps : others) {
-            if (ps != null && ps.item != null) {
-                if (NEIClientConfig.getSetting(NEIPlanConfig.ConfigBurnableOverride.KEY)
-                    .getIntValue(NEIPlanConfig.ConfigBurnableOverride.OFF) == NEIPlanConfig.ConfigBurnableOverride.ON) {
-                    if (this.machineConfig.getString(Settings.BURNABLE_OVERRIDE.key())
-                        .equals("IN")) {
-                        this.inputs.add(new Port<>(RecipePropertyAPI.ITEM, ps.item.copy(), 1.f));
-                    } else if (this.machineConfig.getString(Settings.BURNABLE_OVERRIDE.key())
-                        .equals("OUT")) {
-                            this.outputs.add(new Port<>(RecipePropertyAPI.ITEM, ps.item.copy(), 1.f));
-                        }
-                } else if (TileEntityFurnace.getItemBurnTime(ps.item) <= 0) {
-                    this.outputs.add(new Port<>(RecipePropertyAPI.ITEM, ps.item.copy(), 1.f));
-                }
-            }
-        }
-
-        final Map<RecipeProperty<?>, Object> props = extractor.extract(this, handler, recipeIndex);
-        if (props != null && !props.isEmpty()) {
-            for (final var entry : props.entrySet()) {
-                this.properties.put(entry.getKey(), entry.getValue());
-            }
-        }
-
-        if (this.properties.containsKey(RecipePropertyAPI.DURATION_TICKS)) {
-            this.durationTicks = (int) this.properties.get(RecipePropertyAPI.DURATION_TICKS);
-        }
+        Map<RecipeProperty<?>, Object> props = extractor.extract(this, handler, recipeIndex);
+        if (props != null && !props.isEmpty()) properties.putAll(props);
 
         deduplicate(inputs);
         deduplicate(outputs);
+        machineConfig.seedRouteDefaults(properties); // todo test if this works
+
+        if (init) {
+            // sanitise input configs
+            inputConfigurations.keySet()
+                .removeIf(
+                    index -> inputs.get(index)
+                        .getAllStacks()
+                        .getFirst().items.length <= 1);
+            inputConfigurations.forEach(this::setConfiguration);
+        }
     }
 
-    private static void deduplicate(final List<Port<?>> ports) {
-        final List<Port<?>> aggregate = new ArrayList<>(ports);
+    @SuppressWarnings("unchecked")
+    private void setConfiguration(int index, ItemStack itemStack) {
+        Port<?> port = inputs.get(index);
+        ResourceProperty<?> type = port.getType();
+        if (type == RecipePropertyAPI.ITEM) ((Port<ItemStack>) port).setValue(itemStack.copy());
+
+        if (type == RecipePropertyAPI.FLUID && Compat.GREGTECH.isLoaded) ((Port<FluidStack>) port).setValue(
+            GTUtility.getFluidFromDisplayStack(itemStack)
+                .copy());
+
+        port.getAllStacks()
+            .forEach(ps -> {
+                PositionedStackAccessor psa = (PositionedStackAccessor) ps;
+                psa.setPermutated(true);
+                ps.setPermutationToRender(itemStack);
+                psa.setPermutated(false);
+            });
+    }
+
+    private static void deduplicate(List<Port<?>> ports) {
+        List<Port<?>> aggregate = new ArrayList<>(ports);
         for (int i = 0; i < aggregate.size(); i++) {
             for (int j = i + 1; j < aggregate.size(); j++) { // 1. Start at i + 1 to avoid self-merging
                 if (aggregate.get(i)
@@ -151,53 +162,73 @@ public class Node {
         ports.addAll(aggregate);
     }
 
-    public void switchExtractor() {
+    public void switchExtractor(final int delta) {
         if (availableExtractors.size() < 2) return;
-        extractorIndex = (extractorIndex + 1) % availableExtractors.size();
-        this.extractor = availableExtractors.get(extractorIndex);
+        extractorIndex = Math.floorMod(extractorIndex + delta, availableExtractors.size());
+        extractor = availableExtractors.get(extractorIndex);
 
-        final RecipeHandlerRef ref = RecipeHandlerRef.of(recipeId);
+        RecipeHandlerRef ref = RecipeHandlerRef.of(recipeId);
         if (ref != null) {
-            final String pid = extractor.getProfileId(ref.handler, ref.recipeIndex);
+            String pid = extractor.getProfileId(ref.handler, ref.recipeIndex);
             if (pid != null && !MachineProfileRegistry.defaultId()
                 .equals(pid)) {
-                this.machineConfig.profileId = pid;
+                machineConfig.setProfileId(pid);
             } else {
-                this.machineConfig.profileId = MachineProfileRegistry.defaultId();
+                machineConfig.setProfileId(MachineProfileRegistry.defaultId());
             }
         }
 
-        refresh();
+        refresh(false);
     }
 
-    private PropertyProvider pickBestExtractor(final IRecipeHandler handler, final int recipeIndex) {
-        for (final PropertyProvider p : availableExtractors) {
+    private PropertyProvider pickBestExtractor(IRecipeHandler handler, int recipeIndex) {
+        for (PropertyProvider p : availableExtractors) {
             if (p.canCraft(handler, recipeIndex)) return p;
         }
         return availableExtractors.getFirst();
     }
 
-    public void initExtractor() {
-        final RecipeHandlerRef ref = RecipeHandlerRef.of(recipeId);
+    public void init() {
+        RecipeHandlerRef ref = RecipeHandlerRef.of(recipeId);
         if (ref == null) {
-            this.extractor = null;
-            this.availableExtractors = List.of();
+            extractor = null;
+            availableExtractors = List.of();
             return;
         }
-        this.availableExtractors = RecipePropertyAPI.getExtractors(ref.handler.getOverlayIdentifier());
-        if (this.extractorIndex >= this.availableExtractors.size()) {
-            this.extractorIndex = 0;
+        availableExtractors = RecipePropertyAPI.getExtractors(ref.handler.getClass());
+        if (extractorIndex >= availableExtractors.size()) {
+            extractorIndex = 0;
         }
-        this.extractor = this.availableExtractors.isEmpty() ? null : this.availableExtractors.get(this.extractorIndex);
+        extractor = availableExtractors.isEmpty() ? DefaultProvider.INSTANCE : availableExtractors.get(extractorIndex);
+
+        refresh(true);
     }
 
-    /**
-     * To be used only for serialization/deserialization
-     */
-    public Node(final UUID id, final int x, final int y) {
-        this.id = id;
+    @Override
+    public String getType() {
+        return TYPE;
+    }
+
+    @Override
+    public boolean invalid() {
+        return super.invalid() || machineName == null
+            || inputConfigurations == null
+            || recipeId == null
+            || machineConfig == null;
+    }
+
+    // TODO: Find a better way to make the tests work
+    public Node(final UUID id, String name, final int x, final int y) {
+        super(id);
         this.x = x;
         this.y = y;
-        this.machineConfig = new MachineConfig(this);
+        this.machineConfig = new MachineConfig();
+        recipeId = null;
+        machineName = name;
+        properties = new HashMap<>();
+        inputs = new ArrayList<>();
+        outputs = new ArrayList<>();
+        extractor = DefaultProvider.INSTANCE;
+        availableExtractors = List.of(DefaultProvider.INSTANCE);
     }
 }

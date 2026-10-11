@@ -6,12 +6,9 @@ import java.util.List;
 import net.minecraft.client.gui.inventory.GuiContainer;
 
 import com.cleanroommc.modularui.screen.GuiContainerWrapper;
-import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
-import com.sbancuz.plannh.data.PropertyProvider;
-import com.sbancuz.plannh.data.flowchart.Graph;
-import com.sbancuz.plannh.data.flowchart.Node;
-import com.sbancuz.plannh.data.flowchart.Plan;
+import com.sbancuz.plannh.data.properties.PropertyProvider;
+import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.FlowchartScreen;
 
 import codechicken.nei.PositionedStack;
@@ -36,31 +33,26 @@ public class PlanOverlayHandler implements IOverlayHandler {
 
     @Override
     public boolean canCraft(final GuiContainer firstGui, final IRecipeHandler handler, final int recipeIndex) {
-        final PropertyProvider provider = RecipePropertyAPI.getExtractor(handler.getOverlayIdentifier());
-        if (provider == null) return false;
-        return provider.canCraft(handler, recipeIndex);
+        for (final PropertyProvider p : RecipePropertyAPI.getExtractors(handler.getClass())) {
+            if (p.canCraft(handler, recipeIndex)) return true;
+        }
+        return false;
     }
 
     @Override
     public boolean craft(final GuiContainer firstGui, final IRecipeHandler handler, final int recipeIndex,
         final int multiplier) {
-        final PropertyProvider provider = RecipePropertyAPI.getExtractor(handler.getOverlayIdentifier());
-        if (provider == null) return false;
-        return provider.canCraft(handler, recipeIndex);
+        for (final PropertyProvider p : RecipePropertyAPI.getExtractors(handler.getClass())) {
+            if (p.canCraft(handler, recipeIndex)) return true;
+        }
+        return false;
     }
 
-    private static final int DEFAULT_NODE_X = 200;
-    private static final int DEFAULT_NODE_Y = 200;
-
     private static void addRecipe(final GuiContainer firstGui, final IRecipeHandler handler, final int recipeIndex) {
-        final Node node = new Node(handler, recipeIndex, DEFAULT_NODE_X, DEFAULT_NODE_Y);
-        final Graph graph = Plan.getActiveGraph();
-        graph.getNodes().put(node.id, node);
-        PlanAPI.save();
-
         if (firstGui instanceof final GuiContainerWrapper wrapper
             && wrapper.getScreen() instanceof final FlowchartScreen screen) {
-            screen.canvas.rebuildNodeWidgets();
+            CanvasWidget canvas =  screen.getCanvas();
+            canvas.addNode(canvas.getCanvasScreenCenterX(), canvas.getCanvasScreenCenterY(), handler, recipeIndex);
         }
     }
 

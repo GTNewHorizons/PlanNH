@@ -1,0 +1,81 @@
+package com.sbancuz.plannh.data.properties;
+
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import net.minecraft.tileentity.TileEntityFurnace;
+
+import com.sbancuz.plannh.Compat;
+import com.sbancuz.plannh.PlanNH;
+import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.flowchart.Port;
+import com.sbancuz.plannh.data.setting.Settings;
+import com.sbancuz.plannh.nei.NEIPlanConfig;
+
+import codechicken.nei.NEIClientConfig;
+import codechicken.nei.PositionedStack;
+import codechicken.nei.recipe.IRecipeHandler;
+import gregtech.nei.GTNEIDefaultHandler;
+
+public interface PropertyProvider {
+
+    void register();
+
+    default Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler,
+        final int recipeIndex) {
+        final List<PositionedStack> ins = handler.getIngredientStacks(recipeIndex);
+        for (final PositionedStack ps : ins) if (ps != null && ps.item != null) node.getInputs()
+            .add(Port.itemPort(ps));
+
+        final PositionedStack result = handler.getResultStack(recipeIndex);
+        if (result != null && result.item != null) {
+            node.getOutputs()
+                .add(Port.itemPort(result));
+            // warn if we find any handlers outside gt that have multiple output permutations
+            if (result.items.length > 1 && (!Compat.GREGTECH.isLoaded || !(handler instanceof GTNEIDefaultHandler)))
+                PlanNH.LOG.warn("output found with permutations");
+        }
+
+        final List<PositionedStack> others = handler.getOtherStacks(recipeIndex);
+        for (final PositionedStack ps : others) {
+            if (ps != null && ps.item != null) {
+                if (NEIClientConfig.getSetting(NEIPlanConfig.ConfigBurnableOverride.KEY)
+                    .getIntValue(NEIPlanConfig.ConfigBurnableOverride.OFF) == NEIPlanConfig.ConfigBurnableOverride.ON) {
+                    if (node.getMachineConfig()
+                        .get(Settings.BURNABLE_OVERRIDE)
+                        .equals(Settings.Burnable.IN)) {
+                        node.getInputs()
+                            .add(Port.itemPort(ps));
+                    } else if (node.getMachineConfig()
+                        .get(Settings.BURNABLE_OVERRIDE)
+                        .equals(Settings.Burnable.OUT)) {
+                            node.getOutputs()
+                                .add(Port.itemPort(ps));
+                        }
+                } else if (TileEntityFurnace.getItemBurnTime(ps.item) <= 0) {
+                    node.getOutputs()
+                        .add(Port.itemPort(ps));
+                }
+            }
+        }
+
+        return Map.of();
+    }
+
+    @Nullable
+    default String getProfileId(final IRecipeHandler handler, final int recipeIndex) {
+        return null;
+    }
+
+    default boolean canCraft(final IRecipeHandler handler, final int recipeIndex) {
+        return true;
+    }
+
+    @Nonnull
+    default String getExtractorName() {
+        return getClass().getSimpleName();
+    }
+}
