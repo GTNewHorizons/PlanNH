@@ -503,7 +503,12 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         arrowWidgets.clear();
         for (final Edge edge : graph.getEdges()
             .values()) {
-            child(new ArrowWidget(this, edge));
+            try {
+                child(new ArrowWidget(this, edge));
+            } catch (Exception npe) {
+                PlanNH.LOG
+                    .warn("Invalid edge found, dropping it to preserve the rest of the graph!\nInvalid Edge: {}", edge);
+            }
         }
     }
 

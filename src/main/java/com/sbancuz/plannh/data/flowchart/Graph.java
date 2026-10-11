@@ -149,4 +149,13 @@ public class Graph {
         edges.remove(id);
         bumpVersion();
     }
+
+    public <T extends GraphData> void addToContainer(T data) {
+        switch (data) {
+            case Node node -> nodes.put(node.getId(), node);
+            case Note note -> notes.put(note.getId(), note);
+            case Group group -> groups.put(group.getId(), group);
+            default -> throw new IllegalArgumentException("Invalid data");
+        }
+    }
 }

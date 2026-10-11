@@ -243,55 +243,9 @@ public final class Serializer {
         graph.setPanX(getSafeFloat(root.get("panX"), 0));
         graph.setPanY(getSafeFloat(root.get("panY"), 0));
 
-        if (root.has("notes")) {
-            for (final JsonElement elem : root.getAsJsonArray("notes")) {
-                final Note note = GSON.fromJson(elem, Note.class);
-
-                if (note.invalid()) {
-                    PlanNH.LOG.warn("Invalid state found for a note!");
-                    continue;
-                }
-
-                graph.getNotes()
-                    .put(note.getId(), note);
-            }
-        }
-
-        if (root.has("groups")) {
-            for (final JsonElement elem : root.getAsJsonArray("groups")) {
-                final Group group;
-                try {
-                    // do this to catch errors in child loading
-                    group = GSON.fromJson(elem, Group.class);
-                } catch (Exception ignored) {
-                    continue;
-                }
-
-                if (group.invalid()) {
-                    PlanNH.LOG.warn("Invalid state found for a group!");
-                    continue;
-                }
-
-                graph.getGroups()
-                    .put(group.getId(), group);
-            }
-        }
-
-        if (root.has("nodes")) {
-            for (final JsonElement elem : root.getAsJsonArray("nodes")) {
-                migrateNodeTargets(elem.getAsJsonObject());
-                final Node node = GSON.fromJson(elem, Node.class);
-
-                if (node.invalid()) {
-                    PlanNH.LOG.warn("Invalid state found for a node!");
-                    continue;
-                }
-
-                node.init();
-                graph.getNodes()
-                    .put(node.getId(), node);
-            }
-        }
+        loadGraphData(root, graph, Note.class);
+        loadGraphData(root, graph, Group.class);
+        loadGraphData(root, graph, Node.class);
 
         if (root.has("edges")) {
             for (final JsonElement elem : root.getAsJsonArray("edges")) {
@@ -308,6 +262,30 @@ public final class Serializer {
         }
 
         return graph;
+    }
+
+    private static void loadGraphData(final JsonObject root, final Graph graph,
+        final Class<? extends GraphData> clazz) {
+        String type = clazz.getSimpleName()
+            .toLowerCase();
+        if (root.has(type + "s")) {
+            for (final JsonElement elem : root.getAsJsonArray(type + "s")) {
+                final GraphData data;
+                try {
+                    data = GSON.fromJson(elem, GraphData.class);
+                } catch (Exception ignored) {
+                    PlanNH.LOG.warn("Error occured during deserialization of {}!", type);
+                    continue;
+                }
+
+                if (data.invalid()) {
+                    PlanNH.LOG.warn("Invalid state found for {}!", type);
+                    continue;
+                }
+
+                graph.addToContainer(data);
+            }
+        }
     }
 
     /**
@@ -338,7 +316,9 @@ public final class Serializer {
         }
     }
 
-    /** Puts a legacy value on the config, unless the config already carries that field itself. */
+    /**
+     * Puts a legacy value on the config, unless the config already carries that field itself.
+     */
     private static void moveTarget(final JsonObject node, final JsonObject config, final String key,
         @Nullable final JsonElement unwrapped) {
         final JsonElement value = unwrapped != null ? unwrapped : node.remove(key);
