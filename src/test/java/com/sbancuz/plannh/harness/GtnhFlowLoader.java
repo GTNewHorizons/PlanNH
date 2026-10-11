@@ -13,16 +13,18 @@ import java.util.UUID;
 
 import org.yaml.snakeyaml.Yaml;
 
+import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.flowchart.balancer.Pin;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.setting.Settings;
 
-import codechicken.nei.recipe.TemplateRecipeHandler;
+import it.unimi.dsi.fastutil.ints.IntIntMutablePair;
 
 /**
  * Loads gtnh-flow style YAML charts into PlanNH {@link Graph}s.
@@ -36,8 +38,8 @@ import codechicken.nei.recipe.TemplateRecipeHandler;
  * <p>
  * Pin semantics from gtnh-flow:
  * <ul>
- * <li>{@code number: N} - the machine count is fixed to N (maps to PlanNH's fixed machine
- * count).</li>
+ * <li>{@code number: N} - the machine count target is set to N and selected, so the balance
+ * holds the machine to it.</li>
  * <li>{@code target: {ingredient: rate}} - a desired output rate; maps to the node's target
  * output rate pin, which AUTO holds exactly. Also surfaced on {@link LoadedChart#pins()} for
  * tests that want to rescale or clear it.</li>
@@ -46,7 +48,7 @@ import codechicken.nei.recipe.TemplateRecipeHandler;
 public final class GtnhFlowLoader {
 
     /** {@code outputIndex} is the resolved output port for target pins, -1 for number pins. */
-    public record Pin(String kind, int machineIndex, String machineName, String ingredient, double value,
+    public record FixturePin(String kind, int machineIndex, String machineName, String ingredient, double value,
         int outputIndex) {}
 
     /**
@@ -56,7 +58,7 @@ public final class GtnhFlowLoader {
     public static final RecipeProperty<Integer> DURATION_TICKS = RecipeProperty.builder("duration_ticks", 0)
         .build();
 
-    public record LoadedChart(String name, Graph graph, List<Node> machines, List<Pin> pins) {
+    public record LoadedChart(String name, Graph graph, List<Node> machines, List<FixturePin> pins) {
 
         public Node machine(final int index) {
             return machines.get(index);
@@ -83,7 +85,7 @@ public final class GtnhFlowLoader {
                 new MachineProfile(
                     MachineProfileRegistry.defaultId(),
                     "Default",
-                    List.of(Settings.MACHINES.def(), Settings.TICK_MODIFIER.def()),
+                    List.of(MachineProfile.entry(Settings.MACHINES), MachineProfile.entry(Settings.TICK_MODIFIER)),
                     (s, ctx) -> new EffectResult(ctx.getOrDefault(DURATION_TICKS, 1), 0, 1)));
         }
     }
@@ -115,7 +117,7 @@ public final class GtnhFlowLoader {
 
         final Graph graph = new Graph();
         final List<Node> machines = new ArrayList<>();
-        final List<Pin> pins = new ArrayList<>();
+        final List<FixturePin> pins = new ArrayList<>();
 
         // ingredient name -> producing (node, output index) / consuming (node, input index)
         final Map<String, List<int[]>> producers = new LinkedHashMap<>();
@@ -126,19 +128,7 @@ public final class GtnhFlowLoader {
             if (entry == null || !entry.containsKey("m")) continue;
             final int machineIndex = index++;
 
-            // todo fix
-            final Node node = new Node(new TemplateRecipeHandler() {
-                @Override
-                public String getGuiTexture() {
-                    return "";
-                }
-
-                @Override
-                public String getRecipeName() {
-                    return "";
-                }
-            }, 0);
-//            node.machineName = String.valueOf(entry.get("m"));
+            final Node node = new Node(nodeId(name, machineIndex), String.valueOf(entry.get("m")), 0, 0);
             node.getProperties().put(DURATION_TICKS,
                 (int) Math.round(asDouble(entry.get("dur"), 1.0) * TICKS_PER_SECOND));
 
@@ -155,9 +145,11 @@ public final class GtnhFlowLoader {
 
             if (entry.containsKey("number")) {
                 final int count = (int) asDouble(entry.get("number"), 1.0);
-                node.getMachineConfig().setMachineCount(count);
-                node.setMachineCountFixed(true);
-                pins.add(new Pin("number", machineIndex, node.getMachineName(), null, count, -1));
+                final MachineConfig config = node.getMachineConfig();
+                config.getCopies()
+                    .setCopies(count);
+                config.setTargetKind(Pin.FIXED_COPIES);
+                pins.add(new FixturePin("number", machineIndex, node.getMachineName(), null, count, -1));
             }
             if (entry.get("target") instanceof final Map<?, ?> targets) {
                 for (final Map.Entry<?, ?> t : targets.entrySet()) {
@@ -166,8 +158,13 @@ public final class GtnhFlowLoader {
                     for (int out = 0; out < node.getOutputs().size(); out++) {
                         if (TestIngredients.nameOf(node.getOutputs().get(out))
                             .equals(ingredient)) {
-                            node.getTargetOutputRates().put(out, rate);
-                            pins.add(new Pin("target", machineIndex, node.getMachineName(), ingredient, rate, out));
+                            node.getMachineConfig()
+                                .getRates()
+                                .rates()
+                                .put(out, rate);
+                            node.getMachineConfig()
+                                .setTargetKind(Pin.TARGET_RATE);
+                            pins.add(new FixturePin("target", machineIndex, node.getMachineName(), ingredient, rate, out));
                         }
                     }
                 }
@@ -189,8 +186,8 @@ public final class GtnhFlowLoader {
                             edgeId(name, edgeIndex++),
                             machines.get(src[0]).getId(),
                             machines.get(dst[0]).getId(),
-                            src[1],
-                            dst[1]));
+                            new IntIntMutablePair(src[1], 0),
+                            new IntIntMutablePair(dst[1], 0)));
                 }
             }
         }
@@ -203,11 +200,13 @@ public final class GtnhFlowLoader {
      * a different scale. Leaves {@code number:} pins (fixed counts) alone.
      */
     public static void clearTargetPins(final LoadedChart chart) {
-        for (final Pin pin : chart.pins()) {
+        for (final FixturePin pin : chart.pins()) {
             if (!"target".equals(pin.kind())) continue;
             chart.machines()
                 .get(pin.machineIndex())
-                .getTargetOutputRates()
+                .getMachineConfig()
+                .getRates()
+                .rates()
                 .clear();
         }
     }
@@ -218,12 +217,15 @@ public final class GtnhFlowLoader {
             .getEdges()
             .values()
             .stream()
-            .filter(e -> e.targetNodeId.equals(machine.getId()) && e.targetInputIndex == inputIndex)
-            .map(e -> e.id)
+            .filter(
+                e -> e.getTargetNodeId()
+                    .equals(machine.getId()) && e.getTargetInputItemIndex() == inputIndex)
+            .map(Edge::getId)
             .toList();
         ids.forEach(
             id -> chart.graph()
-                .removeEdge(id));
+                .getEdges()
+                .remove(id));
         return ids.size();
     }
 

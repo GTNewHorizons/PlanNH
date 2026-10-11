@@ -2,7 +2,6 @@ package com.sbancuz.plannh.data.flowchart;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -45,15 +44,22 @@ public class Node extends GraphData {
     private transient Map<RecipeProperty<?>, Object> properties;
 
     @Setter
-    private boolean machineCountFixed;
+    private transient boolean settingsOpen = true;
 
-    /**
-     * Target production rates by output port index, in ingredient units per second. A target is
-     * a pin: AUTO holds the machine's extent so the targeted output hits the rate exactly, and
-     * the rest of the chart follows. With several targets on one machine the largest implied
-     * extent wins - parallel outputs share one extent, so only the tightest can be exact.
-     */
-    private final Map<Integer, Double> targetOutputRates = new LinkedHashMap<>();
+    /** Whether the target rows are showing. Transient, like {@link #settingsOpen}. */
+    @Setter
+    @Getter
+    private transient boolean targetOpen = true;
+
+    /** Whether the throughput rows are showing. Transient, like {@link #targetOpen}. */
+    @Setter
+    @Getter
+    private transient boolean throughputOpen = true;
+
+    /** Whether the properties rows are showing. Transient, like {@link #throughputOpen}. */
+    @Setter
+    @Getter
+    private transient boolean propertiesOpen = true;
 
     private transient PropertyProvider extractor;
     private transient List<PropertyProvider> availableExtractors;
@@ -156,10 +162,9 @@ public class Node extends GraphData {
         ports.addAll(aggregate);
     }
 
-    // TODO add button for this
-    public void switchExtractor() {
+    public void switchExtractor(final int delta) {
         if (availableExtractors.size() < 2) return;
-        extractorIndex = (extractorIndex + 1) % availableExtractors.size();
+        extractorIndex = Math.floorMod(extractorIndex + delta, availableExtractors.size());
         extractor = availableExtractors.get(extractorIndex);
 
         RecipeHandlerRef ref = RecipeHandlerRef.of(recipeId);
@@ -209,7 +214,21 @@ public class Node extends GraphData {
         return super.invalid() || machineName == null
             || inputConfigurations == null
             || recipeId == null
-            || machineConfig == null
-            || targetOutputRates == null;
+            || machineConfig == null;
+    }
+
+    // TODO: Find a better way to make the tests work
+    public Node(final UUID id, String name, final int x, final int y) {
+        super(id);
+        this.x = x;
+        this.y = y;
+        this.machineConfig = new MachineConfig();
+        recipeId = null;
+        machineName = name;
+        properties = new HashMap<>();
+        inputs = new ArrayList<>();
+        outputs = new ArrayList<>();
+        extractor = DefaultProvider.INSTANCE;
+        availableExtractors = List.of(DefaultProvider.INSTANCE);
     }
 }

@@ -19,7 +19,6 @@ import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.value.BoolValue;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.ColorPickerDialog;
-import com.cleanroommc.modularui.widgets.CycleButtonWidget;
 import com.cleanroommc.modularui.widgets.ToggleButton;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.sbancuz.plannh.api.PlanAPI;
@@ -68,7 +67,10 @@ public abstract class GroupWidget<G extends Group> extends FlowchartWidget<Group
                 true),
             true);
 
-        Flow mainColumn = FlowchartFlow.column(this)
+        name("group");
+
+        Flow mainColumn = FlowchartFlow.col(this)
+            .name("group.column")
             .coverChildren(GROUP_MIN_W, 0)
             .collapseDisabledChild();
 
@@ -89,6 +91,7 @@ public abstract class GroupWidget<G extends Group> extends FlowchartWidget<Group
 
     protected Flow getTopRow() {
         return FlowchartFlow.row(this)
+            .name("group.header")
             .coverChildrenHeight()
             .fullWidth()
             .childPadding(4)
@@ -98,34 +101,30 @@ public abstract class GroupWidget<G extends Group> extends FlowchartWidget<Group
 
     protected Flow getButtonRow(IPanelHandler colorPicker) {
         return FlowchartFlow.row(this)
+            .name("group.buttons")
             .coverChildren()
             .childPadding(2)
             .reverseLayout()
             .child(new CloseButtonWidget(this))
-            .child(new ToggleButton().value(new BoolValue.Dynamic(data::isCoverChildren, val -> {
-                data.setCoverChildren(val);
-                areaWidget.configureCoverChildren();
-            }))
-                .overlay(
-                    IKey.str("CC")
-                        .color(Color.WHITE.main))
-                .addTooltipLine("Toggle Cover Children"))
             .child(
-                new ButtonWidget<>().overlay(GuiTextures.COLOR_WHEEL)
+                new ToggleButton().name("group.coverChildren")
+                    .value(new BoolValue.Dynamic(data::isCoverChildren, val -> {
+                        data.setCoverChildren(val);
+                        areaWidget.configureCoverChildren();
+                    }))
+                    .overlay(
+                        IKey.str("CC")
+                            .color(Color.WHITE.main))
+                    .addTooltipLine("Toggle Cover Children"))
+            .child(
+                new ButtonWidget<>().name("group.color")
+                    .overlay(GuiTextures.COLOR_WHEEL)
                     .onMousePressed(_ -> {
                         if (!colorPicker.isPanelOpen()) colorPicker.openPanel();
                         else colorPicker.closePanel();
                         return true;
                     })
-                    .addTooltipLine("Open Color Picker"))
-            .child(
-                new CycleButtonWidget().stateCount(2)
-                    .stateOverlay(true, IKey.str("^"))
-                    .stateOverlay(false, IKey.str("V"))
-                    .value(new BoolValue.Dynamic(data::isCollapsed, val -> {
-                        PlanAPI.recordEdit(canvas.getGraph(), () -> data.setCollapsed(val));
-                        scheduleResize();
-                    })));
+                    .addTooltipLine("Open Color Picker"));
     }
 
     @Override
@@ -206,6 +205,10 @@ public abstract class GroupWidget<G extends Group> extends FlowchartWidget<Group
             .orElseThrow()
             .getTransformationMatrix()
             .unTransformY(context.getAbsMouseX(), context.getAbsMouseY());
+    }
+
+    public int contentAreaOffset() {
+        return areaWidget.getArea().y - getArea().y;
     }
 
     @Override

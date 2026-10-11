@@ -37,8 +37,9 @@ import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.client.ScreenEffect;
 import com.sbancuz.plannh.client.UIBlurEffect;
-import com.sbancuz.plannh.data.flowchart.Edge2;
+import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
+import com.sbancuz.plannh.data.flowchart.GraphData;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.MachineGroup;
 import com.sbancuz.plannh.data.flowchart.Node;
@@ -50,10 +51,12 @@ import com.sbancuz.plannh.data.flowchart.balancer.BalanceView;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.edge.ArrowWidget;
 import com.sbancuz.plannh.gui.group.GroupWidget;
+import com.sbancuz.plannh.gui.layout.ChartLayouter;
+import com.sbancuz.plannh.gui.layout.ElkLayoutStrategy;
+import com.sbancuz.plannh.gui.layout.LayoutStrategy;
 import com.sbancuz.plannh.gui.node.NodeWidget;
 import com.sbancuz.plannh.gui.node.PortWidget;
 import com.sbancuz.plannh.gui.note.NoteWidget;
-import com.sbancuz.plannh.layout.AutoLayout;
 import com.sbancuz.plannh.nei.NEIPlanConfig;
 import com.sbancuz.plannh.nei.NodeLookupContext;
 
@@ -119,13 +122,48 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private static final float ZOOM_MAX = 5.0f;
 
     // Orthogonal arrow routing (world-space units).
-    private static final int ROUTE_CELL = 6;
-    private static final int ROUTE_MARGIN = 12;
+    /** Arrow-router granularity and node clearance, in world units. Both are the router's to define. */
+    public static final int ROUTE_CELL = 6;
+    public static final int ROUTE_MARGIN = 12;
     private static final ArrowRouter ARROW_ROUTER = new ArrowRouter(ROUTE_CELL, ROUTE_MARGIN);
+
+    /**
+     * The narrowest gap between two columns of machines the arrow router can still turn in.
+     *
+     * <p>
+     * Asked of the router rather than restated, because these are its numbers. Auto-layout needs the
+     * figure to size its inter-column spacing, and an earlier attempt transcribed the answer into the layout
+     * settings as 24 - commented as "twice the margin plus one cell", which is 30 - and then never called
+     * the check from anywhere in production.
+     */
+    public static int requiredRouteCorridor() {
+        return ARROW_ROUTER.requiredCorridor();
+    }
+
+    /**
+     * Arranges the chart. Constructed with the engine so nothing here names a concrete implementation.
+     */
+    @Getter
+    private final ChartLayouter layouter;
 
     @NotNull
     @Getter
     private Graph graph;
+
+    /**
+     * Never written to.
+     *
+     * <p>
+     * The dead half of the layout input. Auto-layout used to read this map, found it empty, and did
+     * nothing — which is why the button has never worked. The live half is {@link #nodeWidgets2}, which
+     * {@code NodeWidget} registers itself into whether or not it is filed inside a group, and which is a
+     * strict superset of {@code Graph.getNodes()}. Layout now reads the model and asks widgets only how
+     * big things are.
+     *
+     * <p>
+     * Still here because a handful of {@code // todo redo} stubs below iterate it. Delete the map with
+     * the stubs.
+     */
     private final Map<UUID, RecipeNodeWidget> nodeWidgets = new HashMap<>();
     @Getter
     private final Map<UUID, NodeWidget> nodeWidgets2 = new HashMap<>();
@@ -144,13 +182,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     @Nullable
     private NodeLookupContext pendingLookup = null;
-    @Setter
-    @Nullable
-    private Menu<?> targetEditorMenu = null;
-    @Nullable
-    private Node targetEditNode;
-    private int targetEditOutput = -1;
-    private boolean targetFocusPending;
 
     @Nullable
     @Getter
@@ -166,6 +197,18 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private boolean needsReroute = true;
 
     public CanvasWidget(Menu<?> menu, ModularPanel panel) {
+        this(menu, panel, new ElkLayoutStrategy());
+    }
+
+    /**
+     * @param strategy the layout engine. Injected here rather than hard-wired inside {@link
+     *                 ChartLayouter} because that is the one thing which varies: the layouter needs this
+     *                 canvas and the canvas would otherwise need the layouter, and passing the engine in
+     *                 is what breaks that cycle without giving up the seam. Nothing in this class names a
+     *                 concrete implementation
+     */
+    public CanvasWidget(Menu<?> menu, ModularPanel panel, final LayoutStrategy strategy) {
+        this.layouter = new ChartLayouter(this, strategy);
         this.graph = Plan.getActiveGraph();
         this.panel = panel;
 
@@ -174,6 +217,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
         full();
         marginBottom(18);
+        name("canvas");
 
         contextMenu = menu;
         rebuildWidgets();
@@ -196,39 +240,83 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     /**
-     * Positions an auto-wired node beside its lookup origin: producers left, consumers right,
-     * in the first free slot down the column.
+     * Positions an auto-wired node beside its lookup origin: producers left, consumers right.
+     * Searches outward in a grid pattern from the ideal position to find the closest non-overlapping spot.
      */
     public void placeBesideOrigin(final Node added, final Node origin, final boolean addedFeedsOrigin) {
-        final RecipeNodeWidget originWidget = nodeWidgets.get(origin.getId());
-        final int originW = originWidget != null ? originWidget.worldWidth() : NODE_W_ESTIMATE;
-        final int originH = originWidget != null ? originWidget.worldHeight() : NODE_H_ESTIMATE;
+        final NodeWidget originWidget = nodeWidgets2.get(origin.getId());
+        if (originWidget == null) return;
+
+        final int originW = originWidget.getArea().width;
         final int baseX = Math.round(
             addedFeedsOrigin ? origin.getX() - originW - AUTO_PLACE_GAP_X : origin.getX() + originW + AUTO_PLACE_GAP_X);
         final int baseY = Math.round(origin.getY());
-        int x;
-        int y;
-        int slot = 0;
-        do {
-            final int stagger = slot * AUTO_PLACE_STAGGER;
-            x = addedFeedsOrigin ? baseX - stagger : baseX + stagger;
-            y = baseY + slot * (originH + AUTO_PLACE_GAP_Y) + (slot + 1) * (PortGeometry.SPACING / 2);
-            slot++;
-        } while (overlapsAnyNode(x, y, originW, originH));
-        added.setX(x);
-        added.setY(y);
+
+        final int[] spot = findFreeSpot(baseX, baseY, NODE_W_ESTIMATE, NODE_H_ESTIMATE);
+        added.setX(spot[0]);
+        added.setY(spot[1]);
     }
 
     private boolean overlapsAnyNode(final int x, final int y, final int w, final int h) {
-        for (final RecipeNodeWidget widget : nodeWidgets.values()) {
-            final Node n = widget.getNode();
-            if (x < n.getX() + widget.worldWidth() && n.getX() < x + w
-                && y < n.getY() + widget.worldHeight()
-                && n.getY() < y + h) {
+        for (final FlowchartWidget<?, ?> widget : flowchartWidgets.values()) {
+            final GraphData n = widget.getData();
+            final int nw = widget.getArea().width;
+            final int nh = widget.getArea().height;
+
+            if (x < n.getX() + nw && n.getX() < x + w && y < n.getY() + nh && n.getY() < y + h) {
                 return true;
             }
         }
         return false;
+    }
+
+    /**
+     * Finds a non-overlapping position near the given point, searching outward in a grid pattern.
+     * Checks positions at increasing distances, preferring spots closer to the ideal location.
+     */
+    private int[] findFreeSpot(final int x, final int y, final int w, final int h) {
+        if (!overlapsAnyNode(x, y, w, h)) return new int[] { x, y };
+        final int step = GRID_SIZE;
+        for (int ring = 1; ring <= 15; ring++) {
+            for (int ox = -ring; ox <= ring; ox++) {
+                for (int oy = -ring; oy <= ring; oy++) {
+                    if (Math.max(Math.abs(ox), Math.abs(oy)) != ring) continue;
+                    final int cx = x + ox * step;
+                    final int cy = y + oy * step;
+                    if (!overlapsAnyNode(cx, cy, w, h)) return new int[] { cx, cy };
+                }
+            }
+        }
+        return new int[] { x, y };
+    }
+
+    /**
+     * Called by a FlowchartWidget after its size changes (e.g. settings opened).
+     * Checks if the resized widget now overlaps any neighbor, and if so, pushes the neighbor away.
+     */
+    public void resolveOverlapsFrom(final FlowchartWidget<?, ?> source) {
+        final GraphData srcData = source.getData();
+        final int srcW = source.getArea().width;
+        final int srcH = source.getArea().height;
+
+        for (final FlowchartWidget<?, ?> other : flowchartWidgets.values()) {
+            if (other == source) continue;
+            final GraphData dstData = other.getData();
+            final int dstW = other.getArea().width;
+            final int dstH = other.getArea().height;
+
+            if (srcData.getX() < dstData.getX() + dstW && dstData.getX() < srcData.getX() + srcW
+                && srcData.getY() < dstData.getY() + dstH
+                && dstData.getY() < srcData.getY() + srcH) {
+                final int[] spot = findFreeSpot(dstData.getX(), dstData.getY(), dstW, dstH);
+
+                PlanAPI.recordEdit(graph, () -> {
+                    dstData.setX(spot[0]);
+                    dstData.setY(spot[1]);
+                    other.reposition();
+                });
+            }
+        }
     }
 
     public void setGraph(final Graph newGraph) {
@@ -281,62 +369,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         PlanAPI.save();
     }
 
-    // ── Target-rate editor ──
-    // The node config panel is immediate-mode drawing, so it cannot host a text widget; the
-    // editor is a screen-level menu (same pattern as the context menu) that this widget opens
-    // and positions, with the value bridged through the two methods below.
-    // TODO rework
-    public boolean isTargetEditorOpen() {
-        return targetEditNode != null;
-    }
-
-    public void openTargetEditor(final Node node, final int outputIndex) {
-        targetEditNode = node;
-        targetEditOutput = outputIndex;
-        if (targetEditorMenu != null) {
-            targetEditorMenu.pos(getContext().getAbsMouseX(), getContext().getAbsMouseY());
-        }
-        targetFocusPending = true;
-    }
-
-    /**
-     * True exactly once per editor opening, and only while the editor is still open.
-     */
-    public boolean consumeTargetEditorFocus() {
-        if (!targetFocusPending || targetEditNode == null) return false;
-        targetFocusPending = false;
-        return true;
-    }
-
-    public void closeTargetEditor() {
-        targetEditNode = null;
-        targetEditOutput = -1;
-    }
-
-    public double editedTargetRate() {
-        if (targetEditNode == null) return 0;
-        return targetEditNode.getTargetOutputRates()
-            .getOrDefault(targetEditOutput, 0.0);
-    }
-
-    /**
-     * Commits the typed rate as one undo step and closes the editor; 0 clears the pin.
-     */
-    public void setEditedTargetRate(final double rate) {
-        final Node node = targetEditNode;
-        final int out = targetEditOutput;
-        if (node == null) return;
-        PlanAPI.recordEdit(graph, () -> {
-            if (rate <= 0) node.getTargetOutputRates()
-                .remove(out);
-            else node.getTargetOutputRates()
-                .put(out, rate);
-        });
-        graph.bumpVersion();
-        PlanAPI.save();
-        closeTargetEditor();
-    }
-
     // todo redo
     public void recheckMembershipAndFit() {
         /*
@@ -347,73 +379,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
          */
     }
 
-    // todo redo
-    public void autoLayoutNodes() {
-        if (graph.getNodes()
-            .isEmpty()) return;
-
-        // The widgets ARE the layout input (they implement LayoutNode); measure them first
-        // because MUI2 culls off-viewport widgets and unmeasured nodes report stub sizes.
-        int anchorX = Integer.MAX_VALUE;
-        int anchorY = Integer.MAX_VALUE;
-        for (final Node node : graph.getNodes()
-            .values()) {
-            final RecipeNodeWidget widget = nodeWidgets.get(node.getId());
-            if (widget != null) widget.ensureRecipeHandler();
-            anchorX = Math.min(anchorX, node.getX());
-            anchorY = Math.min(anchorY, node.getY());
-        }
-
-        // ELK reports bad option/graph combinations by throwing, and its node placement recurses
-        // per path, so a pathological chart can exhaust the stack. Both would otherwise leave a
-        // mouse handler and crash the client with the chart unsaved; the chart is worth more than
-        // the layout, so log and keep the current positions.
-        final Map<UUID, int[]> positions;
-        try {
-            positions = AutoLayout.layout(
-                nodeWidgets.values(),
-                graph.getEdges()
-                    .values(),
-                chipMargins());
-        } catch (final RuntimeException | StackOverflowError e) {
-            PlanNH.LOG.error("Auto-layout failed; node positions left unchanged", e);
-            return;
-        }
-        if (positions.isEmpty()) return;
-
-        // Anchor the new layout's top-left where the chart's top-left used to be.
-        int layoutMinX = Integer.MAX_VALUE;
-        int layoutMinY = Integer.MAX_VALUE;
-        for (final int[] pos : positions.values()) {
-            layoutMinX = Math.min(layoutMinX, pos[0]);
-            layoutMinY = Math.min(layoutMinY, pos[1]);
-        }
-        final int offsetX = anchorX - layoutMinX;
-        final int offsetY = anchorY - layoutMinY;
-
-        // Bracketed only from here: a layout that threw or produced nothing left the chart alone,
-        // and an undo entry for a no-op move would make the button look like it did something.
-        PlanAPI.recordEdit(graph, () -> {
-            for (final Node node : graph.getNodes()
-                .values()) {
-                final int[] pos = positions.get(node.getId());
-                if (pos == null) continue;
-                node.setX(pos[0] + offsetX);
-                node.setY(pos[1] + offsetY);
-            }
-            applyNodePositions();
-        });
-    }
-
-    private void applyNodePositions() {
-        for (final RecipeNodeWidget widget : nodeWidgets.values()) {
-            widget.pos(
-                widget.getNode()
-                    .getX(),
-                widget.getNode()
-                    .getY());
-        }
-        recheckMembershipAndFit();
+    public void autoLayout() {
+        layouter.autoLayout();
     }
 
     @Nullable
@@ -484,20 +451,19 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private void updateNodeGroupMembership(final Node node) {
         /*
          * for (final Group group : graph.groups.values()) {
-         * if (group.isCollapsed()) continue;
          * final boolean inside = isInside(group, node);
-         * final boolean contained = group.getNodeIds()
-         * .contains(node.id);
+         * final boolean contained = group.getChildren()
+         * .containsKey(node.getId());
          * if (inside && !contained) {
          * if (group instanceof final MachineGroup machineGroup) {
          * joinsMachineGroup(machineGroup, node);
          * continue;
          * }
-         * group.getNodeIds()
-         * .add(node.id);
+         * group.getChildren()
+         * .put(node.getId(), node);
          * } else if (!inside && contained) {
-         * group.getNodeIds()
-         * .remove(node.id);
+         * group.getChildren()
+         * .remove(node.getId());
          * }
          * }
          */
@@ -535,7 +501,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     public void rebuildArrowWidgets() {
         arrowWidgets.clear();
-        for (final Edge2 edge : graph.getEdges2()
+        for (final Edge edge : graph.getEdges()
             .values()) {
             child(new ArrowWidget(this, edge));
         }
@@ -845,7 +811,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             .toList();
 
         final List<ArrowRouter.Request> requests = new ArrayList<>();
-        for (final Edge2 edge : graph.getEdges2()
+        for (final Edge edge : graph.getEdges()
             .values()) {
             final NodeWidget src = nodeWidgets2.get(edge.getSourceNodeId());
             final NodeWidget dst = nodeWidgets2.get(edge.getTargetNodeId());
@@ -1088,8 +1054,18 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     public void addNode(int x, int y, IRecipeHandler handler, int recipeIndex) {
         PlanAPI.recordEdit(graph, () -> {
             Node node = new Node(handler, recipeIndex);
-            node.setX(x);
-            node.setY(y);
+
+            if (neiTransferSource != null) {
+                final PortWidget portWidget = neiTransferSource;
+                final Node origin = portWidget.getNode();
+                final boolean addedFeedsOrigin = !portWidget.getPortType()
+                    .isEdgeSource();
+                placeBesideOrigin(node, origin, addedFeedsOrigin);
+            } else {
+                final int[] spot = findFreeSpot(x, y, NODE_W_ESTIMATE, NODE_H_ESTIMATE);
+                node.setX(spot[0]);
+                node.setY(spot[1]);
+            }
 
             graph.getNodes()
                 .put(node.getId(), node);

@@ -223,10 +223,10 @@ public final class Balancer {
         PlanNH.LOG.info(
             "{} balance: {} machines, {} open gates, {}ms",
             mode,
-            view.machineCounts.size(),
+            view.copyCounts.size(),
             view.openGates,
             view.wallMillis);
-        return buildResultFractional(graph, view.machineCounts, view.notes, view, solved.alternatives());
+        return buildResultFractional(graph, view.copyCounts, view.notes, view, solved.alternatives());
     }
 
     /**
@@ -241,7 +241,7 @@ public final class Balancer {
             counts.put(
                 node.getId(),
                 (double) node.getMachineConfig()
-                    .getMachineCount());
+                    .configuredCopies());
         }
         return counts;
     }
@@ -249,11 +249,11 @@ public final class Balancer {
     /**
      * Builds the balance result from (possibly fractional) machine counts. Every displayed
      * number derives from the exact fractional count; rounding up for placement is left to the
-     * reader. A machine missing from {@code machineCounts} reads zero - the way a chart with no
+     * reader. A node missing from {@code copyCounts} reads zero - the way a chart with no
      * solve-derived quantities is presented.
      */
     @Nonnull
-    private static BalanceResult buildResultFractional(final Graph graph, final Map<UUID, Double> machineCounts,
+    private static BalanceResult buildResultFractional(final Graph graph, final Map<UUID, Double> copyCounts,
         final List<Note> notes, @Nullable final SolutionView auto, @Nullable final Alternatives alternatives) {
         final Map<UUID, NodeBalance> nodeBalances = new HashMap<>();
         final Map<RecipeProperty<?>, Long> propertyTotals = new HashMap<>();
@@ -262,7 +262,7 @@ public final class Balancer {
 
         for (final Node node : graph.getNodes().values()) {
             if (node.getExtractor() == null) continue; // incorrectly loaded node
-            final double count = machineCounts.getOrDefault(node.getId(), 0.0);
+            final double count = copyCounts.getOrDefault(node.getId(), 0.0);
             totalOps += count;
 
             final MachineConfig cfg = node.getMachineConfig();
@@ -298,7 +298,7 @@ public final class Balancer {
                 effIns.put(i, total);
             }
 
-            nodeBalances.put(node.getId(), new NodeBalance(count, durPerOp, totalEnergy, durPerOp, effOuts, effIns));
+            nodeBalances.put(node.getId(), new NodeBalance(count, totalEnergy, durPerOp, effOuts, effIns));
 
             for (final Map.Entry<RecipeProperty<?>, Object> entry : node.getProperties().entrySet()) {
                 if (entry.getValue() instanceof final Number num) {
@@ -314,7 +314,7 @@ public final class Balancer {
     }
 
     /** One machine's share of a solved balance, for the node widget and the machine-count panel. */
-    public record NodeBalance(double operations, int totalDurationTicks, long totalEnergy, int durationPerOp,
+    public record NodeBalance(double operations, long totalEnergy, int durationPerOp,
         Map<Integer, Float> effectiveOutputs, Map<Integer, Float> effectiveInputs) {}
 
 }

@@ -53,8 +53,7 @@ public final class PlannhColors {
         TEXT_DIM     = C.rgb("text_dim",     "0x888888"),
         TEXT_FAINT   = C.rgb("text_faint",   "0x666666"),
         TEXT_DARK    = C.rgb("text_dark",    "0x444444"),
-        TEXT_NOTE    = C.rgb("text_note",    "0x555555"),
-        TEXT_BADGE   = C.rgb("text_badge",   "0xAAFFFF");
+        TEXT_NOTE    = C.rgb("text_note",    "0x555555");
 
     // ── Summary Panel ──
     public static final ColorResource
@@ -64,6 +63,8 @@ public final class PlannhColors {
 
     // ── Accent Text Colors (opaque) ──
     public static final ColorResource
+        ACCENT_RED2    = C.rgb("accent_red2",    "0xA00000"),
+        ACCENT_GREEN3  = C.rgb("accent_green3",  "0x006E00"),
         ACCENT_BLUE    = C.rgb("accent_blue",    "0x88AAFF"),
         ACCENT_GREEN   = C.rgb("accent_green",   "0x88FF88"),
         ACCENT_RED     = C.rgb("accent_red",     "0xFF8888"),
