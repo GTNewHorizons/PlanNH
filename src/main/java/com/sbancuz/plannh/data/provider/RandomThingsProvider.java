@@ -9,11 +9,11 @@ import javax.annotation.Nullable;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
-import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
+import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.recipe.IRecipeHandler;
 import lumien.randomthings.Handler.ModCompability.NEI.ImbuingStationRecipeHandler;
@@ -30,8 +30,8 @@ public final class RandomThingsProvider implements PropertyProvider {
 
         MachineProfileRegistry.register(
             MachineProfile.builder("randomthings:imbuing_station", "Imbuing Station")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.TICK_MODIFIER.def())
+                .setting(Settings.MACHINES)
+                .setting(Settings.TICK_MODIFIER)
                 .effect(
                     Effects.clearCost()
                         .applyParallelism())

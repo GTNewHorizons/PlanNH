@@ -9,6 +9,7 @@ import java.util.List;
 import org.jetbrains.annotations.Nullable;
 
 import com.sbancuz.plannh.api.PlanAPI;
+import com.sbancuz.plannh.data.serialization.Serializer;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -22,7 +23,6 @@ public class Plan {
 
     private transient final List<Graph> graphs = new ArrayList<>();
     private int activeIndex = 0;
-    private boolean snapToGrid;
 
     @Getter
     @Setter
@@ -55,10 +55,10 @@ public class Plan {
                 final String data = Files.readString(saveFile.toPath(), StandardCharsets.UTF_8);
                 return Serializer.decodePlan(data);
             }
-        } catch (final Exception | Error ignored) {}
+        } catch (final Exception | LinkageError ignored) {}
         final Plan plan = new Plan();
         plan.getGraphs()
-            .add(new Graph("Slot 1"));
+            .add(new Graph());
         return plan;
     }
 

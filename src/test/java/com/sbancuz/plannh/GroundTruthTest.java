@@ -29,8 +29,8 @@ import com.sbancuz.plannh.data.flowchart.balancer.Severity;
 import com.sbancuz.plannh.data.flowchart.balancer.SolutionView;
 import com.sbancuz.plannh.data.flowchart.balancer.SolverMessage;
 import com.sbancuz.plannh.harness.GtnhFlowLoader;
+import com.sbancuz.plannh.harness.GtnhFlowLoader.FixturePin;
 import com.sbancuz.plannh.harness.GtnhFlowLoader.LoadedChart;
-import com.sbancuz.plannh.harness.GtnhFlowLoader.Pin;
 import com.sbancuz.plannh.harness.TestIngredients;
 
 /**
@@ -93,7 +93,8 @@ class GroundTruthTest {
         assertEquals(1, s.gatedSources.size(), "the gate is a source");
         final External source = s.gatedSources.get(0);
         assertEquals(
-            chart.machine(0).id,
+            chart.machine(0)
+                .getId(),
             source.port()
                 .nodeId(),
             "source sits on the DT (diluted acid input)");
@@ -102,8 +103,20 @@ class GroundTruthTest {
                 .input());
         assertEquals(100.0 / 3.0, source.ratePerSecond(), EPS, "injects exactly 1/3 of the DT's demand");
         assertAllMachinesRun(chart, s);
-        assertEquals(1.0, s.machineCounts.get(chart.machine(0).id), EPS, "pinned DT stays at 1");
-        assertEquals(8.0 / 15.0, s.machineCounts.get(chart.machine(1).id), EPS, "LCR runs at 0.533 machines");
+        assertEquals(
+            1.0,
+            s.copyCounts.get(
+                chart.machine(0)
+                    .getId()),
+            EPS,
+            "pinned DT stays at 1");
+        assertEquals(
+            8.0 / 15.0,
+            s.copyCounts.get(
+                chart.machine(1)
+                    .getId()),
+            EPS,
+            "LCR runs at 0.533 machines");
     }
 
     @Test
@@ -119,7 +132,8 @@ class GroundTruthTest {
         assertEquals(1, s.gatedSinks.size(), "the deterministic default is the sink");
         final External sink = s.gatedSinks.get(0);
         assertEquals(
-            chart.machine(1).id,
+            chart.machine(1)
+                .getId(),
             sink.port()
                 .nodeId(),
             "sink sits on the DT's heavy naquadah output");
@@ -157,7 +171,8 @@ class GroundTruthTest {
 
         final External sink = s.gatedSinks.get(0);
         assertEquals(
-            chart.machine(0).id,
+            chart.machine(0)
+                .getId(),
             sink.port()
                 .nodeId(),
             "the surplus is voided at the centrifuge's nitrogen output, not at the oven's charcoal");
@@ -165,7 +180,9 @@ class GroundTruthTest {
 
         assertEquals(
             0.25,
-            s.extentsPerSecond.get(chart.machine(1).id),
+            s.extentsPerSecond.get(
+                chart.machine(1)
+                    .getId()),
             EPS,
             "the oven runs to the charcoal demand, not to the nitrogen supply");
         assertEquals(1.0, terminalRate(chart, s.terminalInputs, "oak wood"), EPS, "and burns 1/s of wood, not 3.12");
@@ -201,7 +218,12 @@ class GroundTruthTest {
         final UUID voidedAt = sink.port()
             .nodeId();
         assertTrue(
-            voidedAt.equals(chart.machine(0).id) || voidedAt.equals(chart.machine(1).id),
+            voidedAt.equals(
+                chart.machine(0)
+                    .getId())
+                || voidedAt.equals(
+                    chart.machine(1)
+                        .getId()),
             "voided at one of the two furnaces, not on the plate line");
         assertAllMachinesRun(chart, s);
     }
@@ -219,7 +241,13 @@ class GroundTruthTest {
         assertEquals(25.0, terminalRate(chart, s.terminalOutputs, "light fuel"), EPS, "light fuel out at 25/s");
         assertEquals(25.0 / 12.0, terminalRate(chart, s.terminalOutputs, "oxygen"), EPS);
         assertEquals(25.0 / 12.0, terminalRate(chart, s.terminalOutputs, "hydrogen sulfide"), EPS);
-        assertEquals(1.0 / 60.0, s.machineCounts.get(chart.machine(0).id), EPS, "chemical reactor at 1/60");
+        assertEquals(
+            1.0 / 60.0,
+            s.copyCounts.get(
+                chart.machine(0)
+                    .getId()),
+            EPS,
+            "chemical reactor at 1/60");
     }
 
     @Test
@@ -245,9 +273,27 @@ class GroundTruthTest {
         final SolutionView s = solve(chart);
 
         assertEquals(0, s.openGates, "no external heavy naquadah - the bath eats the excess");
-        assertEquals(1.0, s.machineCounts.get(chart.machine(0).id), EPS, "fusion pinned at 1");
-        assertEquals(3.12, s.machineCounts.get(chart.machine(1).id), EPS, "DT at 3.12 machines");
-        assertEquals(1.0 / 6.0, s.machineCounts.get(chart.machine(2).id), EPS, "bath at 1/6 machines");
+        assertEquals(
+            1.0,
+            s.copyCounts.get(
+                chart.machine(0)
+                    .getId()),
+            EPS,
+            "fusion pinned at 1");
+        assertEquals(
+            3.12,
+            s.copyCounts.get(
+                chart.machine(1)
+                    .getId()),
+            EPS,
+            "DT at 3.12 machines");
+        assertEquals(
+            1.0 / 6.0,
+            s.copyCounts.get(
+                chart.machine(2)
+                    .getId()),
+            EPS,
+            "bath at 1/6 machines");
         assertEquals(62.4, terminalRate(chart, s.terminalInputs, "naquadah solution"), EPS);
     }
 
@@ -269,7 +315,13 @@ class GroundTruthTest {
         final SolutionView s = solve(chart);
 
         assertEquals(0, s.openGates, "gate-free as drawn: the bath absorbs all routed heavy");
-        assertEquals(13.0 / 6.0, s.machineCounts.get(chart.machine(2).id), EPS, "bath scales to 2.167 machines");
+        assertEquals(
+            13.0 / 6.0,
+            s.copyCounts.get(
+                chart.machine(2)
+                    .getId()),
+            EPS,
+            "bath scales to 2.167 machines");
         assertEquals(
             14.4,
             terminalRate(chart, s.terminalInputs, "heavy naquadah fuel"),
@@ -338,7 +390,7 @@ class GroundTruthTest {
         // over a model that is simply infeasible sends the reader looking at the wrong thing.
         final LoadedChart chart = GtnhFlowLoader.load("loopGraph");
         final Node pinned = chart.machine(0);
-        final Answer result = solveWith(chart.graph(), Map.of(pinned.id, -1.0));
+        final Answer result = solveWith(chart.graph(), Map.of(pinned.getId(), -1.0));
 
         final Note failure = failureOf(result, "a negative extent pin cannot be solved");
         assertTrue(
@@ -382,6 +434,18 @@ class GroundTruthTest {
     }
 
     @Test
+    void platline230_atMostTwoGates() {
+        // The sink/source pair on one machine balances it with two gates, so a third means a gate
+        // certificate the LP never confirmed.
+        // FIXME: one gate (a source alone) is feasible; big-M sized from the filter's scale cuts it off.
+        final LoadedChart chart = GtnhFlowLoader.load("230_platline");
+        final SolutionView s = solve(chart);
+
+        assertAllMachinesRun(chart, s);
+        assertTrue(s.openGates <= 2, "at most 2 externals, got " + s.openGates);
+    }
+
+    @Test
     void nanocircuits_zeroGates_fastPath() {
         // 394 machines, fully balanced chain: zero gates. The zero-gate LP fast path must keep
         // this well under budget despite the model size.
@@ -405,8 +469,8 @@ class GroundTruthTest {
         final Node fusion = chart.machine(0);
         final Node tower = chart.machine(1);
 
-        assertEquals(0.1, s.extentsPerSecond.get(fusion.id), EPS, "fusion runs at 0.1 crafts/s");
-        assertEquals(0.65, s.extentsPerSecond.get(tower.id), EPS, "tower runs at 0.65 crafts/s");
+        assertEquals(0.1, s.extentsPerSecond.get(fusion.getId()), EPS, "fusion runs at 0.1 crafts/s");
+        assertEquals(0.65, s.extentsPerSecond.get(tower.getId()), EPS, "tower runs at 0.65 crafts/s");
 
         assertEquals(13.0, terminalRate(chart, s.terminalInputs, "naquadah solution"), EPS, "13/s in");
         assertEquals(10.0, terminalRate(chart, s.terminalOutputs, "naquadah fuel mk1"), EPS, "10/s out");
@@ -432,11 +496,15 @@ class GroundTruthTest {
         final String ingredient) {
         double rate = 0;
         for (final Edge edge : chart.graph()
-            .getEdges()) {
-            if (!edge.targetNodeId.equals(machine.id)) continue;
-            if (!TestIngredients.nameOf(machine.inputs.get(edge.targetInputIndex))
+            .getEdges()
+            .values()) {
+            if (!edge.getTargetNodeId()
+                .equals(machine.getId())) continue;
+            if (!TestIngredients.nameOf(
+                machine.getInputs()
+                    .get(edge.getTargetInputItemIndex()))
                 .equals(ingredient)) continue;
-            rate += s.edgeFlowsPerSecond.getOrDefault(edge.id, 0.0);
+            rate += s.edgeFlowsPerSecond.getOrDefault(edge.getId(), 0.0);
         }
         return rate;
     }
@@ -461,9 +529,14 @@ class GroundTruthTest {
         final Node stranded = chart.machine(2);
         chart.graph()
             .getEdges()
+            .values()
             .stream()
-            .filter(e -> e.sourceNodeId.equals(stranded.id) || e.targetNodeId.equals(stranded.id))
-            .map(e -> e.id)
+            .filter(
+                e -> e.getSourceNodeId()
+                    .equals(stranded.getId())
+                    || e.getTargetNodeId()
+                        .equals(stranded.getId()))
+            .map(Edge::getId)
             .toList()
             .forEach(
                 id -> chart.graph()
@@ -472,8 +545,11 @@ class GroundTruthTest {
         final Answer result = solveWith(chart.graph());
         final SolutionView solved = solved(result, "a machine disconnected from the pin");
         for (final Node machine : chart.machines()) {
-            if (machine.id.equals(stranded.id)) continue;
-            assertTrue(solved.extentsPerSecond.get(machine.id) > 1e-9, machine.machineName + " must still run");
+            if (machine.getId()
+                .equals(stranded.getId())) continue;
+            assertTrue(
+                solved.extentsPerSecond.get(machine.getId()) > 1e-9,
+                machine.getMachineName() + " must still run");
         }
     }
 
@@ -533,9 +609,13 @@ class GroundTruthTest {
         final LoadedChart chart = GtnhFlowLoader.load("mk1");
         final Edge stale = chart.graph()
             .getEdges()
+            .values()
             .iterator()
             .next();
-        stale.targetInputIndex = 99;
+
+        // NOTE: This only works because in the loader we use a mutable pair object
+        stale.getTargetInputIndex()
+            .first(99);
 
         final Answer result = solveWith(chart.graph());
 
@@ -568,29 +648,32 @@ class GroundTruthTest {
         }
 
         for (final Node node : chart.machines()) {
-            final double extent = s.extentsPerSecond.getOrDefault(node.id, 0.0);
+            final double extent = s.extentsPerSecond.getOrDefault(node.getId(), 0.0);
             for (int side = 0; side < 2; side++) {
                 final boolean input = side == 0;
-                final List<Port<?>> ports = input ? node.inputs : node.outputs;
+                final List<Port<?>> ports = input ? node.getInputs() : node.getOutputs();
                 for (int p = 0; p < ports.size(); p++) {
                     final int i = p;
                     final double machineRate = extent * TestIngredients.quantityOf(ports.get(i));
                     double edges = 0;
                     for (final Edge edge : chart.graph()
-                        .getEdges()) {
-                        final boolean hit = input ? edge.targetNodeId.equals(node.id) && edge.targetInputIndex == i
-                            : edge.sourceNodeId.equals(node.id) && edge.sourceOutputIndex == i;
+                        .getEdges()
+                        .values()) {
+                        final boolean hit = input ? edge.getTargetNodeId()
+                            .equals(node.getId()) && edge.getTargetInputItemIndex() == i
+                            : edge.getSourceNodeId()
+                                .equals(node.getId()) && edge.getSourceOutputItemIndex() == i;
                         if (hit) {
-                            edges += s.edgeFlowsPerSecond.getOrDefault(edge.id, 0.0);
+                            edges += s.edgeFlowsPerSecond.getOrDefault(edge.getId(), 0.0);
                         }
                     }
                     final double edgeRate = edges;
-                    final double external = externals.getOrDefault(new PortRef(node.id, i, input), 0.0);
+                    final double external = externals.getOrDefault(new PortRef(node.getId(), i, input), 0.0);
                     final double residual = machineRate - edgeRate - external;
                     assertTrue(
                         Math.abs(residual) <= 1e-6 * Math.max(1.0, machineRate),
                         () -> name + ": "
-                            + node.machineName
+                            + node.getMachineName()
                             + (input ? " input " : " output ")
                             + i
                             + " does not conserve - machine "
@@ -638,10 +721,14 @@ class GroundTruthTest {
     /** Converts the loader's target-rate pins (ingredient/s) into extent pins (crafts/s). */
     private static Map<UUID, Double> targetPins(final LoadedChart chart) {
         final Map<UUID, Double> pins = new HashMap<>();
-        for (final Pin pin : chart.pins()) {
+        for (final FixturePin pin : chart.pins()) {
             if (!"target".equals(pin.kind())) continue;
             final Node node = chart.machine(pin.machineIndex());
-            pins.put(node.id, pin.value() / TestIngredients.quantityOf(node.outputs.get(pin.outputIndex())));
+            pins.put(
+                node.getId(),
+                pin.value() / TestIngredients.quantityOf(
+                    node.getOutputs()
+                        .get(pin.outputIndex())));
         }
         return pins;
     }
@@ -649,8 +736,8 @@ class GroundTruthTest {
     private static void assertAllMachinesRun(final LoadedChart chart, final SolutionView s) {
         for (final Node machine : chart.machines()) {
             assertTrue(
-                s.extentsPerSecond.get(machine.id) > 1e-9,
-                machine.machineName + " must run, extent=" + s.extentsPerSecond.get(machine.id));
+                s.extentsPerSecond.get(machine.getId()) > 1e-9,
+                machine.getMachineName() + " must run, extent=" + s.extentsPerSecond.get(machine.getId()));
         }
     }
 
@@ -659,11 +746,13 @@ class GroundTruthTest {
         final String ingredient) {
         double total = 0;
         for (final External t : terminals) {
-            final Node node = chart.graph().nodes.get(
-                t.port()
-                    .nodeId());
+            final Node node = chart.graph()
+                .getNodes()
+                .get(
+                    t.port()
+                        .nodeId());
             final var ports = t.port()
-                .input() ? node.inputs : node.outputs;
+                .input() ? node.getInputs() : node.getOutputs();
             if (TestIngredients.nameOf(
                 ports.get(
                     t.port()

@@ -20,12 +20,12 @@ import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
-import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.properties.SummaryProperty;
+import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
@@ -72,18 +72,18 @@ public class ThaumcraftProvider implements PropertyProvider {
 
         MachineProfileRegistry.register(
             MachineProfile.builder("thaumcraft:arcane", "Arcane Workbench")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.VIS_PER_TICK.def())
-                .setting(Settings.TICK_MODIFIER.def())
+                .setting(Settings.MACHINES)
+                .setting(Settings.VIS_PER_TICK)
+                .setting(Settings.TICK_MODIFIER)
                 .effect(
-                    Effects.durationFromTotal(TOTAL_VIS, Settings.VIS_PER_TICK.key(), 1)
+                    Effects.durationFromTotal(TOTAL_VIS, Settings.VIS_PER_TICK)
                         .amortizeCost(TOTAL_VIS)
                         .applyParallelism())
                 .build());
         MachineProfileRegistry.register(
             MachineProfile.builder("thaumcraft:infusion", "Infusion Altar")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.TICK_MODIFIER.def())
+                .setting(Settings.MACHINES)
+                .setting(Settings.TICK_MODIFIER)
                 .effect(Effects.durationFromFormula((ctx, s) -> {
                     final int tv = ctx.getOrDefault(TOTAL_VIS, 0);
                     final int nc = ctx.getOrDefault(NUM_COMPONENTS, 0);

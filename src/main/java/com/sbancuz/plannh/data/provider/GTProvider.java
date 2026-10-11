@@ -1,5 +1,8 @@
 package com.sbancuz.plannh.data.provider;
 
+import static codechicken.nei.PositionedStack.CHANCE_FULL;
+
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,16 +12,15 @@ import java.util.function.BiPredicate;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidStack;
 
 import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
+import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
-import com.sbancuz.plannh.data.SettingDef;
-import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.effect.steps.GTOverclockStep;
 import com.sbancuz.plannh.data.flowchart.Node;
@@ -26,6 +28,7 @@ import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.properties.SummaryProperty;
+import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.FurnaceRecipeHandler;
@@ -39,7 +42,6 @@ import gregtech.api.recipe.maps.LargeBoilerFuelBackend;
 import gregtech.api.util.GTRecipe;
 import gregtech.api.util.GTRecipeConstants;
 import gregtech.api.util.recipe.Sievert;
-import gregtech.common.items.ItemFluidDisplay;
 import gregtech.nei.GTNEIDefaultHandler;
 import gregtech.nei.GTNEIDefaultHandler.CachedDefaultRecipe;
 import gregtech.nei.formatter.HeatingCoilSpecialValueFormatter;
@@ -48,9 +50,6 @@ public class GTProvider implements PropertyProvider {
 
     // Vanilla furnace: base cook time of 200 ticks (10 seconds)
     private static final int FURNACE_COOK_TICKS = 200;
-
-    /** GT5u stores a chance as 1..10000, where 10000 is 100%. */
-    private static final float GT_CHANCE_SCALE = 10_000f;
 
     public static final RecipeProperty<Integer> SPECIAL_VALUE = RecipeProperty.<Integer>builder("gt.special_value", 0)
         .build();
@@ -92,8 +91,8 @@ public class GTProvider implements PropertyProvider {
         new GTSteamProvider().register();
     }
 
-    static BiPredicate<RecipeContext, Map<String, Object>> multiblockOnly() {
-        return (ctx, s) -> MachineProfile.getBool(s, Settings.GT_MULTIBLOCK.key(), false);
+    static BiPredicate<RecipeContext, MachineConfig> multiblockOnly() {
+        return (ctx, config) -> config.get(Settings.GT_MULTIBLOCK);
     }
 
     private static boolean hasHeat(final RecipeContext ctx) {
@@ -109,60 +108,28 @@ public class GTProvider implements PropertyProvider {
     }
 
     private static final MachineProfile PROFILE = MachineProfile.builder("gregtech:unified", "GT Unified")
-        .setting(Settings.VOLTAGE.def())
-        .setting(Settings.AMP.def())
-        .setting(Settings.SPEED.def())
-        .setting(
-            Settings.PARALLELS.def()
-                .withVisibility((ctx, s) -> !isEoH(ctx)))
-        .setting(Settings.MACHINES.def())
-        .setting(Settings.PERFECT_OC.def())
-        .setting(Settings.GT_MULTIBLOCK.def())
-        .setting(
-            Settings.LASER_OC.def()
-                .withVisibility(multiblockOnly()))
-        .setting(
-            Settings.EUT_DISCOUNT.def()
-                .withVisibility(multiblockOnly()))
-        .setting(
-            Settings.EUT_INCREASE_PER_OC.def()
-                .withVisibility(multiblockOnly()))
-        .setting(
-            Settings.DURATION_DECREASE_PER_OC.def()
-                .withVisibility(multiblockOnly()))
-        .setting(
-            Settings.MAX_OVERCLOCKS.def()
-                .withVisibility(multiblockOnly()))
-        .setting(
-            Settings.MAX_REGULAR_OC.def()
-                .withVisibility(multiblockOnly()))
-        .setting(
-            Settings.MAX_TIER_SKIPS.def()
-                .withVisibility(multiblockOnly()))
-        .setting(
-            Settings.UNLIMITED_SKIPS.def()
-                .withVisibility(multiblockOnly()))
-        .setting(
-            Settings.NO_OVERCLOCK.def()
-                .withVisibility(multiblockOnly()))
-        .setting(
-            Settings.HEAT_OC.def()
-                .withVisibility((ctx, s) -> hasHeat(ctx)))
-        .setting(
-            Settings.MACHINE_HEAT.def()
-                .withVisibility(multiblockOnly().and((ctx, s) -> hasHeat(ctx))))
-        .setting(
-            Settings.RECIPE_HEAT.def()
-                .withVisibility(multiblockOnly().and((ctx, s) -> hasHeat(ctx))))
-        .setting(
-            Settings.HEAT_DISCOUNT.def()
-                .withVisibility(multiblockOnly().and((ctx, s) -> hasHeat(ctx))))
-        .setting(
-            Settings.HEAT_DISCOUNT_MULT.def()
-                .withVisibility(multiblockOnly().and((ctx, s) -> hasHeat(ctx))))
-        .setting(
-            Settings.CATALYST_ASTRAL_ARRAYS.def()
-                .withVisibility((ctx, s) -> isEoH(ctx)))
+        .setting(Settings.VOLTAGE)
+        .setting(Settings.AMP)
+        .setting(Settings.SPEED)
+        .setting(Settings.PARALLELS, (ctx, s) -> !isEoH(ctx))
+        .setting(Settings.MACHINES)
+        .setting(Settings.PERFECT_OC)
+        .setting(Settings.GT_MULTIBLOCK)
+        .setting(Settings.LASER_OC, multiblockOnly())
+        .setting(Settings.EUT_DISCOUNT, multiblockOnly())
+        .setting(Settings.EUT_INCREASE_PER_OC, multiblockOnly())
+        .setting(Settings.DURATION_DECREASE_PER_OC, multiblockOnly())
+        .setting(Settings.MAX_OVERCLOCKS, multiblockOnly())
+        .setting(Settings.MAX_REGULAR_OC, multiblockOnly())
+        .setting(Settings.MAX_TIER_SKIPS, multiblockOnly())
+        .setting(Settings.UNLIMITED_SKIPS, multiblockOnly())
+        .setting(Settings.NO_OVERCLOCK, multiblockOnly())
+        .setting(Settings.HEAT_OC, (ctx, s) -> hasHeat(ctx))
+        .setting(Settings.MACHINE_HEAT, multiblockOnly().and((ctx, s) -> hasHeat(ctx)))
+        .setting(Settings.RECIPE_HEAT, multiblockOnly().and((ctx, s) -> hasHeat(ctx)))
+        .setting(Settings.HEAT_DISCOUNT, multiblockOnly().and((ctx, s) -> hasHeat(ctx)))
+        .setting(Settings.HEAT_DISCOUNT_MULT, multiblockOnly().and((ctx, s) -> hasHeat(ctx)))
+        .setting(Settings.CATALYST_ASTRAL_ARRAYS, (ctx, s) -> isEoH(ctx))
 
         .effect(
             Effects.durationFromHandler()
@@ -176,28 +143,28 @@ public class GTProvider implements PropertyProvider {
                         .route(
                             "gt.recipe.eyeofharmony",
                             step -> step.withCatalyst(
-                                (SettingDef<Integer>) Settings.CATALYST_ASTRAL_ARRAYS.def(),
+                                Settings.CATALYST_ASTRAL_ARRAYS,
                                 v -> (int) Math
                                     .pow(2, (int) Math.floor(Math.log(8.0 * Math.min(v, 8637)) / Math.log(1.7)))))
                         // Perfect OC defaults
-                        .withDefault("gt.recipe.largechemicalreactor", Settings.PERFECT_OC.key(), true)
-                        .withDefault("gtpp.recipe.flotationcell", Settings.PERFECT_OC.key(), true)
-                        .withDefault("gg.recipe.naquadah_fuel_refine_factory", Settings.PERFECT_OC.key(), true)
-                        .withDefault("gtpp.recipe.matterfab2", Settings.PERFECT_OC.key(), true)
-                        .withDefault("gtpp.recipe.oremill", Settings.PERFECT_OC.key(), true)
-                        .withDefault("bw.recipe.cal", Settings.PERFECT_OC.key(), true)
-                        .withDefault("gtnhlanth.recipe.digester", Settings.PERFECT_OC.key(), true)
-                        .withDefault("gt.recipe.nanoforge", Settings.PERFECT_OC.key(), true)
-                        .withDefault("gt.recipe.plasmaforge", Settings.PERFECT_OC.key(), true)
+                        .withDefault("gt.recipe.largechemicalreactor", Settings.PERFECT_OC, true)
+                        .withDefault("gtpp.recipe.flotationcell", Settings.PERFECT_OC, true)
+                        .withDefault("gg.recipe.naquadah_fuel_refine_factory", Settings.PERFECT_OC, true)
+                        .withDefault("gtpp.recipe.matterfab2", Settings.PERFECT_OC, true)
+                        .withDefault("gtpp.recipe.oremill", Settings.PERFECT_OC, true)
+                        .withDefault("bw.recipe.cal", Settings.PERFECT_OC, true)
+                        .withDefault("gtnhlanth.recipe.digester", Settings.PERFECT_OC, true)
+                        .withDefault("gt.recipe.nanoforge", Settings.PERFECT_OC, true)
+                        .withDefault("gt.recipe.plasmaforge", Settings.PERFECT_OC, true)
                         // Unlimited tier skip defaults
-                        .withDefault("gg.recipe.naquadah_fuel_refine_factory", Settings.UNLIMITED_SKIPS.key(), true)
-                        .withDefault("gt.recipe.nanoforge", Settings.UNLIMITED_SKIPS.key(), true)
-                        .withDefault("gt.recipe.plasmaforge", Settings.UNLIMITED_SKIPS.key(), true)
-                        .withDefault("gtpp.recipe.alloyblastsmelter", Settings.UNLIMITED_SKIPS.key(), true)
-                        .withDefault("gt.recipe.transcendentplasmamixerrecipes", Settings.UNLIMITED_SKIPS.key(), true)
+                        .withDefault("gg.recipe.naquadah_fuel_refine_factory", Settings.UNLIMITED_SKIPS, true)
+                        .withDefault("gt.recipe.nanoforge", Settings.UNLIMITED_SKIPS, true)
+                        .withDefault("gt.recipe.plasmaforge", Settings.UNLIMITED_SKIPS, true)
+                        .withDefault("gtpp.recipe.alloyblastsmelter", Settings.UNLIMITED_SKIPS, true)
+                        .withDefault("gt.recipe.transcendentplasmamixerrecipes", Settings.UNLIMITED_SKIPS, true)
                         // No-overclock defaults
-                        .withDefault("gt.recipe.transcendentplasmamixerrecipes", Settings.NO_OVERCLOCK.key(), true)
-                        .withDefault("gtpp.recipe.algae_pond", Settings.NO_OVERCLOCK.key(), true)))
+                        .withDefault("gt.recipe.transcendentplasmamixerrecipes", Settings.NO_OVERCLOCK, true)
+                        .withDefault("gtpp.recipe.algae_pond", Settings.NO_OVERCLOCK, true)))
         .build();
 
     @Override
@@ -230,10 +197,12 @@ public class GTProvider implements PropertyProvider {
     }
 
     public static Map<RecipeProperty<?>, Object> extractGTRecipe(final Node node, final IRecipeHandler handler,
-        final int recipeIndex) {
+                                                                 final int recipeIndex) {
         final Map<RecipeProperty<?>, Object> props = new HashMap<>();
         GTRecipe r;
         RecipeMap<?> gthMap = null;
+        List<PositionedStack> inputStacks = new ArrayList<>();
+        List<PositionedStack> outputStacks = new ArrayList<>();
 
         if (handler instanceof final FurnaceRecipeHandler fh) {
             final List<TemplateRecipeHandler.CachedRecipe> fRecipes = RecipeHandlerAccess.getArecipes(fh);
@@ -274,6 +243,10 @@ public class GTProvider implements PropertyProvider {
 
             final CachedDefaultRecipe cached = (CachedDefaultRecipe) recipes.get(recipeIndex);
             r = cached.mRecipe;
+
+            inputStacks = cached.mInputs;
+            outputStacks = cached.mOutputs;
+
             if (r == null) return props;
 
             gthMap = gth.getRecipeMap();
@@ -319,45 +292,31 @@ public class GTProvider implements PropertyProvider {
             props.put(SPECIAL_VALUE, r.mSpecialValue);
         }
 
-        // Reset everything to not ignore burnables
-        node.inputs.clear();
-        node.outputs.clear();
+        List<Port<?>> inputs = node.getInputs();
+        List<Port<?>> outputs = node.getOutputs();
 
-        for (int i = 0; i < r.mInputs.length; i++) {
-            if (r.mInputs[i].stackSize <= 0) continue;
-            node.inputs.add(
-                new Port<>(
-                    RecipePropertyAPI.ITEM,
-                    r.mInputs[i],
-                    r.mInputChances != null ? r.mInputChances[i] / GT_CHANCE_SCALE : 1.f));
-        }
-        for (int i = 0; i < r.mOutputs.length; i++) {
-            node.outputs.add(
-                new Port<>(
-                    RecipePropertyAPI.ITEM,
-                    r.mOutputs[i],
-                    r.mOutputChances != null ? r.mOutputChances[i] / GT_CHANCE_SCALE : 1.f));
-        }
-        for (int i = 0; i < r.mFluidInputs.length; i++) {
-            if (r.mFluidInputs[i].amount <= 0) continue;
-            node.inputs.add(
-                new Port<>(
-                    RecipePropertyAPI.FLUID,
-                    r.mFluidInputs[i],
-                    r.mFluidInputChances != null ? r.mFluidInputChances[i] / GT_CHANCE_SCALE : 1.f));
-        }
-        for (int i = 0; i < r.mFluidOutputs.length; i++) {
-            node.outputs.add(
-                new Port<>(
-                    RecipePropertyAPI.FLUID,
-                    r.mFluidOutputs[i],
-                    r.mFluidOutputChances != null ? r.mFluidOutputChances[i] / GT_CHANCE_SCALE : 1.f));
+        for (PositionedStack ps : inputStacks) {
+            if (ps instanceof GTNEIDefaultHandler.FixedPositionedStack fps && fps.isFluid())
+                inputs.add(fluidPort(fps));
+            else if(ps.item != null) inputs.add(Port.itemPort(ps));
         }
 
-        node.inputs.removeIf(p -> p.getValue() instanceof ItemStack stack && stack.getItem() instanceof ItemFluidDisplay);
-        node.outputs.removeIf(p -> p.getValue() instanceof ItemStack stack && stack.getItem() instanceof ItemFluidDisplay);
+        for (PositionedStack ps : outputStacks) {
+            if (ps instanceof GTNEIDefaultHandler.FixedPositionedStack fps && fps.isFluid())
+                outputs.add(fluidPort(fps));
+            else outputs.add(Port.itemPort(ps));
+        }
 
         return props;
     }
 
+    private static Port<FluidStack> fluidPort(GTNEIDefaultHandler.FixedPositionedStack fps) {
+        return new Port<>(
+            RecipePropertyAPI.FLUID,
+            fps.getFluidAlternatives()
+                .getFirst()
+                .copy(),
+            (float) fps.getChance() / CHANCE_FULL,
+            fps);
+    }
 }

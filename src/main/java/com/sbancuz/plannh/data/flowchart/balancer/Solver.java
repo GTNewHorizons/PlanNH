@@ -1,7 +1,9 @@
 package com.sbancuz.plannh.data.flowchart.balancer;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 
 import org.ojalgo.optimisation.Expression;
 import org.ojalgo.optimisation.Optimisation;
@@ -111,6 +113,11 @@ public final class Solver {
 
     /** Stage 1 exact MILP (certification): proves the gate-count optimum within the node budget. */
     public static SolveResult gateMILP(final SolveContext ctx, final Double upperBoundCost, final double scale) {
+        return confirmed(ctx, infeasible -> gateMILP(ctx, upperBoundCost, scale, infeasible));
+    }
+
+    private static SolveResult gateMILP(final SolveContext ctx, final Double upperBoundCost, final double scale,
+        final List<Set<Integer>> infeasible) {
         final Numerics n = ctx.heuristics.numerics();
         double bigM = n.bigMFactor * scale;
         for (int growth = 0; growth <= n.maxMGrowths; growth++) {
@@ -131,6 +138,7 @@ public final class Solver {
                 if (ub != null) ub.set(h.gateVars()[g], weight);
             }
             if (ub != null) ub.upper(upperBoundCost + 0.5);
+            addCoverCuts(h, infeasible);
             // Epsilon cost on every external so a costless external cannot sit at an arbitrary
             // vertex (which presses the big-M cap and pollutes the flow-derived support). Sized
             // after bigM so one external at its cap costs a thousandth of a gate on any scale.
@@ -177,6 +185,11 @@ public final class Solver {
     /** Stage 2 MILP: least external quantity under the stage-1 gate-cap cut, free over supports. */
     public static SolveResult quantityMILP(final SolveContext ctx, final double weightedCap,
         final List<Set<Integer>> cuts, final double scale) {
+        return confirmed(ctx, infeasible -> quantityMILP(ctx, weightedCap, cuts, infeasible, scale));
+    }
+
+    private static SolveResult quantityMILP(final SolveContext ctx, final double weightedCap,
+        final List<Set<Integer>> cuts, final List<Set<Integer>> infeasible, final double scale) {
         final Numerics n = ctx.heuristics.numerics();
         double bigM = n.bigMFactor * scale;
         for (int growth = 0; growth <= n.maxMGrowths; growth++) {
@@ -198,6 +211,7 @@ public final class Solver {
                 h.extVars()[p].weight(ctx.externalWeight(p));
             }
             addNoGoodCuts(h, cuts);
+            addCoverCuts(h, infeasible);
             final Optimisation.Result result = solve(ctx, h, "stage 2 quantity MILP");
             if (!isUsable(result)) return rejected(ctx, result);
             if (pressesCap(h, bigM)) {
@@ -208,6 +222,35 @@ public final class Solver {
             return fromHandles(ctx, h, false);
         }
         return SolveResult.rejected(ctx.rejection);
+    }
+
+    /**
+     * Gate binaries are integral only to tolerance, so a big-M link can leak enough flow to certify
+     * a support that is infeasible on its own. Re-solve each answer as an LP over its support; cut
+     * and retry every one the LP refutes.
+     */
+    private static SolveResult confirmed(final SolveContext ctx, final Function<List<Set<Integer>>, SolveResult> milp) {
+        final List<Set<Integer>> infeasible = new ArrayList<>();
+        while (true) {
+            final SolveResult found = milp.apply(infeasible);
+            if (found.isRejected()) return found;
+            final StageOutcome point = found.point();
+            final SolveResult lp = fixedQuantity(ctx, point.support);
+            if (!lp.isRejected()) {
+                final StageOutcome confirmedPoint = lp.point();
+                return SolveResult.solved(
+                    StageOutcome.of(
+                        ctx,
+                        confirmedPoint.extents,
+                        confirmedPoint.flows,
+                        confirmedPoint.externals,
+                        point.provenOptimal));
+            }
+            if (infeasible.size() >= ctx.heuristics.numerics().maxRefutedSupports || ctx.budget.expired()) {
+                return lp;
+            }
+            infeasible.add(point.support);
+        }
     }
 
     /** The one canonical point among a stage-3 optimum: redistributes within it, deterministically. */
@@ -268,6 +311,22 @@ public final class Solver {
                 e.set(h.gateVars()[g], cut.contains(g) ? -1.0 : 1.0);
             }
             e.lower(1.0 - cut.size());
+        }
+    }
+
+    /**
+     * A support the LP has shown infeasible, and so every subset of it: some gate outside it must
+     * open.
+     */
+    private static void addCoverCuts(final Handles h, final List<Set<Integer>> infeasible) {
+        int i = 0;
+        for (final Set<Integer> support : infeasible) {
+            final Expression e = h.model()
+                .addExpression("cover_" + i++);
+            for (int g = 0; g < h.gateVars().length; g++) {
+                if (!support.contains(g)) e.set(h.gateVars()[g], 1.0);
+            }
+            e.lower(1.0);
         }
     }
 

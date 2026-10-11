@@ -235,7 +235,10 @@ public final class Enumerator {
     private static Integer resolveByIngredient(final SolveContext ctx, final PortRef anchor) {
         final ModelData model = ctx.model;
         final ModelData.Machine machine = model.machines.get(model.machineIndex.get(anchor.nodeId()));
-        final var ports = anchor.input() ? machine.node().inputs : machine.node().outputs;
+        final var ports = anchor.input() ? machine.node()
+            .getInputs()
+            : machine.node()
+                .getOutputs();
         if (anchor.portIndex() < 0 || anchor.portIndex() >= ports.size()) return null;
         final var want = ports.get(anchor.portIndex());
         Integer found = null;
@@ -244,7 +247,7 @@ public final class Enumerator {
             if (cp.input() != anchor.input()) continue;
             final var other = model.machines.get(cp.machine())
                 .node();
-            final var candidate = (cp.input() ? other.inputs : other.outputs).get(cp.portIndex());
+            final var candidate = (cp.input() ? other.getInputs() : other.getOutputs()).get(cp.portIndex());
             if (!want.canConnect(candidate)) continue;
             if (found != null && found != model.portGate[p]) return null; // ambiguous, so no answer
             found = model.portGate[p];

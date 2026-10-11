@@ -21,6 +21,7 @@ import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.FlowchartList;
+import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.PlannhColors;
 
 /**
@@ -36,14 +37,14 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
     private static final int TITLE_INSET_X = 4;
     private static final int BUTTON_GAP = 2;
     private static final int SCROLLBAR_GAP = 4;
-    private static final int SCREEN_MARGIN = 10;
     private static final int MIN_VIEWPORT_H = 45;
-    private static final int PANEL_CHROME = SummaryHeader.HEADER_H + 1 + SECTION_GAP * 4 + SCREEN_MARGIN;
+    private static final int PANEL_CHROME = SummaryHeader.HEADER_H + 1 + SECTION_GAP * 4;
 
     protected final CanvasWidget canvas;
     protected final Summary data;
 
     private Graph lastGraph;
+    private final FlowchartList sectionsList;
     private boolean moving = false;
     private int dragStartMouseX, dragStartMouseY;
     private int dragStartX, dragStartY;
@@ -54,18 +55,19 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
             .getSummary();
         pos(data.getX(), data.getY());
 
+        name("summary");
         coverChildren();
 
-        final FlowchartList sectionsList = new FlowchartList().fullWidth()
+        final FlowchartList sectionsList = new FlowchartList().name("summary.sections")
+            .fullWidth()
             .paddingRight(SCROLLBAR_GAP)
             .crossAxisAlignment(Alignment.CrossAxis.START)
             .scrollDirection(new VerticalScrollData())
             .setEnabledIf(_ -> !data.isSummaryFold(Summary.Section.ALL))
-            .maxSize(
-                () -> Math.max(
-                    MIN_VIEWPORT_H,
-                    this.canvas.getArea().height / this.canvas.getGraph()
-                        .getZoom() - PANEL_CHROME));
+            .maxSize(() -> {
+                final Area a = this.canvas.getArea();
+                return Math.max(MIN_VIEWPORT_H, a.ry + a.height - data.getY() - minHeight());
+            });
 
         sectionsList.onMove(children -> {
             final int[] order = new int[children.size()];
@@ -83,6 +85,7 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
 
         child(
             SummaryFlow.col()
+                .name("summary.column")
                 .width(WIDTH)
                 .padding(PADDING)
                 .childPadding(SECTION_GAP)
@@ -96,6 +99,7 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
                         .color(PlannhColors.SUMMARY_BORDER.getColor()))
                 .child(
                     SummaryFlow.row()
+                        .name("summary.header")
                         .fullWidth()
                         .height(SummaryHeader.HEADER_H)
                         .paddingLeft(TITLE_INSET_X)
@@ -114,7 +118,8 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
                                 .child(rateToggle())
                                 .child(SummaryHeader.foldToggle(data, Summary.Section.ALL))))
                 .child(
-                    new Widget<>().fullWidth()
+                    new Widget<>().name("summary.header.rule")
+                        .fullWidth()
                         .height(1)
                         .background(new Rectangle().color(PlannhColors.SUMMARY_TITLE_LINE.getColor())))
                 .child(sectionsList));
@@ -123,13 +128,14 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
     private static CycleButtonWidget rateToggle() {
         final Summary summary = Plan.getInstance()
             .getSummary();
-        final CycleButtonWidget toggle = new CycleButtonWidget().size(SummaryHeader.HEADER_H, SummaryHeader.HEADER_H)
+        final CycleButtonWidget toggle = new CycleButtonWidget().name("summary.rate")
+            .size(SummaryHeader.HEADER_H, SummaryHeader.HEADER_H)
             .tooltipStatic(
                 t -> t.addLine(IKey.lang("plannh.summary.rate.title"))
                     .addLine(IKey.lang("plannh.summary.mode.switch_hint")))
-            .value(new EnumValue.Dynamic<>(Summary.RateUnit.class, summary::getRateUnit, summary::setRateUnit))
+            .value(new EnumValue.Dynamic<>(GuiHelper.RateUnit.class, summary::getRateUnit, summary::setRateUnit))
             .setEnabledIf(_ -> summary.getMode() == Summary.Mode.THROUGHPUT);
-        for (final Summary.RateUnit unit : Summary.RateUnit.VALUES) {
+        for (final GuiHelper.RateUnit unit : GuiHelper.RateUnit.VALUES) {
             toggle.stateOverlay(unit, IKey.lang(unit.langKey));
         }
         return toggle;
@@ -138,7 +144,8 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
     private CycleButtonWidget modeToggle() {
         final Summary summary = Plan.getInstance()
             .getSummary();
-        return new CycleButtonWidget().size(SummaryHeader.HEADER_H, SummaryHeader.HEADER_H)
+        return new CycleButtonWidget().name("summary.mode")
+            .size(SummaryHeader.HEADER_H, SummaryHeader.HEADER_H)
             .tooltipStatic(
                 t -> t.addLine(IKey.lang("plannh.summary.mode.title"))
                     .addLine(IKey.lang("plannh.summary.mode.switch_hint")))
@@ -148,6 +155,12 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
             }))
             .stateOverlay(Summary.Mode.CYCLES, IKey.lang("plannh.summary.mode.cycles.short"))
             .stateOverlay(Summary.Mode.THROUGHPUT, IKey.lang("plannh.summary.mode.throughput.short"));
+    }
+
+    private int minHeight() {
+        final int list = sectionsList.getArea().height;
+        final int panel = getArea().height;
+        return list > 0 && panel > list ? panel - list : PANEL_CHROME;
     }
 
     @Override

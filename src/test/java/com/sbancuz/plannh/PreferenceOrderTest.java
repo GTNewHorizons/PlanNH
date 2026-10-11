@@ -13,7 +13,9 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
+import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
+import com.sbancuz.plannh.data.flowchart.GraphData;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
 import com.sbancuz.plannh.data.flowchart.balancer.alternatives.Alternative;
@@ -38,12 +40,14 @@ class PreferenceOrderTest {
             final Graph graph = GtnhFlowLoader.load(chart)
                 .graph();
             final List<UUID> nodeIds = graph.getNodes()
+                .values()
                 .stream()
-                .map(n -> n.id)
+                .map(GraphData::getId)
                 .toList();
             final List<UUID> edgeIds = graph.getEdges()
+                .values()
                 .stream()
-                .map(e -> e.id)
+                .map(Edge::getId)
                 .toList();
             assertEquals(
                 nodeIds.stream()

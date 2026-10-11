@@ -53,8 +53,7 @@ public final class PlannhColors {
         TEXT_DIM     = C.rgb("text_dim",     "0x888888"),
         TEXT_FAINT   = C.rgb("text_faint",   "0x666666"),
         TEXT_DARK    = C.rgb("text_dark",    "0x444444"),
-        TEXT_NOTE    = C.rgb("text_note",    "0x555555"),
-        TEXT_BADGE   = C.rgb("text_badge",   "0xAAFFFF");
+        TEXT_NOTE    = C.rgb("text_note",    "0x555555");
 
     // ── Summary Panel ──
     public static final ColorResource
@@ -64,6 +63,8 @@ public final class PlannhColors {
 
     // ── Accent Text Colors (opaque) ──
     public static final ColorResource
+        ACCENT_RED2    = C.rgb("accent_red2",    "0xA00000"),
+        ACCENT_GREEN3  = C.rgb("accent_green3",  "0x006E00"),
         ACCENT_BLUE    = C.rgb("accent_blue",    "0x88AAFF"),
         ACCENT_GREEN   = C.rgb("accent_green",   "0x88FF88"),
         ACCENT_RED     = C.rgb("accent_red",     "0xFF8888"),
@@ -129,13 +130,13 @@ public final class PlannhColors {
      * Uses golden-ratio hue distribution for visual variety.
      */
     public static int titleColor(final String name) {
-        final int hash = name.hashCode();
-        final float hue = ((hash * 0.618033988749895f) % 1.0f + 1.0f) % 1.0f;
+        final int hash = name.hashCode() % 1000;
+        final float hue = hash * 0.618033988749895f;
         final int rgb = java.awt.Color.HSBtoRGB(hue, 0.45f, 0.55f);
-        final int r = (rgb >> 16) & 0xFF;
-        final int g = (rgb >> 8) & 0xFF;
+        final int r = rgb >> 16 & 0xFF;
+        final int g = rgb >> 8 & 0xFF;
         final int b = rgb & 0xFF;
-        return Color.argb(200, r, g, b);
+        return Color.argb(r, g, b, 100);
     }
 
     /**
