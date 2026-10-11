@@ -113,6 +113,8 @@ plannh.share.copy_to_clipboard=Plan exported to clipboard
 plannh.share.copy_from_clipboard=Plan imported from clipboard
 
 ## GUI
+key.neiflowchart.open=Open flowchart
+key.neiflowchart.secondscreen=Toggle second screen
 ## GUI - Node throughput
 plannh.gui.node.throughput.duration=%s
 plannh.gui.node.throughput.copies_needed=Copies needed §7
