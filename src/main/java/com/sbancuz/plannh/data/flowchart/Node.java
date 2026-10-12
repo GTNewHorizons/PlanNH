@@ -9,7 +9,6 @@ import java.util.UUID;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 
-import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
@@ -22,7 +21,7 @@ import com.sbancuz.plannh.mixins.PositionedStackAccessor;
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.Recipe;
 import codechicken.nei.recipe.RecipeHandlerRef;
-import gregtech.api.util.GTUtility;
+import codechicken.nei.recipe.StackInfo;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -131,9 +130,11 @@ public class Node extends GraphData {
         ResourceProperty<?> type = port.getType();
         if (type == RecipePropertyAPI.ITEM) ((Port<ItemStack>) port).setValue(itemStack.copy());
 
-        if (type == RecipePropertyAPI.FLUID && Compat.GREGTECH.isLoaded) ((Port<FluidStack>) port).setValue(
-            GTUtility.getFluidFromDisplayStack(itemStack)
-                .copy());
+        if (type == RecipePropertyAPI.FLUID) {
+            FluidStack fluid = StackInfo.getFluid(itemStack);
+            if (fluid == null) return;
+            ((Port<FluidStack>) port).setValue(fluid.copy());
+        }
 
         port.getAllStacks()
             .forEach(ps -> {

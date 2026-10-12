@@ -10,7 +10,7 @@
     "GuiOverlayButtonMixin",
     "GTNEIDefaultHandlerMixin",
     "GTNEIDefaultHandlerAccessor",
-    "NEIRecipeWidgetMixin",
+    "RecipeWidgetMixin",
     "PositionedStackMixin",
     "PositionedStackAccessor"
   ]

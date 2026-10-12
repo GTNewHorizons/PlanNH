@@ -77,7 +77,7 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
             recipeWidth = neiWidget.w;
         }
 
-        NEIRecipeWidgetAccessor accessor = (NEIRecipeWidgetAccessor) neiWidget;
+        RecipeWidgetAccessor accessor = (RecipeWidgetAccessor) neiWidget;
         int yShift = accessor.plannh$getHandlerInfo()
             .getYShift();
 
@@ -151,7 +151,7 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
 
             handlers.keySet()
                 .forEach(handlerRef -> handlerRef.handler.onUpdate());
-            widgets.forEach(neiWidget -> ((NEIRecipeWidgetAccessor) neiWidget).plannh$setUpdate(true));
+            widgets.forEach(neiWidget -> ((RecipeWidgetAccessor) neiWidget).plannh$setUpdate(true));
         }
 
         glEnable(GL_TEXTURE_2D);

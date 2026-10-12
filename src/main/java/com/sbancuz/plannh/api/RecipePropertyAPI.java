@@ -1,7 +1,6 @@
 package com.sbancuz.plannh.api;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import javax.annotation.Nonnull;
@@ -24,7 +23,7 @@ import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.mixins.PositionedStackAccessor;
 
 import codechicken.nei.PositionedStack;
-import gregtech.api.util.GTUtility;
+import codechicken.nei.recipe.StackInfo;
 import gregtech.nei.GTNEIDefaultHandler;
 
 public final class RecipePropertyAPI {
@@ -96,28 +95,22 @@ public final class RecipePropertyAPI {
     }
 
     private static boolean fluidPortsMatch(final Port<FluidStack> pa, final Port<FluidStack> pb) {
-        if (Compat.GREGTECH.isLoaded) {
-            // gregtech has fluid alternatives so we need to check those
-            FluidStack[] as = Arrays.stream(
-                pa.getAllStacks()
-                    .getFirst().items)
-                .map(GTUtility::getFluidFromDisplayStack)
-                .toArray(FluidStack[]::new);
-            FluidStack[] bs = Arrays.stream(
-                pb.getAllStacks()
-                    .getFirst().items)
-                .map(GTUtility::getFluidFromDisplayStack)
-                .toArray(FluidStack[]::new);
+        PositionedStack psa = pa.getAllStacks()
+            .getFirst();
+        PositionedStack psb = pb.getAllStacks()
+            .getFirst();
+        ItemStack[] as = ((PositionedStackAccessor) psa).getPermutated() ? psa.items : new ItemStack[] { psa.item };
+        ItemStack[] bs = ((PositionedStackAccessor) psb).getPermutated() ? psb.items : new ItemStack[] { psb.item };
 
-            for (FluidStack a : as) {
-                for (FluidStack b : bs) {
-                    if (a.isFluidEqual(b)) return true;
-                }
+        for (ItemStack a : as) {
+            FluidStack fluidA = StackInfo.getFluid(a);
+            if (fluidA == null) continue;
+            for (ItemStack b : bs) {
+                FluidStack fluidB = StackInfo.getFluid(b);
+                if (fluidB != null && fluidA.isFluidEqual(fluidB)) return true;
             }
         }
-
-        return pa.getValue()
-            .isFluidEqual(pb.getValue());
+        return false;
     }
 
     public static void registerExtractor(final Class<?> handlerClass, final PropertyProvider extractor) {
