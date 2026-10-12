@@ -33,6 +33,7 @@ import com.sbancuz.plannh.data.setting.Settings;
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.FurnaceRecipeHandler;
 import codechicken.nei.recipe.IRecipeHandler;
+import codechicken.nei.recipe.StackInfo;
 import codechicken.nei.recipe.TemplateRecipeHandler;
 import gregtech.api.recipe.RecipeMap;
 import gregtech.api.recipe.RecipeMaps;
@@ -313,10 +314,9 @@ public class GTProvider implements PropertyProvider {
     private static Port<FluidStack> fluidPort(GTNEIDefaultHandler.FixedPositionedStack fps) {
         return new Port<>(
             RecipePropertyAPI.FLUID,
-            fps.getFluidAlternatives()
-                .getFirst()
+            StackInfo.getFluid(fps.item)
                 .copy(),
             (float) fps.getChance() / CHANCE_FULL,
-            fps);
+            fps.copy());
     }
 }

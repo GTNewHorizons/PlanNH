@@ -10,14 +10,14 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import com.sbancuz.plannh.gui.node.NEIRecipeWidgetAccessor;
+import com.sbancuz.plannh.gui.node.RecipeWidgetAccessor;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.HandlerInfo;
 import codechicken.nei.recipe.widget.RecipeWidget;
 
 @Mixin(value = RecipeWidget.class, remap = false)
-public abstract class NEIRecipeWidgetMixin implements NEIRecipeWidgetAccessor {
+public abstract class RecipeWidgetMixin implements RecipeWidgetAccessor {
 
     @Shadow
     protected boolean update;

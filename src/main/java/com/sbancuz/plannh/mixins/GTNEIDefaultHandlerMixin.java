@@ -32,7 +32,8 @@ public class GTNEIDefaultHandlerMixin {
     private int plannh$drawTicks;
 
     @Inject(method = "drawDescription", at = @At("HEAD"), cancellable = true)
-    private void plannh$drawDescription(GTNEIDefaultHandler.CachedDefaultRecipe cachedRecipe, final CallbackInfo ci) {
+    private void plannh$drawDescription(GTNEIDefaultHandler.CachedDefaultRecipe cachedRecipe, int recipeIndex,
+        final CallbackInfo ci) {
         if (Minecraft.getMinecraft().currentScreen instanceof GuiContainerWrapper wrapper
             && wrapper.getScreen() instanceof FlowchartScreen) ci.cancel();
     }

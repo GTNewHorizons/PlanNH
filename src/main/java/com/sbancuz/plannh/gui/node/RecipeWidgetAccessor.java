@@ -5,7 +5,7 @@ import java.util.List;
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.HandlerInfo;
 
-public interface NEIRecipeWidgetAccessor {
+public interface RecipeWidgetAccessor {
 
     void plannh$setUpdate(boolean update);
 

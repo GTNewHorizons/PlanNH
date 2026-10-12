@@ -27,7 +27,6 @@ import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.layout.Grid;
-import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
@@ -50,7 +49,7 @@ import codechicken.nei.KeyManager;
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.GuiCraftingRecipe;
 import codechicken.nei.recipe.GuiUsageRecipe;
-import gregtech.api.util.GTUtility;
+import codechicken.nei.recipe.StackInfo;
 import it.unimi.dsi.fastutil.ints.IntIntPair;
 import lombok.Getter;
 
@@ -228,9 +227,11 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     @SuppressWarnings("unchecked")
     private void setPermutationToStack(ItemStack itemStack) {
         if (port.getType() == RecipePropertyAPI.ITEM) ((Port<ItemStack>) port).setValue(itemStack.copy());
-        if (port.getType() == RecipePropertyAPI.FLUID && Compat.GREGTECH.isLoaded) ((Port<FluidStack>) port).setValue(
-            GTUtility.getFluidFromDisplayStack(itemStack)
-                .copy());
+        if (port.getType() == RecipePropertyAPI.FLUID) {
+            FluidStack fluid = StackInfo.getFluid(itemStack);
+            if (fluid == null) return;
+            ((Port<FluidStack>) port).setValue(fluid.copy());
+        }
 
         port.getAllStacks()
             .forEach(ps -> {
