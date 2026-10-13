@@ -170,7 +170,7 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
             getContext().getAllBelowMouse()
                 .spliterator(),
             false)
-            // a group's header has no area to place the widget into
+            // the dragged widget and its descendants can be under the mouse. Skip them
             .filter(w -> (w instanceof GroupAreaWidget || w instanceof CanvasWidget) && !isSelfOrDescendant(w))
             .map(w -> (ParentWidget<?>) w)
             .findFirst() // this should always find at least 1 match (the canvas)
