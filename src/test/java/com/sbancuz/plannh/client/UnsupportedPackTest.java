@@ -37,7 +37,7 @@ class UnsupportedPackTest {
 
     @Test
     void gtnh290Rc1IsRejectedOnGregTechAndNei() {
-        // RC-1 predates both APIs the required mixins inject into.
+        // RC-1 predates both APIs the required mixins inject into
         final List<String> outdated = UnsupportedPackException
             .outdated(pack("5.09.54.183", "2.8.145-GTNH", "2.3.91-1.7.10", "0.11.51"));
         assertEquals(2, outdated.size(), outdated.toString());
@@ -56,7 +56,7 @@ class UnsupportedPackTest {
 
     @Test
     void absentModsAreNotReported() {
-        // GregTech is optional, so a pack without it is judged on the other libraries alone.
+        // GregTech is optional, so a pack without it is judged on the other libraries alone
         final Map<String, ModContainer> mods = pack("5.09.51.482", "2.8.155-GTNH", "2.3.92-1.7.10", "0.11.52");
         mods.remove(Compat.IDs.GREGTECH);
         assertTrue(
