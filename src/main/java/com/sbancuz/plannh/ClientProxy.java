@@ -13,6 +13,7 @@ import com.sbancuz.plannh.client.ChatHandler;
 import com.sbancuz.plannh.client.GPUProgram;
 import com.sbancuz.plannh.client.ImportCommand;
 import com.sbancuz.plannh.client.OffscreenHandler;
+import com.sbancuz.plannh.client.UnsupportedPackException;
 import com.sbancuz.plannh.client.WorldHandler;
 import com.sbancuz.plannh.gui.FlowchartScreen;
 import com.sbancuz.plannh.gui.layout.ElkLayoutStrategy;
@@ -20,6 +21,7 @@ import com.sbancuz.plannh.gui.layout.ElkLayoutStrategy;
 import cpw.mods.fml.client.registry.ClientRegistry;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.Loader;
+import cpw.mods.fml.common.event.FMLConstructionEvent;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
@@ -31,6 +33,13 @@ public class ClientProxy extends CommonProxy {
         "key.neiflowchart.open",
         Keyboard.KEY_F8,
         "key.categories.neiflowchart");
+
+    @Override
+    public void construct(final FMLConstructionEvent event) {
+        // Not preInit: a halt after any preInit leaves tick handlers from mods whose init never runs, and on 2.8.4
+        // Angelica's throws every tick, so the error screen never draws its text.
+        UnsupportedPackException.throwIfUnsupported();
+    }
 
     @Override
     public void preInit(FMLPreInitializationEvent event) {
