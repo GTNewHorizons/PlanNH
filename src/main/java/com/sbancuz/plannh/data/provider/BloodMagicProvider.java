@@ -12,12 +12,12 @@ import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
-import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.properties.SummaryProperty;
+import com.sbancuz.plannh.data.setting.Settings;
 
 import WayofTime.alchemicalWizardry.client.nei.NEIAlchemyRecipeHandler;
 import WayofTime.alchemicalWizardry.client.nei.NEIAlchemyRecipeHandler.CachedAlchemyRecipe;
@@ -69,11 +69,11 @@ public final class BloodMagicProvider implements PropertyProvider {
 
         MachineProfileRegistry.register(
             MachineProfile.builder("bloodmagic:altar", "Blood Altar")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.LP_PER_TICK.def())
-                .setting(Settings.TICK_MODIFIER.def())
+                .setting(Settings.MACHINES)
+                .setting(Settings.LP_PER_TICK)
+                .setting(Settings.TICK_MODIFIER)
                 .effect(
-                    Effects.durationFromTotal(LP_AMOUNT, Settings.LP_PER_TICK.key(), 20)
+                    Effects.durationFromTotal(LP_AMOUNT, Settings.LP_PER_TICK)
                         .amortizeCost(LP_AMOUNT)
                         .applyParallelism())
                 .build());

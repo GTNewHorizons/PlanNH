@@ -9,11 +9,11 @@ import javax.annotation.Nullable;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
-import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
+import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.recipe.IRecipeHandler;
 import tonius.neiintegration.mods.harvestcraft.RecipeHandlerApiary;
@@ -50,8 +50,8 @@ public class HarvestCraftProvider implements PropertyProvider {
 
         MachineProfileRegistry.register(
             MachineProfile.builder(PROFILE_ID, "HarvestCraft")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.TICK_MODIFIER.def())
+                .setting(Settings.MACHINES)
+                .setting(Settings.TICK_MODIFIER)
                 .effect(
                     Effects.clearCost()
                         .applyParallelism())

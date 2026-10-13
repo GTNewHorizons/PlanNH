@@ -6,13 +6,13 @@ import com.cleanroommc.modularui.api.GuiAxis;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.Rectangle;
-import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.gui.PlannhColors;
+import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 
 /**
  * A clickable choice row: the active answer is lead-marked; the reason it gives up on hover.
@@ -29,6 +29,7 @@ final class ChoiceRow extends SummaryFlow implements Interactable {
             .hoverBackground(new Rectangle().color(PlannhColors.SUMMARY_ROW_HOVER.getColor()))
             .child(
                 new TextWidget<>(IKey.str((choice.active() ? "> " : "  ") + choice.displayName()))
+                    .name("summary.choice.text")
                     .paddingLeft(SummaryBody.TEXT_X)
                     .color(
                         choice.active() ? PlannhColors.ACCENT_CYAN2.getColor()
@@ -37,10 +38,13 @@ final class ChoiceRow extends SummaryFlow implements Interactable {
                     .fullWidth());
 
         if (choice.reason() != null) {
-            tooltip(
-                new RichTooltip().add(
-                    choice.reason()
-                        .render()));
+            tooltipBuilder(
+                t -> TooltipBuilder.create(t)
+                    .row(
+                        IKey.str(
+                            choice.reason()
+                                .render()))
+                    .flush());
         }
     }
 
@@ -52,7 +56,7 @@ final class ChoiceRow extends SummaryFlow implements Interactable {
                 .getSummary()
                 .setExcessChoice(choice.key());
             Plan.getActiveGraph()
-                .markDirty();
+                .bumpVersion();
         });
         return Result.SUCCESS;
     }

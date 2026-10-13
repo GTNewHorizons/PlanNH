@@ -3,6 +3,8 @@ package com.sbancuz.plannh.data.flowchart;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
+import com.sbancuz.plannh.data.serialization.Serializer;
+
 /**
  * Stack-based undo/redo over whole-graph snapshots.
  *
@@ -47,13 +49,13 @@ public final class UndoHistory {
     /** Camera fields come back at defaults. */
     public Graph undo(final Graph current) {
         redoStack.push(encodeNormalized(current));
-        return Serializer.decode(undoStack.pop());
+        return Serializer.decodeGraph(undoStack.pop());
     }
 
     /** Camera fields come back at defaults. */
     public Graph redo(final Graph current) {
         undoStack.push(encodeNormalized(current));
-        return Serializer.decode(redoStack.pop());
+        return Serializer.decodeGraph(redoStack.pop());
     }
 
     /**
@@ -64,11 +66,11 @@ public final class UndoHistory {
         final float zoom = graph.getZoom();
         final float panX = graph.getPanX();
         final float panY = graph.getPanY();
-        graph.setZoom(1f);
-        graph.setPanX(0f);
-        graph.setPanY(0f);
+        graph.setZoom(1);
+        graph.setPanX(0);
+        graph.setPanY(0);
         try {
-            return Serializer.encode(graph);
+            return Serializer.encodeGraph(graph);
         } finally {
             graph.setZoom(zoom);
             graph.setPanX(panX);

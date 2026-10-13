@@ -19,7 +19,7 @@ import codechicken.nei.recipe.RecipeHandlerRef;
 @Mixin(value = GuiOverlayButton.class, remap = false)
 public class GuiOverlayButtonMixin {
 
-    @Inject(method = "drawItemOverlay", at = @At("HEAD"), cancellable = true, remap = false)
+    @Inject(method = "drawItemOverlay", at = @At("HEAD"), cancellable = true)
     private void plannh$onDrawItemOverlay(final CallbackInfo ci) {
         final GuiOverlayButton self = (GuiOverlayButton) (Object) this;
         if (self.firstGui instanceof GuiContainerWrapper
@@ -33,8 +33,9 @@ public class GuiOverlayButtonMixin {
     private static boolean planNH$isRecipeInGraph(final RecipeHandlerRef ref) {
         final Recipe.RecipeId currentId = Recipe.RecipeId.of(ref.handler, ref.recipeIndex);
         final Graph graph = Plan.getActiveGraph();
-        for (final Node node : graph.getNodes()) {
-            if (currentId.equals(node.recipeId)) {
+        for (final Node node : graph.getNodes()
+            .values()) {
+            if (currentId.equals(node.getRecipeId())) {
                 return true;
             }
         }

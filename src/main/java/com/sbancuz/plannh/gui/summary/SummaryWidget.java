@@ -21,6 +21,7 @@ import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.FlowchartList;
+import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.PlannhColors;
 
 /**
@@ -54,9 +55,11 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
             .getSummary();
         pos(data.getX(), data.getY());
 
+        name("summary");
         coverChildren();
 
-        sectionsList = new FlowchartList().fullWidth()
+        sectionsList = new FlowchartList().name("summary.sections")
+            .fullWidth()
             .paddingRight(SCROLLBAR_GAP)
             .crossAxisAlignment(Alignment.CrossAxis.START)
             .scrollDirection(new VerticalScrollData())
@@ -82,6 +85,7 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
 
         child(
             SummaryFlow.col()
+                .name("summary.column")
                 .width(WIDTH)
                 .padding(PADDING)
                 .childPadding(SECTION_GAP)
@@ -95,6 +99,7 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
                         .color(PlannhColors.SUMMARY_BORDER.getColor()))
                 .child(
                     SummaryFlow.row()
+                        .name("summary.header")
                         .fullWidth()
                         .height(SummaryHeader.HEADER_H)
                         .paddingLeft(TITLE_INSET_X)
@@ -113,7 +118,8 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
                                 .child(rateToggle())
                                 .child(SummaryHeader.foldToggle(data, Summary.Section.ALL))))
                 .child(
-                    new Widget<>().fullWidth()
+                    new Widget<>().name("summary.header.rule")
+                        .fullWidth()
                         .height(1)
                         .background(new Rectangle().color(PlannhColors.SUMMARY_TITLE_LINE.getColor())))
                 .child(sectionsList));
@@ -122,13 +128,14 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
     private static CycleButtonWidget rateToggle() {
         final Summary summary = Plan.getInstance()
             .getSummary();
-        final CycleButtonWidget toggle = new CycleButtonWidget().size(SummaryHeader.HEADER_H, SummaryHeader.HEADER_H)
+        final CycleButtonWidget toggle = new CycleButtonWidget().name("summary.rate")
+            .size(SummaryHeader.HEADER_H, SummaryHeader.HEADER_H)
             .tooltipStatic(
                 t -> t.addLine(IKey.lang("plannh.summary.rate.title"))
                     .addLine(IKey.lang("plannh.summary.mode.switch_hint")))
-            .value(new EnumValue.Dynamic<>(Summary.RateUnit.class, summary::getRateUnit, summary::setRateUnit))
+            .value(new EnumValue.Dynamic<>(GuiHelper.RateUnit.class, summary::getRateUnit, summary::setRateUnit))
             .setEnabledIf(_ -> summary.getMode() == Summary.Mode.THROUGHPUT);
-        for (final Summary.RateUnit unit : Summary.RateUnit.VALUES) {
+        for (final GuiHelper.RateUnit unit : GuiHelper.RateUnit.VALUES) {
             toggle.stateOverlay(unit, IKey.lang(unit.langKey));
         }
         return toggle;
@@ -137,7 +144,8 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
     private CycleButtonWidget modeToggle() {
         final Summary summary = Plan.getInstance()
             .getSummary();
-        return new CycleButtonWidget().size(SummaryHeader.HEADER_H, SummaryHeader.HEADER_H)
+        return new CycleButtonWidget().name("summary.mode")
+            .size(SummaryHeader.HEADER_H, SummaryHeader.HEADER_H)
             .tooltipStatic(
                 t -> t.addLine(IKey.lang("plannh.summary.mode.title"))
                     .addLine(IKey.lang("plannh.summary.mode.switch_hint")))

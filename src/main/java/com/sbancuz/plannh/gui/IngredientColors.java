@@ -29,6 +29,7 @@ import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.provider.gregtech.GTHooks;
 
 import codechicken.nei.guihook.GuiContainerManager;
+import codechicken.nei.item.ItemFluidDisplay;
 
 /**
  * Derives a representative color for an ingredient from its sprite, so ports and edges can be
@@ -263,14 +264,12 @@ public final class IngredientColors {
             final int tint = fluid.getColor(fluidStack);
             if ((tint & RGB_MASK) != NO_TINT) return logColor(key, tint & RGB_MASK, "fluid-color");
 
-            // Otherwise color it the way NEI displays it: GT's fluid display item carries the
+            // Otherwise color it the way NEI displays it: NEI's fluid display item carries the
             // exact icon + tint combination the player sees in recipe screens.
-            if (Compat.GREGTECH.isLoaded) {
-                final ItemStack display = GTHooks.fluidDisplayStack(fluidStack);
-                if (display != null) {
-                    final int rgb = itemColor(display);
-                    if (rgb != UNKNOWN) return logColor(key, rgb, "fluid-display");
-                }
+            final ItemStack display = ItemFluidDisplay.createStack(fluidStack);
+            if (display != null) {
+                final int rgb = itemColor(display);
+                if (rgb != UNKNOWN) return logColor(key, rgb, "fluid-display");
             }
 
             final ModalColor modal = modalSpriteColor(fluid.getIcon(fluidStack), true);
@@ -299,7 +298,7 @@ public final class IngredientColors {
         // Fast path: the stitched atlas' retained CPU-side frame data. Angelica (present in all
         // modern GTNH packs and this repo's dev runtime) frees that data, so fall back to reading
         // the sprite's source PNG through the resource manager - the same file the stitcher
-        // loaded it from. Items that borrow icons from the other atlas (e.g. GT's fluid display
+        // loaded it from. Items that borrow icons from the other atlas (e.g. NEI's fluid display
         // uses block-atlas fluid icons) get a cross-atlas retry.
         ModalColor result = fromAtlasFrames(icon, blocksAtlas);
         if (result == null) result = fromResourcePng(icon, blocksAtlas);

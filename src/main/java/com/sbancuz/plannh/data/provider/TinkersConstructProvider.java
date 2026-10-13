@@ -11,11 +11,11 @@ import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
-import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
+import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
@@ -42,8 +42,8 @@ public final class TinkersConstructProvider implements PropertyProvider {
 
         MachineProfileRegistry.register(
             MachineProfile.builder("tconstruct:basic", "Tinkers' Construct")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.TICK_MODIFIER.def())
+                .setting(Settings.MACHINES)
+                .setting(Settings.TICK_MODIFIER)
                 .effect(
                     Effects.clearCost()
                         .applyParallelism())

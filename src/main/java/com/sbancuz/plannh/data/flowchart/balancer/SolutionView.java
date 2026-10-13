@@ -28,7 +28,7 @@ import com.sbancuz.plannh.data.flowchart.Port;
 public final class SolutionView {
 
     public final Map<UUID, Double> extentsPerSecond = new LinkedHashMap<>();
-    public final Map<UUID, Double> machineCounts = new LinkedHashMap<>();
+    public final Map<UUID, Double> copyCounts = new LinkedHashMap<>();
     public final Map<UUID, Double> edgeFlowsPerSecond = new LinkedHashMap<>();
     public final List<External> gatedSources = new ArrayList<>();
     public final List<External> gatedSinks = new ArrayList<>();
@@ -48,8 +48,8 @@ public final class SolutionView {
             * ctx.solutionScale(ctx.extents(), ctx.flows(), ctx.externals());
         for (int m = 0; m < model.machines.size(); m++) {
             final ModelData.Machine md = model.machines.get(m);
-            extentsPerSecond.put(md.node.id, ctx.extents()[m]);
-            machineCounts.put(md.node.id, ctx.extents()[m] * md.durTicks / (double) Numerics.TICKS_PER_SECOND);
+            extentsPerSecond.put(md.node.getId(), ctx.extents()[m]);
+            copyCounts.put(md.node.getId(), ctx.extents()[m] * md.durTicks / (double) Numerics.TICKS_PER_SECOND);
         }
         for (int e = 0; e < model.edges.size(); e++) {
             edgeFlowsPerSecond.put(
@@ -111,7 +111,7 @@ public final class SolutionView {
             if (model.portLookup.containsKey(key)) continue; // connected, not a terminal
             final double rate = ctx.extents()[m] * qty;
             if (rate <= tol) continue;
-            out.add(new External(new PortRef(md.node.id, i, input), rate));
+            out.add(new External(new PortRef(md.node.getId(), i, input), rate));
         }
     }
 
@@ -169,8 +169,10 @@ public final class SolutionView {
             final ModelData.ConnectedPort port = model.connectedPorts.get(p);
             if (port.input() || model.portComponent[p] == excludeComponent) continue;
             final ModelData.Machine md = model.machines.get(port.machine());
-            if (want.canConnect(md.node.outputs.get(port.portIndex()))) {
-                return md.node.machineName;
+            if (want.canConnect(
+                md.node.getOutputs()
+                    .get(port.portIndex()))) {
+                return md.node.getMachineName();
             }
         }
         for (int m = 0; m < model.machines.size(); m++) {
@@ -179,8 +181,10 @@ public final class SolutionView {
                 if (md.outQty[i] <= 0) continue;
                 final long key = ((long) m << 32) | ((long) i << 1);
                 if (model.portLookup.containsKey(key)) continue; // connected, handled above
-                if (want.canConnect(md.node.outputs.get(i))) {
-                    return md.node.machineName;
+                if (want.canConnect(
+                    md.node.getOutputs()
+                        .get(i))) {
+                    return md.node.getMachineName();
                 }
             }
         }
@@ -194,7 +198,7 @@ public final class SolutionView {
                 external.port()
                     .nodeId())).node;
         final List<Port<?>> ports = external.port()
-            .input() ? node.inputs : node.outputs;
+            .input() ? node.getInputs() : node.getOutputs();
         return ports.get(
             external.port()
                 .portIndex());
@@ -204,7 +208,7 @@ public final class SolutionView {
         return ctx.model.machines.get(
             ctx.model.machineIndex.get(
                 external.port()
-                    .nodeId())).node.machineName;
+                    .nodeId())).node.getMachineName();
     }
 
     /** The ingredient at a port, named the way the rest of the GUI names it. */

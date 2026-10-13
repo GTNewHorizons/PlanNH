@@ -17,7 +17,6 @@ import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
 import com.sbancuz.plannh.data.flowchart.balancer.ChoiceKey;
 import com.sbancuz.plannh.data.flowchart.balancer.Note;
 import com.sbancuz.plannh.data.flowchart.balancer.alternatives.Alternatives;
-import com.sbancuz.plannh.data.properties.ResourceProperty;
 import com.sbancuz.plannh.data.properties.SummaryProperty;
 import com.sbancuz.plannh.gui.GuiHelper;
 
@@ -60,32 +59,6 @@ public final class Summary extends GraphData {
     public enum Mode {
         CYCLES,
         THROUGHPUT
-    }
-
-    /**
-     * The time unit per-second rates are spelled in. {@code secondsPerUnit} rescales a rate that
-     * is stored per second; the lang keys cover the button's short form and the row suffix.
-     */
-    public enum RateUnit {
-
-        SECONDS("second", 1),
-        MINUTES("minute", 60),
-        HOURS("hour", 60 * 60),
-        DAYS("day", 60 * 60 * 24);
-
-        public static final RateUnit[] VALUES = RateUnit.values();
-
-        public final String langKey;
-        public final double secondsPerUnit;
-
-        RateUnit(final String name, final double secondsPerUnit) {
-            this.langKey = "plannh.summary.rate." + name;
-            this.secondsPerUnit = secondsPerUnit;
-        }
-
-        public String suffixKey() {
-            return langKey + ".suffix";
-        }
     }
 
     /**
@@ -198,18 +171,19 @@ public final class Summary extends GraphData {
 
     @Getter
     @Setter
-    private ChoiceKey excessChoice;
+    private ChoiceKey excessChoice = ChoiceKey.none();
 
     @Getter
     private Mode mode = Mode.CYCLES;
     @Getter
-    private RateUnit rateUnit = RateUnit.SECONDS;
+    private GuiHelper.RateUnit rateUnit = GuiHelper.RateUnit.SECONDS;
     private int[] sectionOrder = defaultSectionOrder();
 
     /**
      * Bumped by every settings change; part of the derived-cache key so a toggle
      * invalidates the rows without touching any {@code graph.version()}.
      */
+    @Getter
     private transient long settingsVersion = 0;
 
     transient private long atVersion = -1;
@@ -251,7 +225,7 @@ public final class Summary extends GraphData {
         settingsVersion++;
     }
 
-    public void setRateUnit(final RateUnit rateUnit) {
+    public void setRateUnit(final GuiHelper.RateUnit rateUnit) {
         this.rateUnit = rateUnit;
         settingsVersion++;
     }
@@ -286,10 +260,6 @@ public final class Summary extends GraphData {
         return Arrays.stream(Section.VALUES)
             .mapToInt(Section::ordinal)
             .toArray();
-    }
-
-    public long getSettingsVersion() {
-        return settingsVersion;
     }
 
     public List<Line<?>> lines(final Section section) {
@@ -339,7 +309,7 @@ public final class Summary extends GraphData {
      * summary's {@link Mode}.
      */
     public Summary recompute(final Graph graph) {
-        if (atGraph == graph && atVersion >= graph.version() && atMode == mode && atSettings == settingsVersion)
+        if (atGraph == graph && atVersion >= graph.getVersion() && atMode == mode && atSettings == settingsVersion)
             return this;
         atGraph = graph;
         atMode = mode;
@@ -351,10 +321,11 @@ public final class Summary extends GraphData {
         final Map<LineKey, Float> inputs = new HashMap<>();
         final Map<LineKey, Float> properties = new HashMap<>();
 
-        final int cycleTicks = cycleTicks(balance, graph);
+        final int cycleTicks = balance.totalDurationTicks();
 
         // Accumulate scaled flows per resource across all ports, connected and unconnected alike.
-        for (final Node node : graph.getNodes()) {
+        for (final Node node : graph.getNodes()
+            .values()) {
             final var nb = balance.nodeBalances()
                 .get(node.id);
             if (nb == null) continue;
@@ -362,8 +333,8 @@ public final class Summary extends GraphData {
             final float scale = mode == Mode.THROUGHPUT
                 ? (float) GuiHelper.TICKS_PER_SECOND / Math.max(1, nb.durationPerOp())
                 : (float) cycleTicks / Math.max(1, nb.durationPerOp());
-            accumulate(node.outputs, nb.effectiveOutputs(), scale, outputs);
-            accumulate(node.inputs, nb.effectiveInputs(), scale, inputs);
+            accumulate(node.getOutputs(), nb.effectiveOutputs(), scale, outputs);
+            accumulate(node.getInputs(), nb.effectiveInputs(), scale, inputs);
         }
 
         net(inputs, outputs);
@@ -384,19 +355,8 @@ public final class Summary extends GraphData {
         setLines(Section.CHOICES, choiceLines(graph));
         setLines(Section.MESSAGES, messageLines());
 
-        atVersion = graph.version();
+        atVersion = graph.getVersion();
         return this;
-    }
-
-    /** The longest recipe on the chart, so one cycle of every machine aligns; 20 ticks when none ran. */
-    private static int cycleTicks(final BalanceResult balance, final Graph graph) {
-        int maxTicks = 0;
-        for (final Node node : graph.getNodes()) {
-            final var nb = balance.nodeBalances()
-                .get(node.id);
-            if (nb != null) maxTicks = Math.max(maxTicks, nb.durationPerOp());
-        }
-        return Math.max(maxTicks, 20);
     }
 
     /** Fold each port's effective flow into {@code into}, scaled to one chart cycle. */
@@ -405,7 +365,7 @@ public final class Summary extends GraphData {
         for (int i = 0; i < ports.size(); i++) {
             final Float total = totals.get(i);
             if (total == null || total <= 0) continue;
-            into.merge(LineKey.ResourceKey.of(ports.get(i)), total * scale, Float::sum);
+            into.merge(new LineKey.ResourceKey<>(ports.get(i)), total * scale, Float::sum);
         }
     }
 
@@ -461,13 +421,14 @@ public final class Summary extends GraphData {
     /** One Measure row per machine with work to do; the chart-wide totals line is appended after. */
     private List<Line<?>> machineLines(final Graph graph) {
         final List<Line<?>> out = new ArrayList<>();
-        for (final Node node : graph.getNodes()) {
+        for (final Node node : graph.getNodes()
+            .values()) {
             final var nb = balance.nodeBalances()
                 .get(node.id);
             if (nb == null) continue;
             final double ops = nb.operations();
             if (ops <= 0) continue;
-            out.add(new Line.Measure<>(MACHINE_LABEL, node.machineName, (float) ops));
+            out.add(new Line.Measure<>(MACHINE_LABEL, node.getMachineName(), (float) ops));
         }
         return out;
     }
@@ -529,28 +490,22 @@ public final class Summary extends GraphData {
     @SuppressWarnings("rawtypes")
     private sealed interface LineKey permits LineKey.ResourceKey,LineKey.PropertyKey {
 
-        record ResourceKey<T> (ResourceProperty<T> type, T resource) implements LineKey {
-
-            @SuppressWarnings("unchecked")
-            static ResourceKey<Object> of(final Port port) {
-                return new ResourceKey<>((ResourceProperty<Object>) port.getType(), port.getValue());
-            }
+        record ResourceKey<T> (Port<T> port) implements LineKey {
 
             Line<?> toLine(final float amount) {
-                return new Line.Measure<>(type, resource, amount);
+                return new Line.Measure<>(port.getType(), port.getValue(), amount);
             }
 
             @Override
-            @SuppressWarnings("unchecked")
             public boolean equals(final Object o) {
-                return o instanceof ResourceKey<?>(SummaryProperty<?> type1, Object resource1)
-                    && type == type1
-                    && type.canConnect(resource, (T) resource1);
+                return o instanceof ResourceKey<?>(Port<?> other)
+                    && port.canConnect(other);
             }
 
             @Override
             public int hashCode() {
-                return type.hashValue(resource);
+                return port.getType()
+                    .hashValue(port.getValue());
             }
         }
 

@@ -11,12 +11,12 @@ import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
-import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.properties.SummaryProperty;
+import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
@@ -49,11 +49,11 @@ public class BotaniaProvider implements PropertyProvider {
 
         MachineProfileRegistry.register(
             MachineProfile.builder("botania:basic", "Botania")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.MANA_PER_TICK.def())
-                .setting(Settings.TICK_MODIFIER.def())
+                .setting(Settings.MACHINES)
+                .setting(Settings.MANA_PER_TICK)
+                .setting(Settings.TICK_MODIFIER)
                 .effect(
-                    Effects.durationFromTotal(MANA_COST, Settings.MANA_PER_TICK.key(), 10)
+                    Effects.durationFromTotal(MANA_COST, Settings.MANA_PER_TICK)
                         .amortizeCost(MANA_COST)
                         .applyParallelism())
                 .build());

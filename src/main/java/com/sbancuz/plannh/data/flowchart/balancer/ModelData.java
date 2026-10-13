@@ -11,6 +11,7 @@ import javax.annotation.Nullable;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
+import com.sbancuz.plannh.data.flowchart.GraphData;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.MachineGroup;
 import com.sbancuz.plannh.data.flowchart.Node;
@@ -25,45 +26,53 @@ import com.sbancuz.plannh.data.flowchart.Node;
  */
 public final class ModelData {
 
-    /** A machine as the solver sees it: the node plus its per-port rates in recipe-extent form. */
+    /**
+     * A machine as the solver sees it: the node plus its per-port rates in recipe-extent form.
+     */
     // TODO: remove this when with the Step pr using the unified interface
     public static final class Machine {
 
         final Node node;
         public final int durTicks;
 
-        /** The underlying chart node, for identity lookups (e.g. the alternatives resolver). */
+        /**
+         * The underlying chart node, for identity lookups (e.g. the alternatives resolver).
+         */
         public Node node() {
             return node;
         }
 
         final double[] inQty;
         final double[] outQty;
-        /** Extent implied by the node's target output rates, or zero when there is none. */
         final double targetExtent;
-        /** Extent implied by the node's fixed machine count, or null when unfixed. */
         final @Nullable Double fixedExtent;
 
         private Machine(final Node node) {
             this.node = node;
-            final MachineConfig cfg = node.machineConfig;
-            final var eff = cfg.computeEffect(node.properties);
+            final MachineConfig cfg = node.getMachineConfig();
+            final var eff = cfg.computeEffect(node.getProperties());
             this.durTicks = Math.max(1, eff.durationTicks());
             final int tf = eff.throughputFactor();
-            this.inQty = new double[node.inputs.size()];
+            this.inQty = new double[node.getInputs()
+                .size()];
             for (int i = 0; i < inQty.length; i++) {
-                final var s = node.inputs.get(i);
+                final var s = node.getInputs()
+                    .get(i);
                 inQty[i] = Math.max(0, s.getAmount()) * s.getChance() * cfg.inputMultiplier(i) * tf;
             }
-            this.outQty = new double[node.outputs.size()];
+            this.outQty = new double[node.getOutputs()
+                .size()];
             for (int i = 0; i < outQty.length; i++) {
-                final var s = node.outputs.get(i);
+                final var s = node.getOutputs()
+                    .get(i);
                 outQty[i] = Math.max(0, s.getAmount()) * s.getChance() * cfg.outputMultiplier(i) * tf;
             }
-            this.targetExtent = targetExtent(node, outQty);
-            this.fixedExtent = node.isMachineCountFixed()
-                ? node.machineConfig.getMachineCount() * (double) Numerics.TICKS_PER_SECOND / durTicks
-                : null;
+
+            this.targetExtent = cfg.getTargetKind() == Pin.TARGET_RATE ? cfg.getRates()
+                .extent(outQty) : 0;
+            this.fixedExtent = cfg.getTargetKind() == Pin.FIXED_COPIES ? cfg.getCopies()
+                .copies() * (double) Numerics.TICKS_PER_SECOND
+                / durTicks : null;
         }
 
         boolean hasPort(final int portIndex, final boolean input) {
@@ -74,28 +83,15 @@ public final class ModelData {
             return input ? inQty[portIndex] : outQty[portIndex];
         }
 
-        /**
-         * The extent implied by the node's target output rates: rate divided by per-craft quantity,
-         * largest target winning (parallel outputs share one extent, so only the tightest can be hit
-         * exactly). Targets on stale ports are skipped the same way stale edges are.
-         */
-        private static double targetExtent(final Node node, final double[] outQty) {
-            double extent = 0;
-            for (final Map.Entry<Integer, Double> t : node.targetOutputRates.entrySet()) {
-                if (t.getValue() == null || t.getValue() <= 0) continue;
-                final int i = t.getKey();
-                if (i < 0 || i >= outQty.length || outQty[i] <= 0) continue;
-                extent = Math.max(extent, t.getValue() / outQty[i]);
-            }
-            return extent > 0 ? extent : 0;
-        }
     }
 
     public record EdgeData(UUID id, int srcPort, int dstPort) {}
 
     public record ConnectedPort(int machine, int portIndex, boolean input, double qtyPerCraft, List<Integer> edges) {}
 
-    /** One gate: an ingredient component in one direction, covering the listed ports. */
+    /**
+     * One gate: an ingredient component in one direction, covering the listed ports.
+     */
     public record Gate(boolean input, List<Integer> ports) {}
 
     /**
@@ -114,32 +110,37 @@ public final class ModelData {
     public final List<Pool> pools = new ArrayList<>();
     public int[] portGate;
     public int[] portComponent;
-    /** Packed lexicographic per-gate weights from the type's heuristics. */
+    /**
+     * Packed lexicographic per-gate weights from the type's heuristics.
+     */
     final double[] gateWeights;
 
     ModelData(final Graph graph, final Heuristics heuristics) {
-        for (final Node node : graph.getNodes()) {
-            machineIndex.put(node.id, machines.size());
+        for (final Node node : graph.getNodes()
+            .values()) {
+            if (node.getExtractor() == null) continue; // incorrectly loaded node
+            machineIndex.put(node.getId(), machines.size());
             machines.add(new Machine(node));
         }
 
-        for (final Edge edge : graph.getEdges()) {
-            final Integer src = machineIndex.get(edge.sourceNodeId);
-            final Integer dst = machineIndex.get(edge.targetNodeId);
+        for (final Edge edge : graph.getEdges()
+            .values()) {
+            final Integer src = machineIndex.get(edge.getSourceNodeId());
+            final Integer dst = machineIndex.get(edge.getTargetNodeId());
             if (src == null || dst == null) continue;
             // Edges keep the port indices they were saved with, while port lists can shrink (a
             // settings change, or a recipe that lost an output between modpack versions). Drop the
             // dangling edge rather than indexing past the node's ports.
             if (!machines.get(src)
-                .hasPort(edge.sourceOutputIndex, false)
+                .hasPort(edge.getSourceOutputItemIndex(), false)
                 || !machines.get(dst)
-                    .hasPort(edge.targetInputIndex, true)) {
+                    .hasPort(edge.getTargetInputItemIndex(), true)) {
                 continue;
             }
-            final int srcPort = internPort(src, edge.sourceOutputIndex, false);
-            final int dstPort = internPort(dst, edge.targetInputIndex, true);
+            final int srcPort = internPort(src, edge.getSourceOutputItemIndex(), false);
+            final int dstPort = internPort(dst, edge.getTargetInputItemIndex(), true);
             final int e = edges.size();
-            edges.add(new EdgeData(edge.id, srcPort, dstPort));
+            edges.add(new EdgeData(edge.getId(), srcPort, dstPort));
             connectedPorts.get(srcPort)
                 .edges()
                 .add(e);
@@ -164,12 +165,15 @@ public final class ModelData {
      * (no machines, or a capacity of zero) is not a pool at all.
      */
     private void buildPools(final Graph graph) {
-        for (final Group group : graph.getGroups()) {
+        for (final Group group : graph.getGroups().values()) {
             if (!(group instanceof final MachineGroup machineGroup) || machineGroup.getMachineCapacity() <= 0) continue;
             final List<Integer> members = new ArrayList<>();
-            for (final UUID nodeId : group.getNodeIds()) {
-                final Integer m = machineIndex.get(nodeId);
-                if (m != null) members.add(m);
+            for (final Map.Entry<UUID, GraphData> entry : group.getChildren().entrySet()) {
+                if (entry.getValue() instanceof Node) {
+                    UUID nodeId = entry.getKey();
+                    final Integer m = machineIndex.get(nodeId);
+                    if (m != null) members.add(m);
+                }
             }
             if (members.isEmpty()) continue;
             pools.add(new Pool(List.copyOf(members), machineGroup.getMachineCapacity()));

@@ -3,8 +3,10 @@ package com.sbancuz.plannh.gui;
 import java.util.Locale;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.util.StatCollector;
 
 import org.apache.commons.lang3.StringUtils;
+import org.lwjgl.input.Keyboard;
 
 import com.cleanroommc.modularui.drawable.GuiDraw;
 
@@ -53,12 +55,71 @@ public final class GuiHelper {
         return trimTrailingZeros(String.format(Locale.ROOT, "%.5f", rate));
     }
 
+    /** A unit of time, and how many seconds one of it holds. */
+    public enum RateUnit {
+
+        TICKS("tick", 1.0 / 20, false),
+        SECONDS("second", 1, true),
+        MINUTES("minute", 60, true),
+        HOURS("hour", 60 * 60, true),
+        DAYS("day", 60 * 60 * 24, true);
+
+        public static final RateUnit[] VALUES = RateUnit.values();
+
+        public final String name;
+        public final String langKey;
+        public final double secondsPerUnit;
+        /** Whether a duration reads well in this unit; a tick is a rate, not a span of time. */
+        public final boolean duration;
+
+        RateUnit(final String name, final double secondsPerUnit, final boolean duration) {
+            this.name = name;
+            this.langKey = "plannh.gui.rate." + name;
+            this.secondsPerUnit = secondsPerUnit;
+            this.duration = duration;
+        }
+
+        public String suffixKey() {
+            return langKey + ".suffix";
+        }
+    }
+
+    /** Largest unit that still leaves a number worth reading. */
+    public static RateUnit unitFor(final double seconds) {
+        RateUnit chosen = RateUnit.SECONDS;
+        for (final RateUnit unit : RateUnit.VALUES) {
+            if (unit.duration && seconds >= unit.secondsPerUnit) chosen = unit;
+        }
+        return chosen;
+    }
+
+    /** Ticks as one duration: "2s", "20m", "3.5h". */
+    public static String formatDuration(final long ticks) {
+        if (ticks <= 0) return "0" + mark(RateUnit.SECONDS);
+        final double seconds = ticks / (double) TICKS_PER_SECOND;
+        final RateUnit unit = unitFor(seconds);
+        return trimTrailingZeros(String.format(Locale.ROOT, "%.2f", seconds / unit.secondsPerUnit)) + mark(unit);
+    }
+
+    public static String mark(final RateUnit unit) {
+        return StatCollector.translateToLocal(unit.langKey);
+    }
+
     public static void drawRectBorder(final int x, final int y, final int w, final int h, final int bw,
         final int color) {
         GuiDraw.drawRect(x, y, w, bw, color);
         GuiDraw.drawRect(x, y + h - bw, w, bw, color);
         GuiDraw.drawRect(x, y, bw, h, color);
         GuiDraw.drawRect(x + w - bw, y, bw, h, color);
+    }
+
+    public static float rate(final float perCycle, final int durationTicks, final RateUnit unit) {
+        final float cycleSeconds = durationTicks / (float) TICKS_PER_SECOND;
+        return perCycle / cycleSeconds * (float) unit.secondsPerUnit;
+    }
+
+    public static boolean shiftHeld() {
+        return Keyboard.isKeyDown(Keyboard.KEY_LSHIFT) || Keyboard.isKeyDown(Keyboard.KEY_RSHIFT);
     }
 
     private static final int CLOSE_INNER_INSET = 2;

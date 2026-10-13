@@ -9,13 +9,13 @@ import javax.annotation.Nullable;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
-import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.effect.steps.GTSteamOverclockStep;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.properties.SummaryProperty;
+import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.recipe.FurnaceRecipeHandler;
 import codechicken.nei.recipe.IRecipeHandler;
@@ -44,11 +44,11 @@ public class GTSteamProvider implements PropertyProvider {
         "gtpp.recipe.simplewasher");
 
     private static final MachineProfile STEAM_PROFILE = MachineProfile.builder("gregtech:steam", "GT Steam")
-        .setting(Settings.SPEED.def())
-        .setting(Settings.PARALLELS.def())
-        .setting(Settings.MACHINES.def())
-        .setting(Settings.STEAM_EUT_DISCOUNT.def())
-        .setting(Settings.STEAM_DURATION_MODIFIER.def())
+        .setting(Settings.SPEED)
+        .setting(Settings.PARALLELS)
+        .setting(Settings.MACHINES)
+        .setting(Settings.STEAM_EUT_DISCOUNT)
+        .setting(Settings.STEAM_DURATION_MODIFIER)
         .effect(
             Effects.durationFromHandler()
                 .andThen(GTSteamOverclockStep.create())
