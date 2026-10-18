@@ -7,32 +7,35 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.BiPredicate;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import net.minecraftforge.fluids.FluidStack;
 
+import com.gtnewhorizons.modularui.api.math.Size;
 import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
-import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
-import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.effect.Effects;
-import com.sbancuz.plannh.data.effect.steps.GTOverclockStep;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
+import com.sbancuz.plannh.data.machine.MachineVariants;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.properties.SummaryProperty;
+import com.sbancuz.plannh.data.provider.gregtech.GTMachineIndex;
+import com.sbancuz.plannh.data.provider.gregtech.GTNodeState;
+import com.sbancuz.plannh.data.provider.gregtech.GTSettings;
 import com.sbancuz.plannh.data.setting.Settings;
+import com.sbancuz.plannh.mixins.GTNEIDefaultHandlerAccessor;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.FurnaceRecipeHandler;
 import codechicken.nei.recipe.IRecipeHandler;
+import codechicken.nei.recipe.StackInfo;
 import codechicken.nei.recipe.TemplateRecipeHandler;
 import gregtech.api.recipe.RecipeMap;
 import gregtech.api.recipe.RecipeMaps;
@@ -78,6 +81,21 @@ public class GTProvider implements PropertyProvider {
         .<RecipeMap<?>>builder("gt.recipe_map", null)
         .build();
 
+    /**
+     * Recipe this node was extracted from, passed to GT's OverclockDescriber. Several describers discard
+     * the template and rebuild from the recipe. Node.properties is rebuilt by refresh() and never
+     * serialized, and the balancer aggregates only Number values, so storing it here costs nothing.
+     */
+    public static final RecipeProperty<GTRecipe> GT_RECIPE = RecipeProperty.<GTRecipe>builder("gt.recipe", null)
+        .build();
+
+    /**
+     * NEI handler's tab title, which contains the name of the machine the recipe list belongs to. The
+     * machine picker defaults to that machine, the one the player had open in NEI.
+     */
+    public static final RecipeProperty<String> NEI_TITLE = RecipeProperty.<String>builder("gt.nei_title", "")
+        .build();
+
     @Override
     public void register() {
         RecipePropertyAPI.registerExtractor(FurnaceRecipeHandler.class, this);
@@ -88,83 +106,22 @@ public class GTProvider implements PropertyProvider {
         RecipePropertyAPI.registerExtractor(GTNEIDefaultHandler.class, this);
 
         MachineProfileRegistry.register(PROFILE);
-        new GTSteamProvider().register();
+        // reset with the shared registries so the index and the MachineVariants memo keyed off it empty together
+        GTMachineIndex.reset();
+        MachineVariants.register(GTMachineIndex.SOURCE);
+        GTSettings.registerChartMinimums();
     }
 
-    static BiPredicate<RecipeContext, MachineConfig> multiblockOnly() {
-        return (ctx, config) -> config.get(Settings.GT_MULTIBLOCK);
-    }
-
-    private static boolean hasHeat(final RecipeContext ctx) {
-        return ctx.properties()
-            .containsKey(GLASS_TIER)
-            || ctx.properties()
-                .containsKey(COIL_HEAT);
-    }
-
-    private static boolean isEoH(final RecipeContext ctx) {
-        final RecipeMap<?> map = ctx.getOrDefault(RECIPE_MAP, null);
-        return map != null && "gt.recipe.eyeofharmony".equals(map.unlocalizedName);
-    }
-
+    /**
+     * The machine count is the one shared setting. Everything else a GregTech node sets is in its {@link GTNodeState}:
+     * the machine, its structure and the overrides, which follow the machine's spec until set.
+     */
     private static final MachineProfile PROFILE = MachineProfile.builder("gregtech:unified", "GT Unified")
-        .setting(Settings.VOLTAGE)
-        .setting(Settings.AMP)
-        .setting(Settings.SPEED)
-        .setting(Settings.PARALLELS, (ctx, s) -> !isEoH(ctx))
         .setting(Settings.MACHINES)
-        .setting(Settings.PERFECT_OC)
-        .setting(Settings.GT_MULTIBLOCK)
-        .setting(Settings.LASER_OC, multiblockOnly())
-        .setting(Settings.EUT_DISCOUNT, multiblockOnly())
-        .setting(Settings.EUT_INCREASE_PER_OC, multiblockOnly())
-        .setting(Settings.DURATION_DECREASE_PER_OC, multiblockOnly())
-        .setting(Settings.MAX_OVERCLOCKS, multiblockOnly())
-        .setting(Settings.MAX_REGULAR_OC, multiblockOnly())
-        .setting(Settings.MAX_TIER_SKIPS, multiblockOnly())
-        .setting(Settings.UNLIMITED_SKIPS, multiblockOnly())
-        .setting(Settings.NO_OVERCLOCK, multiblockOnly())
-        .setting(Settings.HEAT_OC, (ctx, s) -> hasHeat(ctx))
-        .setting(Settings.MACHINE_HEAT, multiblockOnly().and((ctx, s) -> hasHeat(ctx)))
-        .setting(Settings.RECIPE_HEAT, multiblockOnly().and((ctx, s) -> hasHeat(ctx)))
-        .setting(Settings.HEAT_DISCOUNT, multiblockOnly().and((ctx, s) -> hasHeat(ctx)))
-        .setting(Settings.HEAT_DISCOUNT_MULT, multiblockOnly().and((ctx, s) -> hasHeat(ctx)))
-        .setting(Settings.CATALYST_ASTRAL_ARRAYS, (ctx, s) -> isEoH(ctx))
-
+        .nodeState(GTNodeState::load)
         .effect(
             Effects.durationFromHandler()
-                .andThen(
-                    GTOverclockStep.create()
-                        .applyIf(GTProvider::hasHeat, GTOverclockStep::withHeat)
-                        .applyIf(
-                            ctx -> ctx.properties()
-                                .containsKey(FUSION_THRESHOLD),
-                            GTOverclockStep::withPerfectOC)
-                        .route(
-                            "gt.recipe.eyeofharmony",
-                            step -> step.withCatalyst(
-                                Settings.CATALYST_ASTRAL_ARRAYS,
-                                v -> (int) Math
-                                    .pow(2, (int) Math.floor(Math.log(8.0 * Math.min(v, 8637)) / Math.log(1.7)))))
-                        // Perfect OC defaults
-                        .withDefault("gt.recipe.largechemicalreactor", Settings.PERFECT_OC, true)
-                        .withDefault("gtpp.recipe.flotationcell", Settings.PERFECT_OC, true)
-                        .withDefault("gg.recipe.naquadah_fuel_refine_factory", Settings.PERFECT_OC, true)
-                        .withDefault("gtpp.recipe.matterfab2", Settings.PERFECT_OC, true)
-                        .withDefault("gtpp.recipe.oremill", Settings.PERFECT_OC, true)
-                        .withDefault("bw.recipe.cal", Settings.PERFECT_OC, true)
-                        .withDefault("gtnhlanth.recipe.digester", Settings.PERFECT_OC, true)
-                        .withDefault("gt.recipe.nanoforge", Settings.PERFECT_OC, true)
-                        .withDefault("gt.recipe.plasmaforge", Settings.PERFECT_OC, true)
-                        // Unlimited tier skip defaults
-                        .withDefault("gg.recipe.naquadah_fuel_refine_factory", Settings.UNLIMITED_SKIPS, true)
-                        .withDefault("gt.recipe.nanoforge", Settings.UNLIMITED_SKIPS, true)
-                        .withDefault("gt.recipe.plasmaforge", Settings.UNLIMITED_SKIPS, true)
-                        .withDefault("gtpp.recipe.alloyblastsmelter", Settings.UNLIMITED_SKIPS, true)
-                        .withDefault("gt.recipe.transcendentplasmamixerrecipes", Settings.UNLIMITED_SKIPS, true)
-                        // No-overclock defaults
-                        .withDefault("gt.recipe.transcendentplasmamixerrecipes", Settings.NO_OVERCLOCK, true)
-                        .withDefault("gtpp.recipe.algae_pond", Settings.NO_OVERCLOCK, true)))
+                .andThen(Effects.machineDriven()))
         .build();
 
     @Override
@@ -236,6 +193,9 @@ public class GTProvider implements PropertyProvider {
             if (r == null) {
                 return props;
             }
+            // Kept out of gthMap: that variable also gates the fuel-backend and heating-coil
+            // branches below, which the furnace maps must not take.
+            props.put(RECIPE_MAP, recipeMap);
 
         } else if (handler instanceof final GTNEIDefaultHandler gth) {
             final List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(gth);
@@ -255,6 +215,11 @@ public class GTProvider implements PropertyProvider {
             return props;
         }
 
+        props.put(GT_RECIPE, r);
+        props.put(
+            NEI_TITLE,
+            handler.getRecipeName()
+                .trim());
         props.put(RecipePropertyAPI.DURATION_TICKS, r.mDuration);
         props.put(EU_PER_TICK, (long) r.mEUt);
         props.put(TOTAL_EU, (long) r.mEUt * r.mDuration);
@@ -310,11 +275,21 @@ public class GTProvider implements PropertyProvider {
         return props;
     }
 
+    /**
+     * The width and height GregTech draws this handler's recipe background at, or null for a handler that is not
+     * GregTech's. For the GUI, which must not name GregTech.
+     */
+    @Nullable
+    public static int[] recipeBackgroundSize(final IRecipeHandler handler) {
+        if (!(handler instanceof final GTNEIDefaultHandlerAccessor gt)) return null;
+        final Size size = gt.getNeiProperties().recipeBackgroundSize;
+        return new int[] { size.width, size.height };
+    }
+
     private static Port<FluidStack> fluidPort(GTNEIDefaultHandler.FixedPositionedStack fps) {
         return new Port<>(
             RecipePropertyAPI.FLUID,
-            fps.getFluidAlternatives()
-                .getFirst()
+            StackInfo.getFluid(fps.item)
                 .copy(),
             (float) fps.getChance() / CHANCE_FULL,
             fps);

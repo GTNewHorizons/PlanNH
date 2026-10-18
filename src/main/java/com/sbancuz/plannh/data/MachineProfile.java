@@ -4,10 +4,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
+import com.google.gson.JsonObject;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.effect.EffectComputer;
 import com.sbancuz.plannh.data.effect.EffectResult;
@@ -17,7 +20,12 @@ import com.sbancuz.plannh.nei.NEIPlanConfig;
 
 import codechicken.nei.NEIClientConfig;
 
-public record MachineProfile(String id, String displayName, List<Entry> settings, EffectComputer effectComputer) {
+/**
+ * @param nodeState reads a node's {@link NodeState} from its save, or from an empty object for a new node. Null for a
+ *                  profile whose machines have no knobs of their own.
+ */
+public record MachineProfile(String id, String displayName, List<Entry> settings, EffectComputer effectComputer,
+    @Nullable Function<JsonObject, NodeState> nodeState) {
 
     /** One setting this profile offers, and the rule for when a machine running it shows the row. */
     public record Entry(SettingDef<?> def, BiPredicate<RecipeContext, MachineConfig> visible) {
@@ -47,6 +55,8 @@ public record MachineProfile(String id, String displayName, List<Entry> settings
                 .get(RecipePropertyAPI.DURATION_TICKS);
             return new EffectResult(dur instanceof Number n ? n.intValue() : 0, 0, 1);
         };
+        @Nullable
+        private Function<JsonObject, NodeState> nodeState;
 
         private Builder(final String id, final String displayName) {
             this.id = id;
@@ -80,9 +90,14 @@ public record MachineProfile(String id, String displayName, List<Entry> settings
             return this;
         }
 
+        public Builder nodeState(final Function<JsonObject, NodeState> reader) {
+            this.nodeState = reader;
+            return this;
+        }
+
         @Nonnull
         public MachineProfile build() {
-            return new MachineProfile(id, displayName, List.copyOf(settings), effectComputer);
+            return new MachineProfile(id, displayName, List.copyOf(settings), effectComputer, nodeState);
         }
     }
 

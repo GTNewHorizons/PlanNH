@@ -33,6 +33,8 @@
  *
  * For more details, see https://docs.gradle.org/8.0.1/userguide/java_library_plugin.html#sec:java_library_configurations_graph
  */
+def gt5uVersion = "5.09.54.189-processingspec-5-eye-of-harmony.87+97cfea9415-dirty"
+
 dependencies {
     api("com.github.GTNewHorizons:GTNHLib:0.11.37:dev")
     api("com.github.GTNewHorizons:ModularUI2:2.3.85-1.7.10:dev")
@@ -63,7 +65,7 @@ dependencies {
     compileOnly("com.github.GTNewHorizons:Gadomancy:1.5.14:dev")
     compileOnly("com.github.GTNewHorizons:ProjectBlue:1.2.10-GTNH:dev")
     compileOnly("com.github.GTNewHorizons:TinkersConstruct:1.14.97-GTNH:dev")
-    compileOnly("com.github.GTNewHorizons:GT5-Unofficial:5.09.54.90:dev")
+    compileOnly("com.github.GTNewHorizons:GT5-Unofficial:$gt5uVersion:dev")
     compileOnly("com.github.GTNewHorizons:Applied-Energistics-2-Unofficial:rv3-beta-999-GTNH:dev")
     compileOnly("com.github.GTNewHorizons:twilightforest:2.7.36:dev")
     runtimeOnlyNonPublishable('com.github.GTNewHorizons:Angelica:2.2.4:dev') { transitive = false }
@@ -84,6 +86,10 @@ dependencies {
     // Loads the GTNH coremod (dreamcraft) so NEI shows the pack's recipe tweaks in dev.
     if (project.hasProperty('gtnhRecipes')) {
         runtimeOnlyNonPublishable('com.github.GTNewHorizons:NewHorizonsCoreMod:2.9.62:dev')
+        // The coremod pulls most of the pack in behind it, but not EnderIO, so the dev client had no
+        // EnderIO recipes to build a node from and the capacitor row could not be looked at. Named
+        // here rather than left to a reviewer to work out. EnderCore and cofh-lib arrive with it.
+        runtimeOnlyNonPublishable('com.github.GTNewHorizons:EnderIO:2.10.31:dev')
     }
 
     def elkVersion = '0.12.0'
@@ -101,9 +107,28 @@ dependencies {
         exclude group: 'org.eclipse.emf', module: 'org.eclipse.emf.ecore.xmi'
     }
 
+    // The overclock and preset tests use GT's own classes as their oracle, so GT has to be
+    // on the test classpath. Scoped to the test source set: the published mod keeps GT compileOnly.
+    testImplementation("com.github.GTNewHorizons:GT5-Unofficial:$gt5uVersion:dev")
+
+    // Same reason: the capacitor tiers PlanNH plans EnderIO recipes at are read out of EnderIO's own
+    // enum, and the tier list is the thing worth asserting - EnderIO ships ten capacitor items for
+    // seven tiers, so a reader that fails to fold the duplicates is wrong in a way only the real jar
+    // shows. Test scope only; the published mod keeps EnderIO compileOnly.
+    testImplementation("com.github.GTNewHorizons:EnderIO:2.10.31:dev")
+
     // Headless test harness (corpus charts are gtnh-flow style YAML)
     testImplementation('org.junit.jupiter:junit-jupiter:5.10.2')
     testRuntimeOnly('org.junit.platform:junit-platform-launcher:1.10.2')
     testImplementation('org.yaml:snakeyaml:2.2')
+    // GTRecipe's constructor needs the game loaded, so tests stand one in
+    testImplementation('org.mockito:mockito-core:5.24.0')
+
+    // The overclock tests call GT's own OverclockCalculator; classloading it pulls in GTUtility,
+    // whose static init reaches joml and fastutil. Both are already on the compile classpath (via
+    // lwjgl3ify and Forge respectively) but neither reaches test runtime, so without these the
+    // tests compile and then die on NoClassDefFoundError. Versions match what compileClasspath
+    // already resolves.
+    testRuntimeOnly('org.joml:joml:1.10.8')
     testRuntimeOnly('it.unimi.dsi:fastutil:8.5.18')
 }

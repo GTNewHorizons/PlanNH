@@ -5,11 +5,13 @@ import java.util.List;
 import java.util.Map;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
+import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
+import com.gtnewhorizon.gtnhlib.color.ColorResource;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Port;
@@ -76,6 +78,10 @@ class ThroughputFold extends NodeFold {
         rateRows.clear();
 
         final Balancer.NodeBalance balance = node.balance();
+        // The machine's own reason it won't run the recipe, so the rates below read as the recipe's, not the machine's
+        if (balance != null && balance.rejection() != null) child(line(balance.rejection(), PlannhColors.ACCENT_RED));
+        if (balance != null) balance.details()
+            .forEach(detail -> child(line(detail, PlannhColors.TEXT_DIM)));
         final int duration = balance == null ? 0 : balance.durationPerOp();
         if (duration <= 0) {
             child(hint(LANG + "unbalanced"));
@@ -91,6 +97,14 @@ class ThroughputFold extends NodeFold {
         // print, which is a different thing from not having been solved.
         if (getChildren().isEmpty()) child(hint(LANG + "unplanned"));
         scheduleResize();
+    }
+
+    private IWidget line(final String text, final ColorResource color) {
+        return new FlowchartTextWidget(
+            IKey.str(text)
+                .color(color.getColor()),
+            node).fullWidth()
+                .name("throughput.machine");
     }
 
     /** One row per port moving this way, and nothing at all when none is. */

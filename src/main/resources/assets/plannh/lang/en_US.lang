@@ -9,6 +9,15 @@ plannh.settings.energy_per_tick=Energy/t
 plannh.settings.inputs_per_tick=Inputs/t
 plannh.settings.burnable_override=Burnable
 
+plannh.settings.machine=Machine
+plannh.settings.follow_machine=Follow the machine's value
+
+## Settings - GT machine and structure
+plannh.settings.gt_advanced=Advanced
+plannh.settings.gt_coil=Coil
+plannh.settings.gt_pipe_casing=Pipe Casing
+plannh.settings.gt_mode=Mode
+
 ## Settings - GT
 plannh.settings.voltage=Tier
 plannh.settings.amp=Amp
@@ -40,14 +49,12 @@ plannh.settings.mana_per_tick=Mana/t
 ## Settings - Thaumcraft (and friends)
 plannh.settings.vis_per_tick=Vis/t
 
-## Settings - Forestry
-plannh.settings.forestry_rf_per_tick=For. RF/t
-
 ## Settings - BloodMagic
 plannh.settings.lp_per_tick=BM LP/t
 
 ## Settings - Cofh core
 plannh.settings.rf_per_tick=RF/t
+plannh.settings.eio_capacitor=Capacitor
 
 ## Settings - Steam
 plannh.settings.steam_eut_discount=Steam EU%
@@ -213,6 +220,13 @@ plannh.solver.inexact_residual=Returned an inexact port residual %s
 plannh.solver.under_supply=Returned a port that under-supplies: residual %s
 plannh.solver.gate_count_not_certified=Gate count %d is minimal but not certified optimal (exact search over budget)
 ## Names
+plannh.machine.singleblock_suffix= (single)
+plannh.machine.no_spec_suffix= (no ProcessingSpec interface)
+plannh.gt.output_odds=%s%% success, %s%% yield
+plannh.gt.startup_eu=Start-up: %s EU
+plannh.gt.eu_per_run=Per run: %s EU
+plannh.gt.mode_not_calculated=This mode does not run as recipes, so it has no numbers to plan
+plannh.gt.eu_generated=Gives per run: %s EU
 plannh.solver.none=none
 plannh.solver.pin_extent=extent
 plannh.solver.pin_target=rate

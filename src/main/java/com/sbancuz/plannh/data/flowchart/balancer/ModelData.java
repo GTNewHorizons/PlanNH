@@ -65,7 +65,10 @@ public final class ModelData {
             for (int i = 0; i < outQty.length; i++) {
                 final var s = node.getOutputs()
                     .get(i);
-                outQty[i] = Math.max(0, s.getAmount()) * s.getChance() * cfg.outputMultiplier(i) * tf;
+                outQty[i] = Math.max(0, s.getAmount()) * s.getChance()
+                    * cfg.outputMultiplier(i)
+                    * eff.outputFactor()
+                    * tf;
             }
 
             this.targetExtent = cfg.getTargetKind() == Pin.TARGET_RATE ? cfg.getRates()

@@ -3,9 +3,13 @@ package com.sbancuz.plannh.data.effect;
 import java.util.function.Predicate;
 import java.util.function.ToIntBiFunction;
 
+import javax.annotation.Nonnull;
+
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.RecipeContext;
+import com.sbancuz.plannh.data.machine.MachineVariant;
+import com.sbancuz.plannh.data.machine.MachineVariants;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.setting.IntegerSettingDef;
 
@@ -65,6 +69,21 @@ public final class Effects {
             final Object dur = ctx.properties().get(RecipePropertyAPI.DURATION_TICKS);
             final int d = dur instanceof final Number n ? n.intValue() : 0;
             return new EffectResult(d, 0, 1);
+        };
+    }
+
+    /**
+     * Takes the numbers from the node's selected machine. Passes the recipe's numbers through when no
+     * machine is selected or its {@link MachineVariant#run} returns null. This is the only step where a
+     * machine's arithmetic enters a chart, so providers hook in through {@link MachineVariant#run}, not
+     * through a new effect step.
+     */
+    @Nonnull
+    public static EffectStep machineDriven() {
+        return (current, s, ctx) -> {
+            final MachineVariant machine = MachineVariants.selected(ctx, s);
+            final EffectResult driven = machine == null ? null : machine.run(ctx, s, current);
+            return driven != null ? driven : current;
         };
     }
 

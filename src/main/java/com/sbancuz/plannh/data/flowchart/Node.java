@@ -22,7 +22,7 @@ import com.sbancuz.plannh.mixins.PositionedStackAccessor;
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.Recipe;
 import codechicken.nei.recipe.RecipeHandlerRef;
-import gregtech.api.util.GTUtility;
+import codechicken.nei.recipe.StackInfo;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -74,13 +74,10 @@ public class Node extends GraphData {
             .trim();
         header = machineName;
 
-        availableExtractors = RecipePropertyAPI.getExtractors(handler.getClass());
+        availableExtractors = extractorsFor(handler, recipeIndex);
         extractorIndex = 0;
-        if (availableExtractors.isEmpty()) {
-            extractor = DefaultProvider.INSTANCE;
-        } else {
-            extractor = pickBestExtractor(handler, recipeIndex);
-        }
+        // extractorsFor() has already dropped the providers that can't craft this recipe
+        extractor = availableExtractors.isEmpty() ? DefaultProvider.INSTANCE : availableExtractors.getFirst();
 
         String pid = extractor.getProfileId(handler, recipeIndex);
         if (pid != null && !MachineProfileRegistry.defaultId()
@@ -112,7 +109,6 @@ public class Node extends GraphData {
 
         deduplicate(inputs);
         deduplicate(outputs);
-        machineConfig.seedRouteDefaults(properties); // todo test if this works
 
         if (init) {
             // sanitise input configs
@@ -132,7 +128,7 @@ public class Node extends GraphData {
         if (type == RecipePropertyAPI.ITEM) ((Port<ItemStack>) port).setValue(itemStack.copy());
 
         if (type == RecipePropertyAPI.FLUID && Compat.GREGTECH.isLoaded) ((Port<FluidStack>) port).setValue(
-            GTUtility.getFluidFromDisplayStack(itemStack)
+            StackInfo.getFluid(itemStack)
                 .copy());
 
         port.getAllStacks()
@@ -181,11 +177,22 @@ public class Node extends GraphData {
         refresh(false);
     }
 
-    private PropertyProvider pickBestExtractor(IRecipeHandler handler, int recipeIndex) {
-        for (PropertyProvider p : availableExtractors) {
-            if (p.canCraft(handler, recipeIndex)) return p;
+    /**
+     * The providers a node can switch to for this recipe. Extractors register against a NEI handler class, so every
+     * GregTech provider matches every GregTech recipe, including the steam one. Using {@code canCraft} only to pick the
+     * first provider would let a player switch a Large Chemical Reactor onto steam.
+     *
+     * <p>
+     * A recipe no provider can craft gets the unfiltered list: something has to extract it, and a wrong provider is
+     * better than a node with no properties.
+     */
+    private static List<PropertyProvider> extractorsFor(final IRecipeHandler handler, final int recipeIndex) {
+        final List<PropertyProvider> all = RecipePropertyAPI.getExtractors(handler.getClass());
+        final List<PropertyProvider> claimed = new ArrayList<>();
+        for (final PropertyProvider p : all) {
+            if (p.canCraft(handler, recipeIndex)) claimed.add(p);
         }
-        return availableExtractors.getFirst();
+        return claimed.isEmpty() ? all : List.copyOf(claimed);
     }
 
     public void init() {
@@ -195,7 +202,7 @@ public class Node extends GraphData {
             availableExtractors = List.of();
             return;
         }
-        availableExtractors = RecipePropertyAPI.getExtractors(ref.handler.getClass());
+        availableExtractors = extractorsFor(ref.handler, ref.recipeIndex);
         if (extractorIndex >= availableExtractors.size()) {
             extractorIndex = 0;
         }

@@ -50,7 +50,7 @@ import codechicken.nei.KeyManager;
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.GuiCraftingRecipe;
 import codechicken.nei.recipe.GuiUsageRecipe;
-import gregtech.api.util.GTUtility;
+import codechicken.nei.recipe.StackInfo;
 import it.unimi.dsi.fastutil.ints.IntIntPair;
 import lombok.Getter;
 
@@ -229,7 +229,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     private void setPermutationToStack(ItemStack itemStack) {
         if (port.getType() == RecipePropertyAPI.ITEM) ((Port<ItemStack>) port).setValue(itemStack.copy());
         if (port.getType() == RecipePropertyAPI.FLUID && Compat.GREGTECH.isLoaded) ((Port<FluidStack>) port).setValue(
-            GTUtility.getFluidFromDisplayStack(itemStack)
+            StackInfo.getFluid(itemStack)
                 .copy());
 
         port.getAllStacks()

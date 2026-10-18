@@ -281,6 +281,7 @@ public final class Balancer {
                 if (stackSize <= 0) continue;
                 final float total = (float) (count * stackSize * outStack.getChance()
                     * cfg.outputMultiplier(i)
+                    * eff.outputFactor()
                     * throughputFactor);
                 if (total <= 0) continue;
                 effOuts.put(i, total);
@@ -298,7 +299,9 @@ public final class Balancer {
                 effIns.put(i, total);
             }
 
-            nodeBalances.put(node.getId(), new NodeBalance(count, totalEnergy, durPerOp, effOuts, effIns));
+            nodeBalances.put(
+                node.getId(),
+                new NodeBalance(count, totalEnergy, durPerOp, effOuts, effIns, eff.rejection(), eff.details()));
 
             for (final Map.Entry<RecipeProperty<?>, Object> entry : node.getProperties().entrySet()) {
                 if (entry.getValue() instanceof final Number num) {
@@ -313,8 +316,14 @@ public final class Balancer {
         return new BalanceResult.Solved(nodeBalances, propertyTotals, totalOps, totalDuration, notes, auto, alternatives);
     }
 
-    /** One machine's share of a solved balance, for the node widget and the machine-count panel. */
+    /**
+     * One machine's share of a solved balance, for the node widget and the machine-count panel.
+     *
+     * @param rejection Why the node's machine won't run its recipe. The node is then planned at the recipe's numbers.
+     * @param details   Lines for the node's panel, beside its numbers.
+     */
     public record NodeBalance(double operations, long totalEnergy, int durationPerOp,
-        Map<Integer, Float> effectiveOutputs, Map<Integer, Float> effectiveInputs) {}
+        Map<Integer, Float> effectiveOutputs, Map<Integer, Float> effectiveInputs, @Nullable String rejection,
+        List<String> details) {}
 
 }

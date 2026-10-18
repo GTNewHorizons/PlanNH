@@ -16,13 +16,12 @@ import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.ParentWidget;
-import com.gtnewhorizons.modularui.api.math.Size;
 import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
+import com.sbancuz.plannh.data.provider.GTProvider;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.common.IFlowchartDraggable;
-import com.sbancuz.plannh.mixins.GTNEIDefaultHandlerAccessor;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.RecipeHandlerRef;
@@ -68,10 +67,10 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
         neiWidget.showAsWidget(true);
         neiWidget.x = WIDGET_OFFSET_X;
 
-        if (Compat.GREGTECH.isLoaded && handlerRef.handler instanceof GTNEIDefaultHandlerAccessor handler) {
-            Size size = handler.getNeiProperties().recipeBackgroundSize;
-            size(size.width, size.height);
-            recipeWidth = size.width;
+        final int[] background = Compat.GREGTECH.isLoaded ? GTProvider.recipeBackgroundSize(handlerRef.handler) : null;
+        if (background != null) {
+            size(background[0], background[1]);
+            recipeWidth = background[0];
         } else {
             size(neiWidget.w, neiWidget.h);
             recipeWidth = neiWidget.w;

@@ -5,6 +5,8 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.UUID;
 
+import javax.annotation.Nonnull;
+
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceView;
@@ -39,6 +41,23 @@ public class Graph {
     private boolean snapToGrid;
 
     private BalanceMode balanceMode = BalanceMode.AUTO;
+
+    /** No floor is set for this key, so a node opens on the best available value. */
+    public static final int NO_MINIMUM = -1;
+
+    /**
+     * The structure available to this chart's factory, keyed by setting. A chart is a factory at one point in a world's
+     * progression, so the starting coil is set once per chart and a node's settings store only what differs.
+     *
+     * <p>
+     * A starting value, not a ceiling. A node whose recipe requires more is raised to that, and a value the user edits
+     * on a node stays as edited.
+     *
+     * <p>
+     * With one field per setting, GregTech settings would be named in a class that has to stay loadable without
+     * GregTech, so the keys come from the installed mods. Sorted so a save writes them in a stable order.
+     */
+    private final SortedMap<String, Integer> minimums = new TreeMap<>();
 
     /**
      * Per-graph undo/redo stack, transient because snapshots are content-encoded and never stored.
@@ -97,6 +116,26 @@ public class Graph {
     public void setBalanceMode(final BalanceMode mode) {
         balanceMode = mode;
         bumpVersion();
+    }
+
+    /** The floor for one setting, or {@link #NO_MINIMUM} when none is set. */
+    public int getMinimum(final String settingKey) {
+        return minimums.getOrDefault(settingKey, NO_MINIMUM);
+    }
+
+    /**
+     * A minimum changes what an untouched node runs at, which changes its parallel count and so the
+     * whole solve.
+     */
+    public void setMinimum(final String settingKey, final int tier) {
+        minimums.put(settingKey, tier);
+        bumpVersion();
+    }
+
+    /** The stored floors, for the serializer. */
+    @Nonnull
+    public SortedMap<String, Integer> getMinimums() {
+        return minimums;
     }
 
     public void removeNode(final UUID id) {

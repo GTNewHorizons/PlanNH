@@ -8,6 +8,7 @@ import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
+import java.util.SortedMap;
 import java.util.UUID;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -24,6 +25,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import com.google.gson.reflect.TypeToken;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.flowchart.Edge;
@@ -39,6 +41,8 @@ import codechicken.nei.recipe.Recipe;
 import it.unimi.dsi.fastutil.ints.IntIntPair;
 
 public final class Serializer {
+
+    private static final Type MINIMUMS = new TypeToken<SortedMap<String, Integer>>() {}.getType();
 
     public static final Gson GSON = new GsonBuilder().setPrettyPrinting()
         .enableComplexMapKeySerialization()
@@ -208,6 +212,8 @@ public final class Serializer {
         root.addProperty("panX", graph.getPanX());
         root.addProperty("panY", graph.getPanY());
         root.addProperty("name", graph.getName());
+        if (!graph.getMinimums()
+            .isEmpty()) root.add("minimums", GSON.toJsonTree(graph.getMinimums(), MINIMUMS));
 
         root.add(
             "notes",
@@ -242,6 +248,12 @@ public final class Serializer {
         graph.setZoom(getSafeFloat(root.get("zoom"), 1));
         graph.setPanX(getSafeFloat(root.get("panX"), 0));
         graph.setPanY(getSafeFloat(root.get("panY"), 0));
+        // Writing into getMinimums() directly would skip the version bump. A floor changes what every
+        // untouched node runs at, so the chart has to solve again.
+        if (root.has("minimums")) {
+            final SortedMap<String, Integer> stored = GSON.fromJson(root.get("minimums"), MINIMUMS);
+            stored.forEach(graph::setMinimum);
+        }
 
         if (root.has("notes")) {
             for (final JsonElement elem : root.getAsJsonArray("notes")) {

@@ -12,8 +12,10 @@ import com.cleanroommc.modularui.screen.ModularContainer;
 import com.sbancuz.plannh.client.ChatHandler;
 import com.sbancuz.plannh.client.GPUProgram;
 import com.sbancuz.plannh.client.ImportCommand;
+import com.sbancuz.plannh.client.MachineTableCommand;
 import com.sbancuz.plannh.client.OffscreenHandler;
 import com.sbancuz.plannh.client.WorldHandler;
+import com.sbancuz.plannh.data.provider.gregtech.GTMachineIndex;
 import com.sbancuz.plannh.gui.FlowchartScreen;
 import com.sbancuz.plannh.gui.layout.ElkLayoutStrategy;
 
@@ -57,10 +59,16 @@ public class ClientProxy extends CommonProxy {
 
         MinecraftForge.EVENT_BUS.register(new ChatHandler());
         ClientCommandHandler.instance.registerCommand(new ImportCommand());
+        if (Compat.GREGTECH.isLoaded) ClientCommandHandler.instance.registerCommand(new MachineTableCommand());
 
         FMLCommonHandler.instance()
             .bus()
             .register(this);
+
+        // Building the GT machine index reads every multiblock's spec and tooltip.
+        // Built here, so the first frame that draws a GT node's settings doesn't stall.
+        if (Compat.GREGTECH.isLoaded) Minecraft.getMinecraft()
+            .func_152344_a(GTMachineIndex::warmup);
 
         Minecraft.getMinecraft()
             .func_152344_a(ElkLayoutStrategy::warmUp);

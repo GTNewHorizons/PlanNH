@@ -33,6 +33,7 @@ import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
+import com.sbancuz.plannh.gui.components.MinimumsMenu;
 import com.sbancuz.plannh.gui.layout.ElkLayoutStrategy;
 import com.sbancuz.plannh.gui.summary.SummaryWidget;
 import com.sbancuz.plannh.nei.NEIPlanConfig;
@@ -47,6 +48,8 @@ public class FlowchartScreen extends ModularScreen {
     private static final int LEFT_MARGIN = 5;
     private static final int RIGHT_MARGIN = 15;
     private static final int TOP_MARGIN = 30;
+    /** Bottom of the button row, and the highest a panel opened from it may sit. */
+    private static final int TOOLBAR_BOTTOM = TOP_MARGIN + 20;
     private static final int BOTTOM_MARGIN = 30;
 
     @Getter
@@ -78,6 +81,8 @@ public class FlowchartScreen extends ModularScreen {
             .full();
 
         Menu<?> contextMenu = new Menu<>();
+        // the structure every node in this chart opens on
+        final MinimumsMenu minimums = new MinimumsMenu();
 
         CanvasWidget canvas = new CanvasWidget(contextMenu, panel, new ElkLayoutStrategy());
 
@@ -243,6 +248,18 @@ public class FlowchartScreen extends ModularScreen {
                                 .stateOverlay(BalanceMode.AUTO, IKey.str("M:A"))
                                 .addTooltipLine("Cycle Balance Modes"))
                         .child(
+                            new ButtonWidget<>().name("edit.minimums")
+                                .onMousePressed(_ -> {
+                                    minimums.toggle(
+                                        canvas.getContext()
+                                            .getAbsMouseX(),
+                                        TOOLBAR_BOTTOM);
+                                    return true;
+                                })
+                                .overlay(IKey.str("Min"))
+                                .addTooltipLine("Structure this chart plans with")
+                                .addTooltipLine("A node needing more raises itself"))
+                        .child(
                             new ButtonWidget<>().name("add.group")
                                 .onMousePressed(_ -> {
                                     canvas.addGroup(canvas.getCanvasScreenCenterX(), canvas.getCanvasScreenCenterY());
@@ -306,6 +323,7 @@ public class FlowchartScreen extends ModularScreen {
         panel.child(mainColumn);
         panel.child(new SummaryWidget(canvas));
         panel.child(contextMenu);
+        panel.child(minimums.widget());
 
         return new FlowchartScreen(panel, canvas);
     }

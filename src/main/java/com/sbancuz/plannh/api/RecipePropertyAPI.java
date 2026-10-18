@@ -3,6 +3,7 @@ package com.sbancuz.plannh.api;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 import javax.annotation.Nonnull;
 
@@ -24,7 +25,7 @@ import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.mixins.PositionedStackAccessor;
 
 import codechicken.nei.PositionedStack;
-import gregtech.api.util.GTUtility;
+import codechicken.nei.recipe.StackInfo;
 import gregtech.nei.GTNEIDefaultHandler;
 
 public final class RecipePropertyAPI {
@@ -101,12 +102,14 @@ public final class RecipePropertyAPI {
             FluidStack[] as = Arrays.stream(
                 pa.getAllStacks()
                     .getFirst().items)
-                .map(GTUtility::getFluidFromDisplayStack)
+                .map(StackInfo::getFluid)
+                .filter(Objects::nonNull)
                 .toArray(FluidStack[]::new);
             FluidStack[] bs = Arrays.stream(
                 pb.getAllStacks()
                     .getFirst().items)
-                .map(GTUtility::getFluidFromDisplayStack)
+                .map(StackInfo::getFluid)
+                .filter(Objects::nonNull)
                 .toArray(FluidStack[]::new);
 
             for (FluidStack a : as) {

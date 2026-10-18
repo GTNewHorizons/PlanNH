@@ -1,5 +1,6 @@
 package com.sbancuz.plannh.gui.node;
 
+import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
@@ -43,22 +44,33 @@ class SettingsFold extends NodeFold {
         final MachineConfig config = data.getMachineConfig();
         config.getProfile()
             .visibleSettings(new RecipeContext(data.getProperties()), config)
-            .forEach(
-                def -> child(
-                    FlowchartFlow.row(node)
-                        .name("settings.row")
-                        .fullWidth()
-                        .marginBottom(ROW_GAP)
-                        .coverChildrenHeight()
-                        .childPadding(2)
-                        .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
-                        .child(new FlowchartTextWidget(def.getLabel(), node).name("settings.row.label"))
-                        .child(def.settingsWidget(data.getMachineConfig(), change -> {
-                            commitEdit(change);
-                            markStale();
-                        }))));
+            .forEach(def -> child(row(def.getLabel(), def.settingsWidget(data.getMachineConfig(), change -> {
+                commitEdit(change);
+                markStale();
+            }))));
+
+        // A profile's own knobs, after the shared ones
+        if (config.getNodeState() != null) {
+            config.getNodeState()
+                .rows(new RecipeContext(data.getProperties()), change -> {
+                    commitEdit(change);
+                    markStale();
+                })
+                .forEach(stateRow -> child(row(stateRow.label(), stateRow.control())));
+        }
 
         scheduleResize();
     }
 
+    private IWidget row(final String label, final IWidget control) {
+        return FlowchartFlow.row(node)
+            .name("settings.row")
+            .fullWidth()
+            .marginBottom(ROW_GAP)
+            .coverChildrenHeight()
+            .childPadding(2)
+            .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
+            .child(new FlowchartTextWidget(label, node).name("settings.row.label"))
+            .child(control);
+    }
 }

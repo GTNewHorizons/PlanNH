@@ -6,6 +6,7 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.google.gson.JsonObject;
 import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.flowchart.balancer.Pin;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
@@ -25,6 +26,10 @@ public class MachineConfig {
     private String profileId;
     @Getter(AccessLevel.NONE)
     private final Map<SettingDef<?>, Object> settings;
+    /** The profile's own knobs for this node. Null when the profile has none. */
+    @Nullable
+    @Setter(AccessLevel.NONE)
+    private NodeState nodeState;
 
     /** The targets this machine is held to. Values here, and one of them is what counts. */
     private final CopyCountTarget copies = new CopyCountTarget();
@@ -49,6 +54,12 @@ public class MachineConfig {
      *                 it exists and reading a setting never has to invent one.
      */
     public MachineConfig(@Nullable final MachineProfile requested, final Map<SettingDef<?>, Object> settings) {
+        this(requested, settings, new JsonObject());
+    }
+
+    /** @param savedState the profile's node state as saved, or an empty object for a new node */
+    public MachineConfig(@Nullable final MachineProfile requested, final Map<SettingDef<?>, Object> settings,
+        final JsonObject savedState) {
         // An unknown profile id means the chart was saved with a mod (or a mod version) that is
         // not present now. That is a chart to degrade, not a save to lose: fall back to the
         // default profile, exactly as getProfile() does for the same reason.
@@ -60,6 +71,27 @@ public class MachineConfig {
 
         for (final SettingDef<?> def : profile.defs()) this.settings.putIfAbsent(def, def.getDefaultValue());
         this.settings.putIfAbsent(Settings.MACHINES, Settings.MACHINES.getDefaultValue());
+        nodeState = readState(profile, savedState);
+    }
+
+    @Nullable
+    private static NodeState readState(final MachineProfile profile, final JsonObject saved) {
+        return profile.nodeState() == null ? null
+            : profile.nodeState()
+                .apply(saved);
+    }
+
+    /** Another profile's machines have other knobs, so its node state starts over. */
+    public void setProfileId(final String profileId) {
+        if (profileId.equals(this.profileId)) return;
+        this.profileId = profileId;
+        nodeState = readState(getProfile(), new JsonObject());
+    }
+
+    /** The node state, as the profile's own type. Null when the profile keeps another type or none. */
+    @Nullable
+    public <S extends NodeState> S nodeState(final Class<S> type) {
+        return type.isInstance(nodeState) ? type.cast(nodeState) : null;
     }
 
     /** The copies target is the one that stands in for {@link Settings#MACHINES} as a row. */
@@ -96,23 +128,6 @@ public class MachineConfig {
         defaults.forEach(settings::putIfAbsent);
     }
 
-    /**
-     * Applies the profile's per-recipe-map route defaults (e.g. Perfect OC on for specific recipe
-     * machines) to the settings. Only values still at the profile default are overridden, so a
-     * user's explicit choice is never clobbered.
-     */
-    public void seedRouteDefaults(Map<RecipeProperty<?>, Object> properties) {
-        final Map<SettingDef<?>, Object> defaults = getProfile().effectComputer()
-            .routeDefaults(new RecipeContext(properties));
-        if (defaults.isEmpty()) return;
-
-        for (final Map.Entry<SettingDef<?>, Object> e : defaults.entrySet()) {
-            final SettingDef<?> def = e.getKey();
-            final Object current = settings.get(def);
-            if (current == null || current.equals(def.getDefaultValue())) settings.put(def, e.getValue());
-        }
-    }
-
     @Nonnull
     public EffectResult computeEffect(final Map<RecipeProperty<?>, Object> properties) {
         final MachineProfile profile = getProfile();
@@ -123,7 +138,7 @@ public class MachineConfig {
             final double factor = 100.0 / tickMod;
             final int newDuration = Math.max(1, (int) Math.round(result.durationTicks() * factor));
             final long newEnergyPerT = Math.round(result.energyPerT() / factor);
-            result = new EffectResult(newDuration, newEnergyPerT, result.throughputFactor());
+            result = result.withTiming(newDuration, newEnergyPerT);
         }
         return result;
     }
@@ -140,6 +155,7 @@ public class MachineConfig {
         settings.clear();
         settings.putAll(other.settings);
         set(Settings.MACHINES, machines);
+        nodeState = other.nodeState == null ? null : other.nodeState.copy();
         targetKind = kind;
     }
 

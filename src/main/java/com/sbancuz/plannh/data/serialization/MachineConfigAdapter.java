@@ -49,6 +49,14 @@ public class MachineConfigAdapter implements JsonSerializer<MachineConfig>, Json
         }
         obj.add("settings", settingsObj);
 
+        // The profile's own knobs, only those set on this node: the rest follow its machine.
+        if (src.getNodeState() != null) {
+            final JsonObject state = src.getNodeState()
+                .save();
+            if (!state.entrySet()
+                .isEmpty()) obj.add("state", state);
+        }
+
         // Which target counts, when there is one. Absent means the balance picks the machine's own setting.
         final Pin kind = src.getTargetKind();
         if (kind != null) obj.addProperty("targetKind", kind.name());
@@ -93,7 +101,11 @@ public class MachineConfigAdapter implements JsonSerializer<MachineConfig>, Json
             if (value != null) settings.put(setting, value);
         }
 
-        final MachineConfig config = new MachineConfig(p, settings);
+        final JsonElement state = obj.get("state");
+        final MachineConfig config = new MachineConfig(
+            p,
+            settings,
+            state != null && state.isJsonObject() ? state.getAsJsonObject() : new JsonObject());
 
         final JsonElement kind = obj.get("targetKind");
         if (kind != null && kind.isJsonPrimitive()) {
