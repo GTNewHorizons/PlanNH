@@ -6,20 +6,30 @@ import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
+import com.google.gson.JsonSerializationContext;
+import com.google.gson.JsonSerializer;
 
 import it.unimi.dsi.fastutil.ints.IntIntPair;
 
-public class IntIntPairDeserializer implements JsonDeserializer<IntIntPair> {
+public class IntIntPairDeserializer implements JsonDeserializer<IntIntPair>, JsonSerializer<IntIntPair> {
 
     @Override
-    public IntIntPair deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
-        throws JsonParseException {
-        JsonObject obj = json.getAsJsonObject();
+    public IntIntPair deserialize(final JsonElement json, final Type type, final JsonDeserializationContext context) {
+        if (!json.isJsonObject()) return null;
+        final var object = json.getAsJsonObject();
+        if (!object.has("left") || !object.has("right")) return null;
         return IntIntPair.of(
-            obj.get("left")
+            object.get("left")
                 .getAsInt(),
-            obj.get("right")
+            object.get("right")
                 .getAsInt());
+    }
+
+    @Override
+    public JsonElement serialize(final IntIntPair pair, final Type type, final JsonSerializationContext context) {
+        final JsonObject object = new JsonObject();
+        object.addProperty("left", pair.leftInt());
+        object.addProperty("right", pair.rightInt());
+        return object;
     }
 }
