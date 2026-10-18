@@ -6,11 +6,10 @@ import java.util.List;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.ChatComponentText;
-import net.minecraft.util.StatCollector;
 
 import org.lwjgl.opengl.GL11;
 
+import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.ModularPanel;
@@ -21,6 +20,7 @@ import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.value.BoolValue;
 import com.cleanroommc.modularui.value.EnumValue;
 import com.cleanroommc.modularui.value.StringValue;
+import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.CycleButtonWidget;
 import com.cleanroommc.modularui.widgets.ListWidget;
@@ -52,6 +52,12 @@ public class FlowchartScreen extends ModularScreen {
     @Getter
     private final CanvasWidget canvas;
 
+    private final ParentWidget<?> messages = new ParentWidget<>().name("screen.messages")
+        .relativeToScreen()
+        .full()
+        .background(IDrawable.EMPTY)
+        .hoverBackground(IDrawable.EMPTY);
+
     private FlowchartScreen(final ModularPanel panel, CanvasWidget canvas) {
         super(PlanNH.MODID, panel);
         getContext().setSettings(new UISettings());
@@ -60,6 +66,7 @@ public class FlowchartScreen extends ModularScreen {
             .enable();
 
         this.canvas = canvas;
+        panel.child(messages);
     }
 
     public static FlowchartScreen create() {
@@ -272,11 +279,7 @@ public class FlowchartScreen extends ModularScreen {
                             new ButtonWidget<>().name("share.copy")
                                 .onMousePressed(_ -> {
                                     PlanAPI.copyToClipboard(canvas.getGraph());
-                                    Minecraft.getMinecraft().thePlayer.addChatMessage(
-                                        new ChatComponentText(
-                                            "[" + PlanNH.MODID
-                                                + "] "
-                                                + StatCollector.translateToLocal("plannh.share.copy_to_clipboard")));
+                                    PlanAPI.showMessage("plannh.share.copy_to_clipboard");
                                     return true;
                                 })
                                 .overlay(
@@ -290,11 +293,7 @@ public class FlowchartScreen extends ModularScreen {
                                     if (graph == null) return true;
                                     PlanAPI.importGraph(graph);
                                     canvas.setGraph(graph);
-                                    Minecraft.getMinecraft().thePlayer.addChatMessage(
-                                        new ChatComponentText(
-                                            "[" + PlanNH.MODID
-                                                + "] "
-                                                + StatCollector.translateToLocal("plannh.share.copy_from_clipboard")));
+                                    PlanAPI.showMessage("plannh.share.copy_from_clipboard");
                                     return true;
                                 })
                                 .overlay(
@@ -314,6 +313,16 @@ public class FlowchartScreen extends ModularScreen {
     public void onClose() {
         PlanAPI.save();
         super.onClose();
+    }
+
+    public void showMessage(final String message) {
+        messages.child(
+            new CursorMessageWidget(
+                IKey.str(message),
+                getContext().getAbsMouseX(),
+                getContext().getAbsMouseY(),
+                Math.max(10, Math.min(280, getScreenArea().width - 18))));
+        messages.scheduleResize();
     }
 
     // Screen level, not canvas level: the panel only offers keys to the hovered widget, so the

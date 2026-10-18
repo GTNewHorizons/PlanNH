@@ -113,6 +113,21 @@ plannh.share.copy_to_clipboard=Plan exported to clipboard
 plannh.share.copy_from_clipboard=Plan imported from clipboard
 
 ## GUI
+plannh.error.recipe_add=Could not add this recipe. The plan was not changed. See the log for details.
+plannh.error.recipe_edit=Could not update recipe %s. The previous settings were preserved. See the log for details.
+plannh.error.save=Could not write the plan to disk. See the log for details.
+plannh.error.load=Could not read the plan. Original data was preserved; checking the backup. See the log for details.
+plannh.error.load_backup=Could not read the backup plan. See the log for details.
+plannh.error.import=Could not import the graph. The plan was not changed. See the log for details.
+plannh.error.export=Could not export or share the graph. See the log for details.
+plannh.error.debug_save=The plan was saved, but its diagnostic copy could not be written. See the log for details.
+plannh.error.connection=Could not create the connection. See the log for details.
+plannh.error.history=Could not restore undo/redo history. See the log for details.
+plannh.warning.unavailable_nodes=Loaded with %s unavailable recipes. Their nodes and connections were preserved but are excluded from all results.
+plannh.warning.malformed_entries=Removed %s malformed entries from the plan.
+plannh.warning.backup_loaded=Loaded the backup plan. The unreadable original was preserved separately.
+plannh.warning.non_atomic_save=This filesystem does not support atomic save replacement. Using a backup-protected write.
+plannh.gui.node.unavailable=Recipe unavailable. Excluded from all results.
 key.neiflowchart.open=Open flowchart
 key.neiflowchart.secondscreen=Toggle second screen
 ## GUI - Node throughput

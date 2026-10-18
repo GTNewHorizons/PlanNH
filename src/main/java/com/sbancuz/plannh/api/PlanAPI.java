@@ -18,6 +18,8 @@ import net.minecraft.nbt.NBTTagList;
 import net.minecraft.nbt.NBTTagString;
 import net.minecraft.util.StatCollector;
 
+import com.cleanroommc.modularui.api.drawable.IKey;
+import com.sbancuz.plannh.client.MessageHandler;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.UndoHistory;
@@ -32,6 +34,16 @@ public final class PlanAPI {
     public static final String PLANNH_DATA_KEY = "plannh_data";
 
     private static final boolean DEBUG_MODE = true;
+
+    /** Shows a localized message in chat and, while the planner is open, beside the cursor. */
+    public static void showMessage(final String key, final Object... args) {
+        showMessage(IKey.lang(key, args));
+    }
+
+    /** Accepts literal, localized, or composed MUI2 text, formatted once on the client thread for both destinations. */
+    public static void showMessage(final IKey message) {
+        MessageHandler.show(message);
+    }
 
     public static UndoHistory undoHistory() {
         return Plan.getActiveGraph()

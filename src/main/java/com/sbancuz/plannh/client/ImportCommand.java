@@ -3,8 +3,6 @@ package com.sbancuz.plannh.client;
 import net.minecraft.client.Minecraft;
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.ICommandSender;
-import net.minecraft.util.ChatComponentText;
-import net.minecraft.util.StatCollector;
 
 import com.cleanroommc.modularui.screen.GuiContainerWrapper;
 import com.cleanroommc.modularui.screen.ModularContainer;
@@ -32,16 +30,14 @@ public class ImportCommand extends CommandBase {
     @Override
     public void processCommand(final ICommandSender sender, final String[] args) {
         if (args.length == 0) {
-            sender.addChatMessage(
-                new ChatComponentText(StatCollector.translateToLocal("plannh.share.import_error.missing")));
+            PlanAPI.showMessage("plannh.share.import_error.missing");
             return;
         }
 
         final String joined = String.join(" ", args);
         final Graph graph = PlanAPI.importFromNBT(joined);
         if (graph == null) {
-            sender.addChatMessage(
-                new ChatComponentText(StatCollector.translateToLocal("plannh.share.import_error.invalid")));
+            PlanAPI.showMessage("plannh.share.import_error.invalid");
             return;
         }
 
