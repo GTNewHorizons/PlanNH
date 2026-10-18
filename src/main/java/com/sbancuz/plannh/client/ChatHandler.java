@@ -50,7 +50,12 @@ public class ChatHandler {
         final String value = click.getValue();
         if (!value.startsWith(BOOKMARK_COMMAND)) return;
 
-        final String nbtString = value.substring(BOOKMARK_COMMAND.length());
+        // NEI's bookmark command carries a cache ID; the shared item is in the hover event.
+        final HoverEvent hover = itemComponent.getChatStyle()
+            .getChatHoverEvent();
+        if (hover == null || hover.getAction() != HoverEvent.Action.SHOW_ITEM) return;
+        final String nbtString = hover.getValue()
+            .getUnformattedText();
         if (!PlanAPI.containsPlanNHData(nbtString)) return;
 
         final IChatComponent replacement = new ChatComponentTranslation("plannh.share.import_link");

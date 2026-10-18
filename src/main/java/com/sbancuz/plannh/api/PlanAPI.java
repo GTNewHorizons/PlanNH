@@ -32,6 +32,7 @@ import com.sbancuz.plannh.data.serialization.Serializer;
 
 import codechicken.nei.NEIClientConfig;
 import codechicken.nei.NEIClientUtils;
+import codechicken.nei.bookmark.BookmarkPayload;
 
 public final class PlanAPI {
 
@@ -75,7 +76,9 @@ public final class PlanAPI {
             final ItemStack stack = createShareStack();
             stack.getTagCompound()
                 .setString(PLANNH_DATA_KEY, encoded);
-            NEIClientUtils.sendChatItemLink(stack.writeToNBT(new NBTTagCompound()));
+            NEIClientUtils.sendChatItemLink(
+                BookmarkPayload.of(stack, null)
+                    .toNBT());
         } catch (final Exception | LinkageError failure) {
             PlanNH.LOG.error("Failed to share graph", failure);
             showMessage("plannh.error.export");
@@ -119,7 +122,7 @@ public final class PlanAPI {
      * Extracts PlanNH share data from a serialised ItemStack NBT string and
      * deserialises it. This is the receiver side of {@link #shareGraph(Graph)}.
      *
-     * @param nbtString the full serialised NBT from the /nei_bookmark command
+     * @param nbtString the full serialised ItemStack NBT from the share link's hover event
      * @return the deserialised graph, or {@code null} if the NBT doesn't
      *         contain a {@code plannh_data} tag or the data is invalid.
      */
@@ -127,10 +130,10 @@ public final class PlanAPI {
     public static Graph importFromNBT(final String nbtString) {
         try {
             final NBTTagCompound nbt = (NBTTagCompound) JsonToNBT.func_150315_a(nbtString);
-            // if (!nbt.hasKey("tag")) return null;
-            // final NBTTagCompound tag = nbt.getCompoundTag("tag");
-            if (!nbt.hasKey(PLANNH_DATA_KEY)) return null;
-            return Serializer.decodeGraph(nbt.getString(PLANNH_DATA_KEY));
+            if (!nbt.hasKey("tag")) return null;
+            final NBTTagCompound tag = nbt.getCompoundTag("tag");
+            if (!tag.hasKey(PLANNH_DATA_KEY)) return null;
+            return Serializer.decodeGraph(tag.getString(PLANNH_DATA_KEY));
         } catch (final Exception | LinkageError e) {
             PlanNH.LOG.error("Failed to import graph from NBT", e);
             showMessage("plannh.error.import");
