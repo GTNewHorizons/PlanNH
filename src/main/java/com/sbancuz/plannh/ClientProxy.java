@@ -13,13 +13,15 @@ import com.sbancuz.plannh.client.ChatHandler;
 import com.sbancuz.plannh.client.GPUProgram;
 import com.sbancuz.plannh.client.ImportCommand;
 import com.sbancuz.plannh.client.MachineTableCommand;
+import com.sbancuz.plannh.client.OffscreenHandler;
 import com.sbancuz.plannh.client.WorldHandler;
 import com.sbancuz.plannh.data.provider.gregtech.GTMachineIndex;
 import com.sbancuz.plannh.gui.FlowchartScreen;
-import com.sbancuz.plannh.layout.AutoLayout;
+import com.sbancuz.plannh.gui.layout.ElkLayoutStrategy;
 
 import cpw.mods.fml.client.registry.ClientRegistry;
 import cpw.mods.fml.common.FMLCommonHandler;
+import cpw.mods.fml.common.Loader;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
@@ -45,6 +47,9 @@ public class ClientProxy extends CommonProxy {
         Compat.init();
 
         ClientRegistry.registerKeyBinding(openFlowchartKey);
+        if (Loader.isModLoaded("offscreen")) {
+            OffscreenHandler.init();
+        }
 
         final WorldHandler handler = new WorldHandler();
         MinecraftForge.EVENT_BUS.register(handler);
@@ -66,7 +71,7 @@ public class ClientProxy extends CommonProxy {
             .func_152344_a(GTMachineIndex::warmup);
 
         Minecraft.getMinecraft()
-            .func_152344_a(AutoLayout::warmup);
+            .func_152344_a(ElkLayoutStrategy::warmUp);
         Minecraft.getMinecraft()
             .func_152344_a(GPUProgram.BLUR::compile);
     }

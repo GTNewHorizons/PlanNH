@@ -8,11 +8,12 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
+import com.google.gson.JsonObject;
 import com.sbancuz.plannh.data.RecipeContext;
-import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.effect.steps.CoFHCompat;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.provider.enderio.EnderIOCapacitors;
+import com.sbancuz.plannh.data.provider.enderio.EnderIONodeState;
 import com.sbancuz.plannh.data.provider.enderio.EnderIOProfile;
 
 import crazypants.enderio.power.Capacitors;
@@ -69,10 +70,10 @@ class EnderIOCapacitorTest {
         return new RecipeContext(props);
     }
 
-    private static Map<String, Object> atCapacitor(final int tier) {
-        final Map<String, Object> settings = new HashMap<>();
-        settings.put(Settings.EIO_CAPACITOR.key(), tier);
-        return settings;
+    private static EnderIONodeState atCapacitor(final int tier) {
+        final JsonObject saved = new JsonObject();
+        saved.addProperty("capacitor", tier);
+        return EnderIONodeState.load(saved);
     }
 
     /** A better capacitor gives a shorter recipe, in the ratio of the two rates. */
@@ -91,7 +92,7 @@ class EnderIOCapacitorTest {
     /** A node draws the capacitor's extract rate. */
     @Test
     void thePowerDrawIsTheCapacitorsOwnRate() {
-        assertEquals(EnderIOCapacitors.rfPerTick(2), EnderIOProfile.rfPerTick(costing(10_000), atCapacitor(2)));
+        assertEquals(EnderIOCapacitors.rfPerTick(2), EnderIOProfile.rfPerTick(atCapacitor(2)));
     }
 
     /** A node with no capacitor stored is planned at the strongest capacitor, as on a fresh chart. */
@@ -99,6 +100,6 @@ class EnderIOCapacitorTest {
     void anUnsetNodeUsesTheChartsCapacitor() {
         assertEquals(
             EnderIOCapacitors.rfPerTick(EnderIOCapacitors.highestTier()),
-            EnderIOProfile.rfPerTick(costing(10_000), new HashMap<>()));
+            EnderIOProfile.rfPerTick(EnderIONodeState.load(new JsonObject())));
     }
 }

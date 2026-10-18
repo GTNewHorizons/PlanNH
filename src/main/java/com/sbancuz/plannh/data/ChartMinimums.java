@@ -29,22 +29,22 @@ public final class ChartMinimums {
     /**
      * One floor row on the chart.
      *
-     * @param setting the setting this is a floor for, also its key on the chart
-     * @param label   row label, short enough to fit beside its two steppers
-     * @param best    value an untouched chart is planned at. Build through {@link Minimum#strongest} or
-     *                {@link Minimum#weakest}: the default end follows from the kind of setting
-     * @param name    display name of a tier: the block a player places, not the stored number
+     * @param key   the value this is a floor for, as the chart stores it
+     * @param label row label, short enough to fit beside its two steppers
+     * @param best  value an untouched chart is planned at. Build through {@link Minimum#strongest} or
+     *              {@link Minimum#weakest}: the default end follows from the kind of setting
+     * @param name  display name of a tier: the block a player places, not the stored number
      */
-    public record Minimum(Settings setting, String label, int min, int max, int best, IntFunction<String> name) {
+    public record Minimum(String key, String label, int min, int max, int best, IntFunction<String> name) {
 
         /**
          * A setting that gates progress, such as a coil or a capacitor. An untouched chart is planned at
          * the best tier the pack ships, since a player who has reached this chart can build it.
          */
         @Nonnull
-        public static Minimum strongest(final Settings setting, final String label, final int min, final int max,
+        public static Minimum strongest(final String key, final String label, final int min, final int max,
             final IntFunction<String> name) {
-            return new Minimum(setting, label, min, max, max, name);
+            return new Minimum(key, label, min, max, max, name);
         }
 
         /**
@@ -52,14 +52,14 @@ public final class ChartMinimums {
          * expensive, so an untouched chart is planned at the cheapest end.
          */
         @Nonnull
-        public static Minimum weakest(final Settings setting, final String label, final int min, final int max,
+        public static Minimum weakest(final String key, final String label, final int min, final int max,
             final IntFunction<String> name) {
-            return new Minimum(setting, label, min, max, min, name);
+            return new Minimum(key, label, min, max, min, name);
         }
 
         /** The floor stored on this chart, or {@link #best} when none is set. */
         public int current(@Nonnull final Graph graph) {
-            final int held = graph.getMinimum(setting.key());
+            final int held = graph.getMinimum(key);
             return held == Graph.NO_MINIMUM ? best : held;
         }
 
@@ -69,7 +69,7 @@ public final class ChartMinimums {
          * would change nothing visible.
          */
         public void step(@Nonnull final Graph graph, final int by) {
-            graph.setMinimum(setting.key(), Math.max(min, Math.min(max, current(graph) + by)));
+            graph.setMinimum(key, Math.max(min, Math.min(max, current(graph) + by)));
         }
     }
 
@@ -90,19 +90,19 @@ public final class ChartMinimums {
     }
 
     /**
-     * The floor the open chart sets for one setting, or {@code best} when none is set.
+     * The floor the open chart sets for one value, or {@code best} when none is set.
      *
      * <p>
-     * Read from the chart on screen, not passed in: a {@link SettingDef} receives the recipe and the node's
-     * settings, never the node or its graph, and only the active chart draws rows. Reaching the open plan
+     * Read from the chart on screen, not passed in: a node's settings receive the recipe and the node, never its
+     * graph, and only the active chart draws rows. Reaching the open plan
      * loads Minecraft through the save directory, so outside a running game this returns {@code best}, which
      * headless tests rely on.
      */
-    public static int floor(@Nonnull final Settings setting, final int best) {
+    public static int floor(@Nonnull final String key, final int best) {
         final int held;
         try {
             held = Plan.getActiveGraph()
-                .getMinimum(setting.key());
+                .getMinimum(key);
         } catch (final RuntimeException | LinkageError outsideAGame) {
             return best;
         }

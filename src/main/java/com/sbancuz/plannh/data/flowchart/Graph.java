@@ -1,6 +1,5 @@
 package com.sbancuz.plannh.data.flowchart;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -16,37 +15,31 @@ import com.sbancuz.plannh.data.flowchart.balancer.ChoiceKey;
 import lombok.Getter;
 import lombok.Setter;
 
+@Getter
 public class Graph {
 
-    // TODO make these use getters
     /**
      * Sorted, so the graph hands its contents back in id order and every consumer that needs a
      * reproducible answer gets one without sorting first - the solver, the serializer, the router
      * and the layout all read these directly.
      */
-    public final SortedMap<UUID, Node> nodes = new TreeMap<>();
-    public final SortedMap<UUID, Edge> edges = new TreeMap<>();
-    public final SortedMap<UUID, Note> notes = new TreeMap<>();
-    public final SortedMap<UUID, Group> groups = new TreeMap<>();
+    private final SortedMap<UUID, Node> nodes = new TreeMap<>();
+    private final SortedMap<UUID, Edge> edges = new TreeMap<>();
+    private final SortedMap<UUID, Note> notes = new TreeMap<>();
+    private final SortedMap<UUID, Group> groups = new TreeMap<>();
 
-    @Getter
     @Setter
     private String name;
 
-    @Getter
     @Setter
     private float zoom = 1f;
-    @Getter
     @Setter
     private float panX;
-    @Getter
     @Setter
     private float panY;
-    @Getter
     @Setter
     private boolean snapToGrid;
 
-    @Getter
     private BalanceMode balanceMode = BalanceMode.AUTO;
 
     /** No floor is set for this key, so a node opens on the best available value. */
@@ -69,7 +62,8 @@ public class Graph {
     /**
      * Per-graph undo/redo stack, transient because snapshots are content-encoded and never stored.
      */
-    public final transient UndoHistory undoHistory = new UndoHistory();
+    @Setter
+    private transient UndoHistory undoHistory = new UndoHistory();
 
     /**
      * The display view, built on first ask after a solve rather than with it: the canvas wants the
@@ -84,7 +78,9 @@ public class Graph {
      */
     private transient long version = 0;
 
-    /** The graph version the solve caches above were built from. */
+    /**
+     * The graph version the solve caches above were built from.
+     */
     private transient long solvedAt = -1;
 
     public Graph() {
@@ -95,22 +91,13 @@ public class Graph {
         this.name = name;
     }
 
-    public long version() {
-        return version;
-    }
-
-    private void bumpVersion() {
-        version++;
-    }
-
     /**
-     * @deprecated Mutations bump the graph version internally; callers that change solve-relevant
-     *             state should route through the graph's own methods instead. This is closely related to the maps at
-     *             the beginning which should have proper accessors
+     * Mutations bump the graph version internally; callers that change solve-relevant
+     * state should route through the graph's own methods instead. This is closely related to the maps at
+     * the beginning which should have proper accessors
      */
-    @Deprecated
-    public void markDirty() {
-        bumpVersion();
+    public void bumpVersion() {
+        version++;
     }
 
     public ChoiceKey getExcessChoice() {
@@ -153,8 +140,13 @@ public class Graph {
 
     public void removeNode(final UUID id) {
         nodes.remove(id);
+
         edges.values()
-            .removeIf(e -> e.sourceNodeId.equals(id) || e.targetNodeId.equals(id));
+            .removeIf(
+                e -> e.getSourceNodeId()
+                    .equals(id)
+                    || e.getTargetNodeId()
+                        .equals(id));
         bumpVersion();
     }
 
@@ -180,58 +172,20 @@ public class Graph {
         return boundaryView;
     }
 
-    public Collection<Node> getNodes() {
-        return nodes.values();
-    }
-
     public void addNode(final Node node) {
         nodes.put(node.id, node);
         bumpVersion();
     }
 
-    public Collection<Edge> getEdges() {
-        return edges.values();
-    }
-
     public void addEdge(final Edge edge) {
-        // A source-port/target-port pair carries at most one edge: re-wiring it replaces the
-        // existing edge instead of stacking a duplicate.
         edges.values()
-            .removeIf(
-                e -> e.sourceNodeId.equals(edge.sourceNodeId) && e.sourceOutputIndex == edge.sourceOutputIndex
-                    && e.targetNodeId.equals(edge.targetNodeId)
-                    && e.targetInputIndex == edge.targetInputIndex);
-        edges.put(edge.id, edge);
+            .removeIf(e -> e.sameConnection(edge));
+        edges.put(edge.getId(), edge);
         bumpVersion();
     }
 
     public void removeEdge(final UUID id) {
         edges.remove(id);
         bumpVersion();
-    }
-
-    /**
-     * First input port of {@code dst} that accepts {@code src}'s given output; -1 when none is
-     * compatible.
-     */
-    public int findCompatibleInput(final Node src, final int srcOutIdx, final Node dst) {
-        if (src == dst || srcOutIdx < 0 || srcOutIdx >= src.outputs.size()) return -1;
-        final Port<?> out = src.outputs.get(srcOutIdx);
-        for (int i = 0; i < dst.inputs.size(); i++) {
-            if (out.canConnect(dst.inputs.get(i))) return i;
-        }
-        return -1;
-    }
-
-    public void removeGroup(final UUID id) {
-        groups.remove(id);
-    }
-
-    public Collection<Group> getGroups() {
-        return groups.values();
-    }
-
-    public Collection<Note> getNotes() {
-        return notes.values();
     }
 }

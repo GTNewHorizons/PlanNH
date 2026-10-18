@@ -1,7 +1,6 @@
 package com.sbancuz.plannh;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -9,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import javax.annotation.Nullable;
 
@@ -18,7 +16,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.sbancuz.plannh.data.RecipeContext;
-import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.machine.MachineVariant;
 import com.sbancuz.plannh.data.machine.MachineVariants;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
@@ -33,15 +30,10 @@ class MachineVariantsTest {
     private static final RecipeProperty<String> KIND = RecipeProperty.<String>builder("test_kind", "")
         .build();
 
-    private record Fake(String id, String displayName, Set<Settings> settings, String label)
-        implements MachineVariant {}
+    private record Fake(String id, String displayName, String label) implements MachineVariant {}
 
-    private static final Fake SIMPLE = new Fake("mod:simple", "Simple Grinder", Set.of(), "Simple Grinder");
-    private static final Fake FANCY = new Fake(
-        "mod:fancy",
-        "Fancy Grinder",
-        Set.of(Settings.GT_COIL),
-        "Fancy Grinder (big)");
+    private static final Fake SIMPLE = new Fake("mod:simple", "Simple Grinder", "Simple Grinder");
+    private static final Fake FANCY = new Fake("mod:fancy", "Fancy Grinder", "Fancy Grinder (big)");
 
     /** Returns candidates for one recipe kind only, like a real provider. */
     private record FakeSource(String kind, List<Fake> offered) implements MachineVariants.Source {
@@ -68,12 +60,6 @@ class MachineVariantsTest {
         return new RecipeContext(props);
     }
 
-    private static Map<String, Object> chose(final String id) {
-        final Map<String, Object> settings = new HashMap<>();
-        settings.put(Settings.MACHINE.key(), id);
-        return settings;
-    }
-
     @BeforeEach
     @AfterEach
     void isolate() {
@@ -87,24 +73,22 @@ class MachineVariantsTest {
         assertTrue(
             MachineVariants.candidates(recipeOf("smelting"))
                 .isEmpty());
-        assertNull(MachineVariants.selected(recipeOf("smelting"), Map.of()));
+        assertNull(MachineVariants.selected(recipeOf("smelting"), (String) null));
     }
 
     /** Nothing stored is the normal state, so the first candidate must be usable as the selection. */
     @Test
-    void anUnsetNodeUsesTheBestCandidateAndStoresNothing() {
+    void anUnsetNodeUsesTheBestCandidate() {
         MachineVariants.register(new FakeSource("grinding", List.of(SIMPLE, FANCY)));
-        final Map<String, Object> settings = new HashMap<>();
 
-        assertSame(SIMPLE, MachineVariants.selected(recipeOf("grinding"), settings));
-        assertTrue(settings.isEmpty(), "resolving a machine must not write one");
+        assertSame(SIMPLE, MachineVariants.selected(recipeOf("grinding"), (String) null));
     }
 
     @Test
     void aStoredMachineIsHonoured() {
         MachineVariants.register(new FakeSource("grinding", List.of(SIMPLE, FANCY)));
 
-        assertSame(FANCY, MachineVariants.selected(recipeOf("grinding"), chose("mod:fancy")));
+        assertSame(FANCY, MachineVariants.selected(recipeOf("grinding"), "mod:fancy"));
     }
 
     /** In a pack without the mod, a stored id must not resolve to a different machine with other numbers. */
@@ -112,36 +96,7 @@ class MachineVariantsTest {
     void aMachineThePackNoLongerHasResolvesToNothing() {
         MachineVariants.register(new FakeSource("grinding", List.of(SIMPLE, FANCY)));
 
-        assertNull(MachineVariants.selected(recipeOf("grinding"), chose("mod:removed")));
-    }
-
-    /** The rows a node draws are the selected machine's, the purpose of registering settings per machine. */
-    @Test
-    void settingRowsFollowTheSelectedMachine() {
-        MachineVariants.register(new FakeSource("grinding", List.of(SIMPLE, FANCY)));
-        final RecipeContext ctx = recipeOf("grinding");
-
-        assertFalse(
-            MachineVariants.usesSetting(Settings.GT_COIL)
-                .test(ctx, chose("mod:simple")));
-        assertTrue(
-            MachineVariants.usesSetting(Settings.GT_COIL)
-                .test(ctx, chose("mod:fancy")));
-    }
-
-    /** The row stores an id and draws a label, so a save stays stable when the label changes. */
-    @Test
-    void thePickerOffersIdsAndShowsLabels() {
-        MachineVariants.register(new FakeSource("grinding", List.of(SIMPLE, FANCY)));
-
-        assertEquals(
-            List.of("mod:simple", "mod:fancy"),
-            MachineVariants.pickerDef()
-                .options(recipeOf("grinding")));
-        assertEquals(
-            "Fancy Grinder (big)",
-            MachineVariants.pickerDef()
-                .display("mod:fancy"));
+        assertNull(MachineVariants.selected(recipeOf("grinding"), "mod:removed"));
     }
 
     /**

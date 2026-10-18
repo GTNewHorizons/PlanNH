@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,26 +23,25 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.ICommandSender;
 import net.minecraft.util.ChatComponentText;
+import net.minecraft.util.StatCollector;
 
+import com.google.gson.JsonObject;
 import com.sbancuz.plannh.PlanNH;
-import com.sbancuz.plannh.data.MachineProfile;
-import com.sbancuz.plannh.data.MachineProfileRegistry;
+import com.sbancuz.plannh.data.NodeState;
 import com.sbancuz.plannh.data.RecipeContext;
-import com.sbancuz.plannh.data.SettingDef;
-import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.provider.GTProvider;
 import com.sbancuz.plannh.data.provider.gregtech.GTMachineIndex;
 import com.sbancuz.plannh.data.provider.gregtech.GTMachineIndex.NumberSource;
 import com.sbancuz.plannh.data.provider.gregtech.GTMachineSpec;
-import com.sbancuz.plannh.data.provider.gregtech.GTSettings;
+import com.sbancuz.plannh.data.provider.gregtech.GTNodeState;
 import com.sbancuz.plannh.data.provider.gregtech.StructureState;
 
 import gregtech.api.GregTechAPI;
 import gregtech.api.interfaces.metatileentity.IMetaTileEntity;
 import gregtech.api.interfaces.tileentity.RecipeMapWorkable;
+import gregtech.api.logic.MachineMode;
 import gregtech.api.logic.ModifierKind;
-import gregtech.api.logic.ModifierRange;
 import gregtech.api.logic.ProcessingInputs;
 import gregtech.api.logic.ProcessingSpec;
 import gregtech.api.metatileentity.implementations.MTEMultiBlockBase;
@@ -57,9 +57,9 @@ public class MachineTableCommand extends CommandBase {
 
     private static final String FILE_NAME = "plannh-machines.md";
 
-    /** Settings every machine has, left out of the table. Matched by key, because the label is translated. */
-    private static final Set<String> ON_EVERY_MACHINE = Set
-        .of(Settings.VOLTAGE.key(), Settings.MACHINES.key(), Settings.AMP.key(), GTSettings.ADVANCED);
+    /** Rows every machine has, left out of the table, by their lang keys. */
+    private static final List<String> ON_EVERY_MACHINE = List
+        .of("plannh.settings.machine", "plannh.settings.voltage", "plannh.settings.amp", "plannh.settings.gt_advanced");
 
     /** Display prose, so defined in this command and not on {@link NumberSource}. */
     private record Section(String heading, String explanation) {}
@@ -236,7 +236,7 @@ public class MachineTableCommand extends CommandBase {
 
     /**
      * The rows that appear before Advanced is ticked. Computed like the node panel: a context with one of the machine's
-     * recipemaps and a settings map with the machine's id, which visibility predicates resolve against.
+     * recipemaps, and a node state with the machine picked.
      */
     private static String visibleRows(@Nullable final GTMachineIndex.MachineEntry entry,
         final RecipeMapWorkable workable) {
@@ -248,12 +248,14 @@ public class MachineTableCommand extends CommandBase {
         if (map == null) return "";
 
         final RecipeContext ctx = new RecipeContext(Map.<RecipeProperty<?>, Object>of(GTProvider.RECIPE_MAP, map));
-        final MachineProfile profile = MachineProfileRegistry.get("gregtech:unified");
-        final Map<String, Object> settings = Map.of(GTSettings.MACHINE, entry.id());
+        final GTNodeState state = GTNodeState.load(new JsonObject());
+        state.pickMachine(entry.id());
+        final Set<String> everywhere = new HashSet<>();
+        for (final String key : ON_EVERY_MACHINE) everywhere.add(StatCollector.translateToLocal(key));
 
         final List<String> labels = new ArrayList<>();
-        for (final SettingDef<?> def : profile.visibleSettings(ctx, settings)) {
-            if (!ON_EVERY_MACHINE.contains(def.key)) labels.add(def.label);
+        for (final NodeState.Row row : state.rows(ctx, change -> {})) {
+            if (!everywhere.contains(row.label())) labels.add(row.label());
         }
         return String.join(", ", labels);
     }
@@ -263,8 +265,8 @@ public class MachineTableCommand extends CommandBase {
         final List<String> names = new ArrayList<>();
         machine.structure()
             .forEach((kind, range) -> names.add(kind.id + " " + range.min() + "-" + range.max()));
-        machine.settings()
-            .forEach(setting -> names.add(setting.name()));
+        if (machine.spec()
+            .variesByMode()) names.add("GT_MODE");
         return String.join(", ", names);
     }
 
@@ -274,13 +276,18 @@ public class MachineTableCommand extends CommandBase {
         if (entry.modes()
             .count() < 2) return "";
 
-        final Map<String, Integer> modes = entry.modes()
-            .byRecipeMap();
+        final MTEMultiBlockBase machine = entry.modes()
+            .machine();
         final String count = entry.modes()
             .count() + " modes";
-        if (modes == null) return count + ", asks";
         // sorted so two runs of this command diff cleanly
-        return count + " " + new TreeMap<>(modes);
+        final Map<String, Integer> byRecipeMap = new TreeMap<>();
+        for (final MachineMode mode : machine.getMachineModes()) {
+            final int index = machine.getMachineModeFor(mode.recipeMap());
+            if (index < 0) return count + ", asks";
+            byRecipeMap.put(mode.recipeMap().unlocalizedName, index);
+        }
+        return byRecipeMap.isEmpty() ? count + ", asks" : count + " " + byRecipeMap;
     }
 
     private static String recipeMaps(final RecipeMapWorkable workable) {
@@ -313,12 +320,11 @@ public class MachineTableCommand extends CommandBase {
     private static String assumes(@Nullable final GTMachineIndex.MachineEntry entry) {
         if (entry == null || entry.machine() == null) return "";
         final List<String> names = new ArrayList<>();
-        for (final ModifierRange range : entry.machine()
-            .spec()
-            .getModifiers()) {
-            final ModifierKind kind = range.kind();
-            if (kind.source != ModifierKind.Source.RUNTIME) continue;
-            names.add(kind.id + "=" + (kind.ordered ? range.max() : range.min()));
+        final ProcessingSpec spec = entry.machine()
+            .spec();
+        for (final ModifierKind kind : spec.getModifiers()
+            .keySet()) {
+            if (kind.source == ModifierKind.Source.RUNTIME) names.add(kind.id + "=" + spec.bestValue(kind));
         }
         return String.join(", ", names);
     }
@@ -359,10 +365,6 @@ public class MachineTableCommand extends CommandBase {
             + " hDisc="
             + (heat != null && heat.rules()
                 .contains(ProcessingSpec.HeatRule.DISCOUNT) ? 1 : 0)
-            + " rHeat="
-            + (heat == null ? -1
-                : heat.fixedRecipeHeat()
-                    .orElse(-1))
             + " skips="
             + spec.getMaxTierSkipsOrDefault();
     }

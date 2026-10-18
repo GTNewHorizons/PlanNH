@@ -16,8 +16,8 @@ import net.minecraft.util.StatCollector;
 
 import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.PlanNH;
+import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.RecipeContext;
-import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.machine.MachineVariant;
 import com.sbancuz.plannh.data.machine.MachineVariants;
@@ -28,7 +28,6 @@ import gregtech.api.interfaces.metatileentity.IMetaTileEntity;
 import gregtech.api.interfaces.tileentity.IOverclockDescriptionProvider;
 import gregtech.api.interfaces.tileentity.RecipeMapWorkable;
 import gregtech.api.logic.ModifierKind;
-import gregtech.api.logic.ModifierRange;
 import gregtech.api.metatileentity.implementations.MTEBasicMachine;
 import gregtech.api.metatileentity.implementations.MTEMultiBlockBase;
 import gregtech.api.metatileentity.implementations.MTETieredMachineBlock;
@@ -88,19 +87,9 @@ public final class GTMachineIndex {
             return modes.modeFor(recipeMap);
         }
 
-        /**
-         * A machine with no spec reads no structure, so it has no rows. Guessed rows for a machine
-         * PlanNH cannot model would put controls on a node that change nothing.
-         */
-        @Override
-        @Nonnull
-        public Set<Settings> settings() {
-            return machine == null ? Set.of() : machine.settings();
-        }
-
         /** Values a player builds or inserts for this machine, each with its range. */
         @Nonnull
-        public Map<ModifierKind, ModifierRange> structure() {
+        public Map<ModifierKind, ModifierKind.Range> structure() {
             return machine == null ? Map.of() : machine.structure();
         }
 
@@ -119,9 +108,8 @@ public final class GTMachineIndex {
 
         @Override
         @Nullable
-        public EffectResult run(final RecipeContext ctx, final Map<String, Object> settings,
-            final EffectResult recipe) {
-            return GTPresetApplier.run(this, ctx, settings, recipe);
+        public EffectResult run(final RecipeContext ctx, final MachineConfig config, final EffectResult recipe) {
+            return GTPresetApplier.run(this, ctx, config, recipe);
         }
     }
 
@@ -235,8 +223,8 @@ public final class GTMachineIndex {
      * means the recipe belongs to another mod.
      */
     @Nullable
-    public static MachineEntry selected(final RecipeContext ctx, final Map<String, Object> settings) {
-        return MachineVariants.selected(ctx, settings) instanceof final MachineEntry entry ? entry : null;
+    public static MachineEntry selected(final RecipeContext ctx, final GTNodeState state) {
+        return MachineVariants.selected(ctx, state.machineId()) instanceof final MachineEntry entry ? entry : null;
     }
 
     /**

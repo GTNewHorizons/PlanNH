@@ -1,9 +1,7 @@
 package com.sbancuz.plannh;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import java.util.List;
@@ -11,7 +9,6 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.provider.gregtech.GTMachineSpec;
 import com.sbancuz.plannh.data.provider.gregtech.StructureState;
 
@@ -32,8 +29,9 @@ class GTMachineSpecTest {
         .range(0, 100)
         .register();
 
-    private static final List<MachineMode> TWO_MODES = List
-        .of(MachineMode.of(mock(RecipeMap.class)), MachineMode.of(mock(RecipeMap.class)));
+    private static final List<MachineMode> TWO_MODES = List.of(
+        new MachineMode(mock(RecipeMap.class), "first", null),
+        new MachineMode(mock(RecipeMap.class), "second", null));
 
     @Test
     void anUnsetValueIsTheSpecsBest() {
@@ -114,25 +112,6 @@ class GTMachineSpecTest {
             machine.spec()
                 .getMaxParallel(machine.inputs(StructureState.of(5, 0))),
             "full momentum");
-    }
-
-    @Test
-    void aModeRowOnlyWhenTheModeMatters() {
-        final ProcessingSpec byMode = ProcessingSpec.builder()
-            .modes(TWO_MODES)
-            .inMode(1, mode -> mode.parallel(32))
-            .build();
-
-        assertTrue(
-            GTMachineSpec.of(byMode)
-                .settings()
-                .contains(Settings.GT_MODE));
-        assertFalse(
-            GTMachineSpec.of(
-                ProcessingSpec.builder()
-                    .build())
-                .settings()
-                .contains(Settings.GT_MODE));
     }
 
     /** The node's amps reach the spec as one hatch with all of them, so a spec using every amp reads them all. */

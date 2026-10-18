@@ -2,16 +2,13 @@ package com.sbancuz.plannh.data.machine;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.function.BiPredicate;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.sbancuz.plannh.data.MachineProfile;
+import com.sbancuz.plannh.data.MachineConfig;
+import com.sbancuz.plannh.data.NodeState;
 import com.sbancuz.plannh.data.RecipeContext;
-import com.sbancuz.plannh.data.SettingDef;
-import com.sbancuz.plannh.data.Settings;
 
 /**
  * The machines that can run a node's recipe, across the installed mods.
@@ -102,17 +99,24 @@ public final class MachineVariants {
      * different machine.
      */
     @Nullable
-    public static MachineVariant selected(final RecipeContext ctx, final Map<String, Object> settings) {
+    public static MachineVariant selected(final RecipeContext ctx, @Nullable final String storedId) {
         final List<? extends MachineVariant> candidates = candidates(ctx);
         if (candidates.isEmpty()) return null;
 
-        final String stored = MachineProfile.getString(settings, Settings.MACHINE.key(), "");
+        final String stored = storedId == null ? "" : storedId;
         if (candidates == lastCandidates && stored.equals(lastStored)) return lastSelected;
 
         lastCandidates = candidates;
         lastStored = stored;
         lastSelected = resolve(candidates, stored);
         return lastSelected;
+    }
+
+    /** The node's machine, by the id its profile's node state stores. */
+    @Nullable
+    public static MachineVariant selected(final RecipeContext ctx, final MachineConfig config) {
+        final NodeState state = config.getNodeState();
+        return selected(ctx, state == null ? null : state.machineId());
     }
 
     @Nullable
@@ -123,37 +127,5 @@ public final class MachineVariants {
                 .equals(stored)) return candidate;
         }
         return null;
-    }
-
-    /** Row visibility: a row appears only when the node's selected machine reads that setting. */
-    @Nonnull
-    public static BiPredicate<RecipeContext, Map<String, Object>> usesSetting(final Settings setting) {
-        return (ctx, settings) -> {
-            final MachineVariant variant = selected(ctx, settings);
-            return variant != null && variant.settings()
-                .contains(setting);
-        };
-    }
-
-    /**
-     * The picker. Options are the machines that can run this node's recipe, best first, so an unset value
-     * acts as the first option without being serialized. The row stores the machine's id and draws its
-     * label, so a save stays stable when a label changes.
-     */
-    @Nonnull
-    public static SettingDef<String> pickerDef() {
-        return SettingDef.dynamicEnumDef(Settings.MACHINE.key(), "", ctx -> {
-            final List<String> ids = new ArrayList<>();
-            for (final MachineVariant variant : candidates(ctx)) {
-                ids.add(variant.id());
-            }
-            return ids;
-        }, MachineVariants::labelOf, null);
-    }
-
-    @Nonnull
-    private static String labelOf(final String id) {
-        final MachineVariant variant = byId(id);
-        return variant == null ? id : variant.label();
     }
 }

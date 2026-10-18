@@ -3,7 +3,6 @@ package com.sbancuz.plannh.data.flowchart.balancer.stages;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 import com.sbancuz.plannh.data.flowchart.balancer.Outcome;
@@ -53,27 +52,21 @@ public final class ExternalMinStage implements Stage<GateCountStage.GatePlan, Ex
         // path (the filter path has no optimality frontier to enumerate). Each candidate opens the
         // gates ITS OWN witness carries - feeding s2's externals to another candidate's support
         // would union the two and make every later candidate a relaxation of the first.
-        final StageOutcome s1Fixed = certified ? Solver.fixedQuantity(ctx, plan.carrying())
-            .point() : null;
-        final List<StageOutcome> candidates = certified && !ctx.budget.expired()
-            ? tiedSupports(ctx, s2Point, s1Fixed, plan)
+        final List<StageOutcome> candidates = certified && !ctx.budget.expired() ? tiedSupports(ctx, s2Point, plan)
             : List.of(s2Point);
 
-        return new Outcome.Continue<>(
-            new ExternalPlan(
-                s1Fixed == null ? Optional.empty() : Optional.of(s1Fixed),
-                candidates,
-                s2Point.externalQuantity));
+        return new Outcome.Continue<>(new ExternalPlan(candidates, s2Point.externalQuantity));
     }
 
     /**
-     * The stage-2 optimum plus any other witness tied with it at the same (weighted gate count,
-     * external quantity), grown by no-good cuts on tried supports. Each is returned whole; a
-     * support without the externals that produced it cannot say which of its gates actually carry
-     * flow.
+     * The stage-2 optimum plus every other witness tied with it at the same (weighted gate count,
+     * external quantity), grown by no-good cuts until the ties run out: the tie-break downstream is
+     * only canonical over a set that does not depend on which tie the MILP finds first. Each is
+     * returned whole; a support without the externals that produced it cannot say which of its
+     * gates actually carry flow.
      */
     private static List<StageOutcome> tiedSupports(final SolveContext ctx, final StageOutcome s2,
-        final StageOutcome s1Fixed, final GateCountStage.GatePlan plan) {
+        final GateCountStage.GatePlan plan) {
         final List<StageOutcome> candidates = new ArrayList<>();
         candidates.add(s2);
         final List<Set<Integer>> cuts = new ArrayList<>();
@@ -81,12 +74,7 @@ public final class ExternalMinStage implements Stage<GateCountStage.GatePlan, Ex
         final Set<Set<Integer>> seen = new HashSet<>();
         seen.add(s2.support);
 
-        if (ties(ctx, s1Fixed, s2, plan) && seen.add(s1Fixed.support)) {
-            candidates.add(s1Fixed);
-            cuts.add(s1Fixed.support);
-        }
-        final int max = (int) ctx.heuristics.numerics()
-            .effort(ctx.heuristics.numerics().maxTiedSupports);
+        final int max = ctx.heuristics.numerics().maxTiedSupports;
         while (candidates.size() < max && !ctx.budget.expired()) {
             final SolveResult nextResult = Solver.quantityMILP(ctx, plan.weightedCap(), cuts, plan.scale());
             if (nextResult.isRejected()) break;
@@ -114,11 +102,10 @@ public final class ExternalMinStage implements Stage<GateCountStage.GatePlan, Ex
 
     /**
      * The external-quantity stage's hand-off: the candidate points tied at the (gate count,
-     * quantity) optimum that the internal-flow stage chooses between, the point grown from stage
-     * 1's own certified support (kept by identity for the tie-break), and the quantity cap every
+     * quantity) optimum that the internal-flow stage chooses between, and the quantity cap every
      * candidate is held to.
      */
-    public record ExternalPlan(Optional<StageOutcome> s1Fixed, List<StageOutcome> candidates, double qtyCap) {
+    public record ExternalPlan(List<StageOutcome> candidates, double qtyCap) {
 
         public ExternalPlan {
             candidates = List.copyOf(candidates);

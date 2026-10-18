@@ -125,8 +125,10 @@ public class EnderIOProvider implements PropertyProvider {
         if (MILL_OUTPUT_CHANCE == null) return;
         try {
             final float[] chances = (float[]) MILL_OUTPUT_CHANCE.get(r);
-            for (int i = 0; i < chances.length && i < node.outputs.size(); i++) {
-                node.outputs.get(i)
+            for (int i = 0; i < chances.length && i < node.getOutputs()
+                .size(); i++) {
+                node.getOutputs()
+                    .get(i)
                     .setChance(chances[i]);
             }
         } catch (final Exception ignored) {}

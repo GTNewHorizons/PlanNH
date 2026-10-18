@@ -141,9 +141,9 @@ class GTPresetApplierTest {
             .setEUt(GTValues.V[5])
             .setDuration(1024);
 
-        assertTrue(forge.getRecipeEUt() <= forge.getMaxAllowedRecipeEUt(), "an unlimited-skip spec lifts the limit");
+        assertTrue(GTValues.V[7] <= forge.getMaxAllowedRecipeEUt(), "an unlimited-skip spec lifts the limit");
         assertTrue(
-            defaultLimit.getRecipeEUt() > defaultLimit.getMaxAllowedRecipeEUt(),
+            GTValues.V[7] > defaultLimit.getMaxAllowedRecipeEUt(),
             "GT's default of one skip does not reach four tiers");
     }
 
@@ -160,12 +160,8 @@ class GTPresetApplierTest {
             .setEUt(GTValues.V[5])
             .setDuration(1024);
 
-        assertTrue(
-            noSkips.getRecipeEUt() > noSkips.getMaxAllowedRecipeEUt(),
-            "an EV recipe must not run in an IV machine");
-        assertTrue(
-            defaultLimit.getRecipeEUt() <= defaultLimit.getMaxAllowedRecipeEUt(),
-            "GT's default would have allowed it");
+        assertTrue(GTValues.V[6] > noSkips.getMaxAllowedRecipeEUt(), "an EV recipe must not run in an IV machine");
+        assertTrue(GTValues.V[6] <= defaultLimit.getMaxAllowedRecipeEUt(), "GT's default would have allowed it");
     }
 
     /**

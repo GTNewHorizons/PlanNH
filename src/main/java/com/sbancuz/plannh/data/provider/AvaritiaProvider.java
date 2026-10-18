@@ -11,12 +11,12 @@ import net.minecraft.item.ItemStack;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
-import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.properties.SummaryProperty;
+import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.recipe.IRecipeHandler;
 import fox.spiteful.avaritia.compat.nei.CompressionHandler;
@@ -33,11 +33,11 @@ public final class AvaritiaProvider implements PropertyProvider {
 
         MachineProfileRegistry.register(
             MachineProfile.builder("avaritia:neutronium_compressor", "Neutronium Compressor")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.INPUTS_PER_TICK.def())
-                .setting(Settings.TICK_MODIFIER.def())
+                .setting(Settings.MACHINES)
+                .setting(Settings.INPUTS_PER_TICK)
+                .setting(Settings.TICK_MODIFIER)
                 .effect(
-                    Effects.durationFromTotal(COMPRESSION_COST, Settings.INPUTS_PER_TICK.key(), 1)
+                    Effects.durationFromTotal(COMPRESSION_COST, Settings.INPUTS_PER_TICK)
                         .amortizeCost(COMPRESSION_COST)
                         .applyParallelism())
                 .build());
@@ -64,8 +64,10 @@ public final class AvaritiaProvider implements PropertyProvider {
         final Map<RecipeProperty<?>, Object> props = new HashMap<>(
             PropertyProvider.super.extract(node, handler, recipeIndex));
 
-        if (handler instanceof CompressionHandler && !node.inputs.isEmpty()) {
-            final ItemStack stack = (ItemStack) node.inputs.getFirst()
+        if (handler instanceof CompressionHandler && !node.getInputs()
+            .isEmpty()) {
+            final ItemStack stack = (ItemStack) node.getInputs()
+                .getFirst()
                 .getValue();
             if (stack != null && stack.stackSize > 0) {
                 props.put(COMPRESSION_COST, stack.stackSize);

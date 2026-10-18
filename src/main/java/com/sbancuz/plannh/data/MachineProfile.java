@@ -2,31 +2,42 @@ package com.sbancuz.plannh.data;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import java.util.function.BiPredicate;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.stream.Stream;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.google.gson.JsonObject;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.effect.EffectComputer;
 import com.sbancuz.plannh.data.effect.EffectResult;
+import com.sbancuz.plannh.data.setting.SettingDef;
+import com.sbancuz.plannh.data.setting.Settings;
 import com.sbancuz.plannh.nei.NEIPlanConfig;
 
 import codechicken.nei.NEIClientConfig;
 
 /**
- * @param onLoad runs once on a chart loaded from disk, before anything reads it. A profile whose
- *               meaning has changed uses this to migrate old settings. Without it, the keys of a chart
- *               saved by an older PlanNH are read under the new meaning, which changes its numbers. The
- *               map it receives is the saved settings, with no defaults seeded.
+ * @param nodeState reads a node's {@link NodeState} from its save, or from an empty object for a new node. Null for a
+ *                  profile whose machines have no knobs of their own.
  */
-public record MachineProfile(String id, String displayName, List<SettingDef<?>> settings, EffectComputer effectComputer,
-    Consumer<Map<String, Object>> onLoad) {
+public record MachineProfile(String id, String displayName, List<Entry> settings, EffectComputer effectComputer,
+    @Nullable Function<JsonObject, NodeState> nodeState) {
 
-    public MachineProfile(final String id, final String displayName, final List<SettingDef<?>> settings,
-        final EffectComputer effectComputer) {
-        this(id, displayName, settings, effectComputer, s -> {});
+    /** One setting this profile offers, and the rule for when a machine running it shows the row. */
+    public record Entry(SettingDef<?> def, BiPredicate<RecipeContext, MachineConfig> visible) {
+
+        public boolean isVisible(final RecipeContext ctx, final MachineConfig config) {
+            return visible.test(ctx, config);
+        }
+    }
+
+    /** An entry with no rule attached: the profile offers it to every machine. */
+    public static Entry entry(final SettingDef<?> def) {
+        return new Entry(def, (_, _) -> true);
     }
 
     @Nonnull
@@ -38,85 +49,91 @@ public record MachineProfile(String id, String displayName, List<SettingDef<?>> 
 
         private final String id;
         private final String displayName;
-        private final List<SettingDef<?>> settings = new ArrayList<>();
-        private EffectComputer effectComputer=(s,ctx)->{final Object dur=ctx.properties().get(RecipePropertyAPI.DURATION_TICKS);return new EffectResult(dur instanceof
-        final Number n?n.intValue():0,0,1);
-    };
+        private final List<Entry> settings = new ArrayList<>();
+        private EffectComputer effectComputer = (s, ctx) -> {
+            Object dur = ctx.properties()
+                .get(RecipePropertyAPI.DURATION_TICKS);
+            return new EffectResult(dur instanceof Number n ? n.intValue() : 0, 0, 1);
+        };
+        @Nullable
+        private Function<JsonObject, NodeState> nodeState;
 
-    private Consumer<Map<String, Object>> onLoad = s -> {};
-
-    private Builder(final String id, final String displayName) {
+        private Builder(final String id, final String displayName) {
             this.id = id;
             this.displayName = displayName;
             if (NEIClientConfig.getSetting(NEIPlanConfig.ConfigBurnableOverride.KEY)
                 .getIntValue(NEIPlanConfig.ConfigBurnableOverride.OFF) == NEIPlanConfig.ConfigBurnableOverride.ON) {
-                addSetting(Settings.BURNABLE_OVERRIDE.def());
+                addSetting(Settings.BURNABLE_OVERRIDE);
             }
         }
 
-    public Builder addSetting(final SettingDef<?> setting) {
-        settings.add(setting);
-        return this;
+        public Builder addSetting(final SettingDef<?> setting) {
+            return setting(setting);
+        }
+
+        public Builder setting(final SettingDef<?> def) {
+            return setting(def, (_, _) -> true);
+        }
+
+        public Builder setting(final SettingDef<?> def, final BiPredicate<RecipeContext, MachineConfig> visible) {
+            settings.add(new Entry(def, visible));
+            return this;
+        }
+
+        public Builder settings(final Consumer<Builder> consumer) {
+            consumer.accept(this);
+            return this;
+        }
+
+        public Builder effect(final EffectComputer effect) {
+            this.effectComputer = effect;
+            return this;
+        }
+
+        public Builder nodeState(final Function<JsonObject, NodeState> reader) {
+            this.nodeState = reader;
+            return this;
+        }
+
+        @Nonnull
+        public MachineProfile build() {
+            return new MachineProfile(id, displayName, List.copyOf(settings), effectComputer, nodeState);
+        }
     }
 
-    public Builder setting(final SettingDef<?> s) {
-        return addSetting(s);
+    @Override
+    public boolean equals(final Object obj) {
+        if (!(obj instanceof final MachineProfile other)) return false;
+        return id.equals(other.id);
     }
 
-    public Builder settings(final Consumer<Builder> consumer) {
-        consumer.accept(this);
-        return this;
+    @Override
+    public int hashCode() {
+        return id.hashCode();
     }
 
-    public Builder effect(final EffectComputer effect) {
-        this.effectComputer = effect;
-        return this;
-    }
-
-    public Builder onLoad(final Consumer<Map<String, Object>> hook) {
-        this.onLoad = hook;
-        return this;
-    }
-
+    /** The defs on offer, unfiltered: what a fresh config seeds from, and what a save lists. */
     @Nonnull
-    public MachineProfile build() {
-        return new MachineProfile(id, displayName, List.copyOf(settings), effectComputer, onLoad);
-    }
-
-    }
-
-    public static int getInt(final Map<String, Object> s, final String key, final int def) {
-        final Object v = s.get(key);
-        return v instanceof final Number n ? n.intValue() : def;
-    }
-
-    public static boolean getBool(final Map<String, Object> s, final String key, final boolean def) {
-        final Object v = s.get(key);
-        return v instanceof final Boolean b ? b : def;
-    }
-
-    public static String getString(final Map<String, Object> s, final String key, final String def) {
-        final Object v = s.get(key);
-        return v instanceof final String str ? str : def;
-    }
-
-    /**
-     * The rows a node renders. Serialization walks the node's settings map, not this list, so a hidden
-     * value still round-trips.
-     */
-    @Nonnull
-    public List<SettingDef<?>> visibleSettings(final RecipeContext ctx, final Map<String, Object> machineSettings) {
+    public List<? extends SettingDef<?>> defs() {
         return settings.stream()
-            .filter(def -> def.isVisible(ctx, machineSettings))
+            .map(Entry::def)
             .toList();
     }
 
-    /** The def behind a key, for controls outside the settings panel. */
-    @Nullable
-    public SettingDef<?> setting(final String key) {
-        for (final SettingDef<?> def : settings) {
-            if (def.key.equals(key)) return def;
-        }
-        return null;
+    /**
+     * The settings this profile offers for one machine: its own list, minus the ones hidden for
+     * this recipe and these values. Visibility is a question about the machine, so it answers
+     * against the config rather than against a bag of values.
+     *
+     * <p>
+     * Nothing here depends on which target is pinned. {@link Settings#MACHINES} is how many machines
+     * the recipe runs on and the copies target is how many of them the chart runs; they are different
+     * numbers, so neither hides the other.
+     */
+    @Nonnull
+    public Stream<? extends SettingDef<?>> visibleSettings(final RecipeContext ctx, final MachineConfig config) {
+        return settings.stream()
+            .filter(e -> e.isVisible(ctx, config))
+            .map(Entry::def);
     }
 }

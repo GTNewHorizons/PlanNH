@@ -1,5 +1,8 @@
 package com.sbancuz.plannh.data.provider;
 
+import static codechicken.nei.PositionedStack.CHANCE_FULL;
+
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -8,15 +11,14 @@ import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidStack;
 
+import com.gtnewhorizons.modularui.api.math.Size;
 import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
-import com.sbancuz.plannh.data.SettingDef;
-import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
@@ -25,13 +27,16 @@ import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.properties.SummaryProperty;
 import com.sbancuz.plannh.data.provider.gregtech.GTMachineIndex;
+import com.sbancuz.plannh.data.provider.gregtech.GTNodeState;
 import com.sbancuz.plannh.data.provider.gregtech.GTSettings;
+import com.sbancuz.plannh.data.setting.Settings;
+import com.sbancuz.plannh.mixins.GTNEIDefaultHandlerAccessor;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.FurnaceRecipeHandler;
 import codechicken.nei.recipe.IRecipeHandler;
+import codechicken.nei.recipe.StackInfo;
 import codechicken.nei.recipe.TemplateRecipeHandler;
-import gregtech.api.logic.ModifierKind;
 import gregtech.api.recipe.RecipeMap;
 import gregtech.api.recipe.RecipeMaps;
 import gregtech.api.recipe.RecipeMetadataKey;
@@ -40,7 +45,6 @@ import gregtech.api.recipe.maps.LargeBoilerFuelBackend;
 import gregtech.api.util.GTRecipe;
 import gregtech.api.util.GTRecipeConstants;
 import gregtech.api.util.recipe.Sievert;
-import gregtech.common.items.ItemFluidDisplay;
 import gregtech.nei.GTNEIDefaultHandler;
 import gregtech.nei.GTNEIDefaultHandler.CachedDefaultRecipe;
 import gregtech.nei.formatter.HeatingCoilSpecialValueFormatter;
@@ -49,9 +53,6 @@ public class GTProvider implements PropertyProvider {
 
     // Vanilla furnace: base cook time of 200 ticks (10 seconds)
     private static final int FURNACE_COOK_TICKS = 200;
-
-    /** GT5u stores a chance as 1..10000, where 10000 is 100%. */
-    private static final float GT_CHANCE_SCALE = 10_000f;
 
     public static final RecipeProperty<Integer> SPECIAL_VALUE = RecipeProperty.<Integer>builder("gt.special_value", 0)
         .build();
@@ -112,63 +113,15 @@ public class GTProvider implements PropertyProvider {
     }
 
     /**
-     * Machine picker plus the structure settings the chosen machine reads. Speed, EU discount, overclock
-     * factors and heat are derived from the machine and appear as rows only when Advanced is ticked.
+     * The machine count is the one shared setting. Everything else a GregTech node sets is in its {@link GTNodeState}:
+     * the machine, its structure and the overrides, which follow the machine's spec until set.
      */
-    private static void machineDriven(final MachineProfile.Builder b) {
-        b.setting(GTSettings.MACHINE_DEF.withVisibility(GTSettings.neverAsARow()));
-        b.setting(GTSettings.VOLTAGE_DEF.withVisibility(GTSettings.voltageEditable()));
-        b.setting(Settings.MACHINES.def());
-        // Nearly every multiblock accepts more than one energy hatch, so amperage is a build choice and its
-        // row appears without Advanced.
-        b.setting(GTSettings.AMP_DEF.withVisibility(GTSettings.ampEditable()));
-        b.setting(GTSettings.PARALLELS_DEF.withVisibility(GTSettings.parallelsEditable()));
-        // One row per value a player builds or inserts, visible when the selected machine reads it.
-        // GregTech registers its kinds as its machines load, before this profile is built, so adding a kind
-        // requires no code here.
-        for (final ModifierKind kind : ModifierKind.all()) {
-            if (kind == ModifierKind.VOLTAGE || kind.source == ModifierKind.Source.RUNTIME) continue;
-            b.setting(
-                GTSettings.structureDef(kind)
-                    .withVisibility(GTSettings.usesStructure(kind)));
-        }
-        b.setting(GTSettings.MODE_DEF.withVisibility(GTSettings.usesSetting(Settings.GT_MODE)));
-        b.setting(GTSettings.ADVANCED_DEF);
-    }
-
-    /** Override rows, under Advanced, for charts tuned by hand. */
-    private static void manual(final MachineProfile.Builder b) {
-        // Each row reads the machine's value until the user stores one over it. The two overclock caps
-        // have no machine counterpart (GT rarely sets them), so they're plain optional limits and an
-        // empty value means no cap.
-        for (final SettingDef<?> def : List.of(
-            GTSettings.SPEED_DEF,
-            Settings.LASER_OC.def(),
-            Settings.NO_OVERCLOCK.def(),
-            GTSettings.UNLIMITED_SKIPS_DEF,
-            GTSettings.EUT_DISCOUNT_DEF,
-            GTSettings.EUT_PER_OC_DEF,
-            GTSettings.DURATION_PER_OC_DEF,
-            Settings.MAX_OVERCLOCKS.def(),
-            Settings.MAX_REGULAR_OC.def(),
-            GTSettings.MAX_TIER_SKIPS_DEF,
-            GTSettings.MACHINE_HEAT_DEF,
-            GTSettings.RECIPE_HEAT_DEF,
-            GTSettings.HEAT_OC_DEF,
-            GTSettings.HEAT_DISCOUNT_DEF,
-            GTSettings.HEAT_DISCOUNT_MULT_DEF,
-            GTSettings.MULTIBLOCK_DEF)) {
-            b.setting(def.withVisibility(GTSettings.advancedOnly()));
-        }
-    }
-
     private static final MachineProfile PROFILE = MachineProfile.builder("gregtech:unified", "GT Unified")
-        .settings(GTProvider::machineDriven)
-        .settings(GTProvider::manual)
+        .setting(Settings.MACHINES)
+        .nodeState(GTNodeState::load)
         .effect(
             Effects.durationFromHandler()
                 .andThen(Effects.machineDriven()))
-        .onLoad(GTSettings::migrateLegacyNode)
         .build();
 
     @Override
@@ -201,10 +154,12 @@ public class GTProvider implements PropertyProvider {
     }
 
     public static Map<RecipeProperty<?>, Object> extractGTRecipe(final Node node, final IRecipeHandler handler,
-        final int recipeIndex) {
+                                                                 final int recipeIndex) {
         final Map<RecipeProperty<?>, Object> props = new HashMap<>();
         GTRecipe r;
         RecipeMap<?> gthMap = null;
+        List<PositionedStack> inputStacks = new ArrayList<>();
+        List<PositionedStack> outputStacks = new ArrayList<>();
 
         if (handler instanceof final FurnaceRecipeHandler fh) {
             final List<TemplateRecipeHandler.CachedRecipe> fRecipes = RecipeHandlerAccess.getArecipes(fh);
@@ -248,6 +203,10 @@ public class GTProvider implements PropertyProvider {
 
             final CachedDefaultRecipe cached = (CachedDefaultRecipe) recipes.get(recipeIndex);
             r = cached.mRecipe;
+
+            inputStacks = cached.mInputs;
+            outputStacks = cached.mOutputs;
+
             if (r == null) return props;
 
             gthMap = gth.getRecipeMap();
@@ -298,45 +257,41 @@ public class GTProvider implements PropertyProvider {
             props.put(SPECIAL_VALUE, r.mSpecialValue);
         }
 
-        // Reset everything to not ignore burnables
-        node.inputs.clear();
-        node.outputs.clear();
+        List<Port<?>> inputs = node.getInputs();
+        List<Port<?>> outputs = node.getOutputs();
 
-        for (int i = 0; i < r.mInputs.length; i++) {
-            if (r.mInputs[i].stackSize <= 0) continue;
-            node.inputs.add(
-                new Port<>(
-                    RecipePropertyAPI.ITEM,
-                    r.mInputs[i],
-                    r.mInputChances != null ? r.mInputChances[i] / GT_CHANCE_SCALE : 1.f));
-        }
-        for (int i = 0; i < r.mOutputs.length; i++) {
-            node.outputs.add(
-                new Port<>(
-                    RecipePropertyAPI.ITEM,
-                    r.mOutputs[i],
-                    r.mOutputChances != null ? r.mOutputChances[i] / GT_CHANCE_SCALE : 1.f));
-        }
-        for (int i = 0; i < r.mFluidInputs.length; i++) {
-            if (r.mFluidInputs[i].amount <= 0) continue;
-            node.inputs.add(
-                new Port<>(
-                    RecipePropertyAPI.FLUID,
-                    r.mFluidInputs[i],
-                    r.mFluidInputChances != null ? r.mFluidInputChances[i] / GT_CHANCE_SCALE : 1.f));
-        }
-        for (int i = 0; i < r.mFluidOutputs.length; i++) {
-            node.outputs.add(
-                new Port<>(
-                    RecipePropertyAPI.FLUID,
-                    r.mFluidOutputs[i],
-                    r.mFluidOutputChances != null ? r.mFluidOutputChances[i] / GT_CHANCE_SCALE : 1.f));
+        for (PositionedStack ps : inputStacks) {
+            if (ps instanceof GTNEIDefaultHandler.FixedPositionedStack fps && fps.isFluid())
+                inputs.add(fluidPort(fps));
+            else if(ps.item != null) inputs.add(Port.itemPort(ps));
         }
 
-        node.inputs.removeIf(p -> p.getValue() instanceof ItemStack stack && stack.getItem() instanceof ItemFluidDisplay);
-        node.outputs.removeIf(p -> p.getValue() instanceof ItemStack stack && stack.getItem() instanceof ItemFluidDisplay);
+        for (PositionedStack ps : outputStacks) {
+            if (ps instanceof GTNEIDefaultHandler.FixedPositionedStack fps && fps.isFluid())
+                outputs.add(fluidPort(fps));
+            else outputs.add(Port.itemPort(ps));
+        }
 
         return props;
     }
 
+    /**
+     * The width and height GregTech draws this handler's recipe background at, or null for a handler that is not
+     * GregTech's. For the GUI, which must not name GregTech.
+     */
+    @Nullable
+    public static int[] recipeBackgroundSize(final IRecipeHandler handler) {
+        if (!(handler instanceof final GTNEIDefaultHandlerAccessor gt)) return null;
+        final Size size = gt.getNeiProperties().recipeBackgroundSize;
+        return new int[] { size.width, size.height };
+    }
+
+    private static Port<FluidStack> fluidPort(GTNEIDefaultHandler.FixedPositionedStack fps) {
+        return new Port<>(
+            RecipePropertyAPI.FLUID,
+            StackInfo.getFluid(fps.item)
+                .copy(),
+            (float) fps.getChance() / CHANCE_FULL,
+            fps);
+    }
 }

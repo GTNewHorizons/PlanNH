@@ -4,19 +4,18 @@ import static com.gtnewhorizon.gtnhlib.util.numberformatting.NumberFormatUtil.fo
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import net.minecraft.util.StatCollector;
 
-import com.sbancuz.plannh.data.MachineProfile;
+import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.RecipeContext;
-import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.machine.MachineVariant;
 import com.sbancuz.plannh.data.provider.GTProvider;
+import com.sbancuz.plannh.data.setting.Settings;
 
 import gregtech.api.logic.ProcessingRun;
 import gregtech.api.logic.ResolvedRecipe;
@@ -42,20 +41,25 @@ public final class GTPresetApplier {
      */
     @Nullable
     public static EffectResult run(@Nonnull final GTMachineIndex.MachineEntry entry, final RecipeContext ctx,
-        final Map<String, Object> settings, final EffectResult recipe) {
-        final int machines = MachineProfile.getInt(settings, Settings.MACHINES.key(), 1);
-        final ResolvedRecipe resolved = GTSettings.resolved(ctx, settings);
+        final MachineConfig config, final EffectResult recipe) {
+        final GTNodeState found = config.nodeState(GTNodeState.class);
+        final GTNodeState state = found != null ? found : new GTNodeState();
+        final int machines = config.get(Settings.MACHINES);
+        final ResolvedRecipe resolved = GTSettings.resolved(ctx, state);
         if (resolved != null) {
-            // an untouched node stores 0, meaning the machine's maximum
-            final int userCap = MachineProfile.getInt(settings, Settings.PARALLELS.key(), 0);
-            final ResolvedRecipe capped = userCap > 0 ? resolved.capParallel(userCap) : resolved;
-            final ProcessingRun run = capped.calculate(applyOverrides(capped.toCalculator(), settings));
+            final ResolvedRecipe capped = state.getOverride(GTOverride.PARALLEL) instanceof final Integer cap
+                ? resolved.capParallel(cap)
+                : resolved;
+            final ProcessingRun run = capped.calculate(applyOverrides(capped.toCalculator(), state));
             if (!run.result()
                 .wasSuccessful())
                 return recipe.rejectedBecause(
                     run.result()
                         .getDisplayString());
             return effect(run, machines);
+        }
+        if (GTSettings.inUncalculatedMode(ctx, state)) {
+            return recipe.rejectedBecause(StatCollector.translateToLocal("plannh.gt.mode_not_calculated"));
         }
 
         // singleblock: GregTech's describer, the same calculator the machine and NEI use
@@ -64,7 +68,7 @@ public final class GTPresetApplier {
         final OverclockCalculator calculator = applyOverrides(
             entry.describer()
                 .createCalculator(gtRecipe),
-            settings).calculate();
+            state).calculate();
         return new EffectResult(calculator.getDuration(), calculator.getConsumption(), machines);
     }
 
@@ -114,91 +118,17 @@ public final class GTPresetApplier {
     }
 
     /**
-     * Lays the user's numbers over the machine's. Only stored keys are applied. The map is sparse, so an
-     * absent key leaves the machine's value at full precision, not the rounded percentage drawn in the
-     * advanced rows. An unreadable stored value falls back to the machine's. Ticking Advanced changes no
-     * number until a row is edited.
+     * Lays the node's numbers over the machine's. Only the overrides set on the node are applied, so the rest keep the
+     * machine's value at full precision, not the rounded percentage a row shows. Ticking Advanced changes no number
+     * until a row is edited.
      */
     @Nonnull
-    public static OverclockCalculator applyOverrides(final OverclockCalculator calculator,
-        final Map<String, Object> settings) {
-        if (settings.containsKey(Settings.AMP.key())) {
-            calculator.setAmperage(
-                MachineProfile.getInt(settings, Settings.AMP.key(), (int) calculator.getMachineAmperage()));
-        }
-        if (settings.containsKey(Settings.SPEED.key())) {
-            calculator.setDurationModifier(
-                100.0 / Math.max(
-                    1,
-                    MachineProfile.getInt(
-                        settings,
-                        Settings.SPEED.key(),
-                        GTSettings.percent(1 / calculator.getDurationModifier()))));
-        }
-        if (settings.containsKey(Settings.EUT_DISCOUNT.key())) {
-            calculator.setEUtDiscount(
-                MachineProfile
-                    .getInt(settings, Settings.EUT_DISCOUNT.key(), GTSettings.percent(calculator.getEUtDiscount()))
-                    / 100.0);
-        }
-        if (settings.containsKey(Settings.EUT_INCREASE_PER_OC.key())) {
-            calculator.setEUtIncreasePerOC(
-                MachineProfile.getInt(
-                    settings,
-                    Settings.EUT_INCREASE_PER_OC.key(),
-                    GTSettings.percent(calculator.getEUtIncreasePerOC())) / 100.0);
-        }
-        if (settings.containsKey(Settings.DURATION_DECREASE_PER_OC.key())) {
-            calculator.setDurationDecreasePerOC(
-                MachineProfile.getInt(
-                    settings,
-                    Settings.DURATION_DECREASE_PER_OC.key(),
-                    GTSettings.percent(calculator.getDurationDecreasePerOC())) / 100.0);
-        }
-        if (settings.containsKey(Settings.NO_OVERCLOCK.key())) {
-            calculator.setNoOverclock(
-                MachineProfile.getBool(settings, Settings.NO_OVERCLOCK.key(), calculator.isNoOverclock()));
-        }
-        if (settings.containsKey(Settings.LASER_OC.key())) {
-            calculator.setLaserOC(MachineProfile.getBool(settings, Settings.LASER_OC.key(), calculator.isLaserOC()));
-        }
-        if (settings.containsKey(Settings.MAX_OVERCLOCKS.key())) {
-            calculator.setMaxOverclocks(
-                MachineProfile.getInt(settings, Settings.MAX_OVERCLOCKS.key(), calculator.getMaxOverclocks()));
-        }
-        if (settings.containsKey(Settings.MAX_REGULAR_OC.key())) {
-            calculator.setMaxRegularOverclocks(
-                MachineProfile.getInt(settings, Settings.MAX_REGULAR_OC.key(), calculator.getMaxRegularOverclocks()));
-        }
-        if (settings.containsKey(Settings.UNLIMITED_SKIPS.key())
-            && MachineProfile.getBool(settings, Settings.UNLIMITED_SKIPS.key(), false)) {
-            calculator.setUnlimitedTierSkips();
-        } else if (settings.containsKey(Settings.MAX_TIER_SKIPS.key())) {
-            // zero is a valid cap here, not "unset": a present key is a user value
-            calculator.setMaxTierSkips(
-                MachineProfile.getInt(settings, Settings.MAX_TIER_SKIPS.key(), calculator.getMaxTierSkips()));
-        }
-        if (settings.containsKey(Settings.MACHINE_HEAT.key())) {
-            calculator.setMachineHeat(
-                MachineProfile.getInt(settings, Settings.MACHINE_HEAT.key(), calculator.getMachineHeat()));
-        }
-        if (settings.containsKey(Settings.RECIPE_HEAT.key())) {
-            calculator
-                .setRecipeHeat(MachineProfile.getInt(settings, Settings.RECIPE_HEAT.key(), calculator.getRecipeHeat()));
-        }
-        if (settings.containsKey(Settings.HEAT_OC.key())) {
-            calculator.setHeatOC(MachineProfile.getBool(settings, Settings.HEAT_OC.key(), calculator.isHeatOC()));
-        }
-        if (settings.containsKey(Settings.HEAT_DISCOUNT.key())) {
-            calculator.setHeatDiscount(
-                MachineProfile.getBool(settings, Settings.HEAT_DISCOUNT.key(), calculator.isHeatDiscount()));
-        }
-        if (settings.containsKey(Settings.HEAT_DISCOUNT_MULT.key())) {
-            calculator.setHeatDiscountMultiplier(
-                MachineProfile.getInt(
-                    settings,
-                    Settings.HEAT_DISCOUNT_MULT.key(),
-                    GTSettings.percent(calculator.getHeatDiscountMultiplier())) / 100.0);
+    public static OverclockCalculator applyOverrides(final OverclockCalculator calculator, final GTNodeState state) {
+        if (state.getAmps() != null) calculator.setAmperage(state.getAmps());
+        // in declaration order, so unlimited tier skips are applied after a typed cap
+        for (final GTOverride override : GTOverride.values()) {
+            final Object value = state.getOverride(override);
+            if (value != null) override.apply(calculator, value);
         }
         return calculator;
     }

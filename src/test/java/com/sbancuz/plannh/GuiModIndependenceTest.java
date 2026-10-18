@@ -44,7 +44,9 @@ class GuiModIndependenceTest {
         "com.sbancuz",
         "codechicken",
         "lombok",
-        "it.unimi.dsi");
+        "it.unimi.dsi",
+        // shaded into PlanNH's jar
+        "org.eclipse.elk");
 
     @Test
     void noGuiClassNamesAModPackage() {

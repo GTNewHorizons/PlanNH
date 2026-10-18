@@ -1,13 +1,10 @@
 package com.sbancuz.plannh.data.machine;
 
-import java.util.Map;
-import java.util.Set;
-
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.RecipeContext;
-import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.effect.EffectResult;
 
 /**
@@ -30,10 +27,6 @@ public interface MachineVariant {
     /** The machine's name, as it appears in the recipe list's title. */
     @Nonnull
     String displayName();
-
-    /** The settings this machine reads, which are the rows a node draws for it. */
-    @Nonnull
-    Set<Settings> settings();
 
     /**
      * Picker label. Defaults to the machine's name. A provider overrides it where the name alone is
@@ -69,7 +62,7 @@ public interface MachineVariant {
      * reason appears on the node.
      */
     @Nullable
-    default EffectResult run(final RecipeContext ctx, final Map<String, Object> settings, final EffectResult recipe) {
+    default EffectResult run(final RecipeContext ctx, final MachineConfig config, final EffectResult recipe) {
         return null;
     }
 }

@@ -1,0 +1,38 @@
+package com.sbancuz.plannh.data.serialization;
+
+import java.lang.reflect.Type;
+
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParseException;
+import com.sbancuz.plannh.data.flowchart.GraphData;
+import com.sbancuz.plannh.data.flowchart.Group;
+import com.sbancuz.plannh.data.flowchart.MachineGroup;
+import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.flowchart.Note;
+
+public class GraphDataDeserializer implements JsonDeserializer<GraphData> {
+
+    @Override
+    public GraphData deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
+        throws JsonParseException {
+        GraphData data = switch (json.getAsJsonObject()
+            .get("type")
+            .getAsString()) {
+            case Note.TYPE -> Serializer.GSON.fromJson(json, Note.class);
+            case Group.TYPE -> Serializer.GSON.fromJson(json, Group.class);
+            case MachineGroup.TYPE -> Serializer.GSON.fromJson(json, MachineGroup.class);
+            case Node.TYPE -> {
+                Node node = Serializer.GSON.fromJson(json, Node.class);
+                node.init();
+                yield node;
+            }
+            default -> throw new JsonParseException("Invalid type detected during GroupData deserialization");
+        };
+
+        if (data.invalid()) throw new IllegalStateException("Invalid state found for graph data!");
+
+        return data;
+    }
+}

@@ -8,15 +8,17 @@ import javax.annotation.Nullable;
 
 import net.minecraft.tileentity.TileEntityFurnace;
 
-import com.sbancuz.plannh.api.RecipePropertyAPI;
-import com.sbancuz.plannh.data.Settings;
+import com.sbancuz.plannh.Compat;
+import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
+import com.sbancuz.plannh.data.setting.Settings;
 import com.sbancuz.plannh.nei.NEIPlanConfig;
 
 import codechicken.nei.NEIClientConfig;
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.IRecipeHandler;
+import gregtech.nei.GTNEIDefaultHandler;
 
 public interface PropertyProvider {
 
@@ -25,15 +27,16 @@ public interface PropertyProvider {
     default Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler,
         final int recipeIndex) {
         final List<PositionedStack> ins = handler.getIngredientStacks(recipeIndex);
-        for (final PositionedStack ps : ins) {
-            if (ps != null && ps.item != null && ps.item.stackSize > 0) {
-                node.inputs.add(new Port<>(RecipePropertyAPI.ITEM, ps.item.copy(), 1.f));
-            }
-        }
+        for (final PositionedStack ps : ins) if (ps != null && ps.item != null) node.getInputs()
+            .add(Port.itemPort(ps));
 
         final PositionedStack result = handler.getResultStack(recipeIndex);
         if (result != null && result.item != null) {
-            node.outputs.add(new Port<>(RecipePropertyAPI.ITEM, result.item.copy(), 1.f));
+            node.getOutputs()
+                .add(Port.itemPort(result));
+            // warn if we find any handlers outside gt that have multiple output permutations
+            if (result.items.length > 1 && (!Compat.GREGTECH.isLoaded || !(handler instanceof GTNEIDefaultHandler)))
+                PlanNH.LOG.warn("output found with permutations");
         }
 
         final List<PositionedStack> others = handler.getOtherStacks(recipeIndex);
@@ -41,15 +44,20 @@ public interface PropertyProvider {
             if (ps != null && ps.item != null) {
                 if (NEIClientConfig.getSetting(NEIPlanConfig.ConfigBurnableOverride.KEY)
                     .getIntValue(NEIPlanConfig.ConfigBurnableOverride.OFF) == NEIPlanConfig.ConfigBurnableOverride.ON) {
-                    if (node.machineConfig.getString(Settings.BURNABLE_OVERRIDE.key())
-                        .equals("IN")) {
-                        node.inputs.add(new Port<>(RecipePropertyAPI.ITEM, ps.item.copy(), 1.f));
-                    } else if (node.machineConfig.getString(Settings.BURNABLE_OVERRIDE.key())
-                        .equals("OUT")) {
-                            node.outputs.add(new Port<>(RecipePropertyAPI.ITEM, ps.item.copy(), 1.f));
+                    if (node.getMachineConfig()
+                        .get(Settings.BURNABLE_OVERRIDE)
+                        .equals(Settings.Burnable.IN)) {
+                        node.getInputs()
+                            .add(Port.itemPort(ps));
+                    } else if (node.getMachineConfig()
+                        .get(Settings.BURNABLE_OVERRIDE)
+                        .equals(Settings.Burnable.OUT)) {
+                            node.getOutputs()
+                                .add(Port.itemPort(ps));
                         }
                 } else if (TileEntityFurnace.getItemBurnTime(ps.item) <= 0) {
-                    node.outputs.add(new Port<>(RecipePropertyAPI.ITEM, ps.item.copy(), 1.f));
+                    node.getOutputs()
+                        .add(Port.itemPort(ps));
                 }
             }
         }

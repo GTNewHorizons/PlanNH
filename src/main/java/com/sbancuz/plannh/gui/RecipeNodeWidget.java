@@ -4,18 +4,13 @@ import static org.lwjgl.opengl.GL11.*;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
 import java.util.UUID;
 import java.util.function.IntConsumer;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.item.ItemStack;
-import net.minecraftforge.fluids.FluidStack;
 
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.GuiDraw;
@@ -24,36 +19,27 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.Widget;
-import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineConfig;
-import com.sbancuz.plannh.data.RecipeContext;
-import com.sbancuz.plannh.data.SettingDef;
-import com.sbancuz.plannh.data.Settings;
+import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
-import com.sbancuz.plannh.data.machine.MachineVariant;
-import com.sbancuz.plannh.data.machine.MachineVariants;
-import com.sbancuz.plannh.data.properties.RecipeProperty;
-import com.sbancuz.plannh.data.provider.gregtech.GTSettings;
-import com.sbancuz.plannh.layout.AutoLayout;
+import com.sbancuz.plannh.data.setting.SettingDef;
 import com.sbancuz.plannh.nei.NodeLookupContext;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.drawable.DrawableBuilder;
 import codechicken.nei.drawable.DrawableResource;
-import codechicken.nei.guihook.GuiContainerManager;
 import codechicken.nei.recipe.GuiCraftingRecipe;
-import codechicken.nei.recipe.NEIRecipeWidget;
 import codechicken.nei.recipe.RecipeHandlerRef;
+import codechicken.nei.recipe.widget.RecipeWidget;
 import lombok.Getter;
 
-public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
-    implements Interactable, RecipeViewerIngredientProvider, AutoLayout.LayoutNode {
+public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Interactable, RecipeViewerIngredientProvider {
 
     private static final int BASE_W = 120;
     private static final int BASE_H = 80;
@@ -114,13 +100,9 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     // Settings panel
     private static final int CONFIG_PANEL_INSET = 2;
     private static final int CONFIG_PANEL_W = 170;
-    /** The clickable span of a settings row: the panel less the inset it is drawn at. */
-    private static final int CONFIG_ROW_W = CONFIG_PANEL_W - CONFIG_PANEL_INSET * 2;
     private static final int BOOL_CLICK_W = 120;
     private static final int CLICK_H = 10;
     private static final int SETTING_DEC_X = 80;
-    /** Gap between a setting's text and its [-]/[+] steppers. */
-    private static final int SETTING_LABEL_GAP = 4;
     private static final int SETTING_BTN_W = 22;
     private static final int SETTING_INC_X = SETTING_DEC_X + SETTING_BTN_W;
     private static final int EXTRACTOR_BTN_W = 100;
@@ -153,7 +135,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     @Nullable
     private RecipeHandlerRef handlerRef;
     @Nullable
-    private NEIRecipeWidget neiWidget;
+    private RecipeWidget neiWidget;
     private String recipeName = "";
     private boolean handlerInitFailed = false;
     private long lastHandlerUpdate = 0;
@@ -166,29 +148,10 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     private int heldZoneMx, heldZoneMy;
     private long zoneHoldStart, zoneLastRepeat;
 
-    /**
-     * @param resetKey The setting this zone edits, or null when the zone is not a setting row. Right-clicking a zone
-     *                 with one clears that setting, so the machine's value applies.
-     */
-    private record ClickZone(int ux1, int uy1, int ux2, int uy2, @Nullable Runnable action, boolean repeat,
-        @Nullable String resetKey) {
+    private record ClickZone(int ux1, int uy1, int ux2, int uy2, Runnable action, boolean repeat) {
 
         ClickZone(final int ux1, final int uy1, final int ux2, final int uy2, final Runnable action) {
-            this(ux1, uy1, ux2, uy2, action, false, null);
-        }
-
-        ClickZone(final int ux1, final int uy1, final int ux2, final int uy2, final Runnable action,
-            final boolean repeat) {
-            this(ux1, uy1, ux2, uy2, action, repeat, null);
-        }
-
-        /** A zone with no left-click behaviour, present so the row it covers can be right-clicked. */
-        static ClickZone resetOnly(final int ux1, final int uy1, final int ux2, final int uy2) {
-            return new ClickZone(ux1, uy1, ux2, uy2, null, false, null);
-        }
-
-        ClickZone withReset(final String key) {
-            return new ClickZone(ux1, uy1, ux2, uy2, action, repeat, key);
+            this(ux1, uy1, ux2, uy2, action, false);
         }
 
         boolean contains(final int ux, final int uy) {
@@ -199,30 +162,29 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     public RecipeNodeWidget(final Node node, final CanvasWidget canvas) {
         this.node = node;
         this.canvas = canvas;
-        size(BASE_W, BASE_H);
+        final float z = canvas.getGraph()
+            .getZoom();
+        size(Math.round(BASE_W * z), Math.round(BASE_H * z));
     }
 
-    @Override
     public UUID id() {
-        return node.id;
+        return node.getId();
     }
 
-    @Override
     public String machineName() {
-        return node.machineName;
+        return node.getMachineName();
     }
 
-    @Override
     public int inputCount() {
-        return node.inputs.size();
+        return node.getInputs()
+            .size();
     }
 
-    @Override
     public int outputCount() {
-        return node.outputs.size();
+        return node.getOutputs()
+            .size();
     }
 
-    @Override
     public int worldWidth() {
         if (handlerRef != null && neiWidget != null) {
             return neiWidget.w + NEI_PAD_W + NEI_BORDER;
@@ -230,7 +192,6 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
         return BASE_W;
     }
 
-    @Override
     public int worldHeight() {
         if (handlerRef != null && neiWidget != null) {
             return neiWidget.h + NEI_PAD_H + calcInfoHeight() + computeConfigPanelHeight() + NEI_BORDER;
@@ -239,8 +200,17 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     }
 
     public void syncTransform(final float zoom, final float panX, final float panY) {
-        pos(Math.round(node.x), Math.round(node.y));
+        final int sx = Math.round(node.getX() * zoom + panX);
+        final int sy = Math.round(node.getY() * zoom + panY);
+        pos(sx, sy);
         resizeForZoom(zoom);
+    }
+
+    private int zq(final float v) {
+        return GuiHelper.zq(
+            v,
+            canvas.getGraph()
+                .getZoom());
     }
 
     private int groupColor(final Group g) {
@@ -252,11 +222,14 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
         final BalanceResult br = canvas.getGraph()
             .balance();
         return br.nodeBalances()
-            .get(node.id);
+            .get(node.getId());
     }
 
     private int calcInfoHeight() {
-        final int lines = 1 + node.inputs.size() + node.outputs.size();
+        final int lines = 1 + node.getInputs()
+            .size()
+            + node.getOutputs()
+                .size();
         return lines * LINE_H + 6;
     }
 
@@ -268,14 +241,14 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     public void ensureRecipeHandler() {
         if (handlerRef != null || handlerInitFailed) return;
 
-        final RecipeHandlerRef ref = RecipeHandlerRef.of(node.recipeId);
+        final RecipeHandlerRef ref = RecipeHandlerRef.of(node.getRecipeId());
         if (ref == null) {
             handlerInitFailed = true;
             return;
         }
 
         this.handlerRef = ref;
-        this.neiWidget = new NEIRecipeWidget(ref);
+        this.neiWidget = new RecipeWidget(ref);
         this.neiWidget.showAsWidget(true);
         this.neiWidget.x = CONTENT_INSET;
         this.neiWidget.y = CONTENT_TOP;
@@ -297,185 +270,150 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
         if (handlerRef != null && neiWidget != null) {
             final int cw = worldWidth() - NEI_BORDER;
             final int ch = neiWidget.h + NEI_PAD_H + calcInfoHeight() + computeConfigPanelHeight();
-            setAreaSize(cw + NEI_BORDER, ch + NEI_BORDER);
+            setAreaSize(Math.round((cw + NEI_BORDER) * z), Math.round((ch + NEI_BORDER) * z));
         } else {
-            setAreaSize(BASE_W, BASE_H);
+            setAreaSize(Math.round(BASE_W * z), Math.round(BASE_H * z));
         }
     }
 
     @Override
     public void draw(final ModularGuiContext context, final WidgetThemeEntry<?> widgetTheme) {
-        ensureRecipeHandler();
-
-        // Widget-local mouse while hovered; parked far away otherwise so NEI's stack hover box
-        // only shows on the node actually under the mouse.
-        if (getContext().isHovered(this)) {
-            hoverMx = canvas.getCanvasMouseX() - Math.round(node.x);
-            hoverMy = canvas.getCanvasMouseY() - Math.round(node.y);
-        } else {
-            hoverMx = -10000;
-            hoverMy = -10000;
-        }
-
-        if (neiWidget != null && handlerRef != null) {
-            final long now = Minecraft.getSystemTime();
-            if (now - lastHandlerUpdate > NEI_HANDLER_THROTTLE_MS) {
-                lastHandlerUpdate = now;
-                handlerRef.handler.onUpdate();
-            }
-
-            glPushAttrib(GL_ENABLE_BIT | GL_LIGHTING_BIT | GL_COLOR_BUFFER_BIT);
-            glTranslatef(0, 0, Z_PUSH);
-            GuiContainerManager.enable2DRender();
-            glColor4f(1, 1, 1, 1);
-
-            final int cw = neiWidget.w + NEI_PAD_W;
-            final int ch = neiWidget.h + NEI_PAD_H;
-
-            BG_TEXTURE.draw(
-                -TEXTURE_OFF,
-                -TEXTURE_OFF,
-                cw + TEXTURE_EXTRA,
-                ch + TEXTURE_EXTRA,
-                BORDER_9P,
-                BORDER_9P,
-                BORDER_9P,
-                BORDER_9P);
-
-            glEnable(GL_TEXTURE_2D);
-            final int titleCol = PlannhColors.titleColor(recipeName);
-            GuiDraw.drawRect(CONTENT_INSET, CONTENT_INSET, cw - TITLE_BAR_RMARGIN, TITLE_BAR_H, titleCol);
-            GuiDraw.drawRect(
-                CONTENT_INSET,
-                CONTENT_TOP,
-                cw - TITLE_BAR_RMARGIN,
-                TITLE_UL_H,
-                PlannhColors.NODE_TITLE_LINE.getColor());
-            // The title is the node's machine, since its numbers come from that machine. Clicking the
-            // title opens the machine picker. Colour keys on the recipe, so a node's hue stays the same
-            // when its machine changes.
-            final String title = titleText();
-            final int titleW = Minecraft.getMinecraft().fontRenderer.getStringWidth(title);
-            GuiDraw.drawText(
-                title,
-                (float) neiWidget.w / 2 - (float) titleW / 2,
-                TITLE_TEXT_Y,
-                1.0f,
-                PlannhColors.textOn(titleCol),
-                false);
-
-            // checking hasStoredSettings() would badge a node whose only stored key is its machine
-            final String badge = buildConfigBadge();
-            if (!badge.isEmpty()) {
-                GuiDraw.drawText(badge, LEFT_CONTENT_X, TITLE_TEXT_Y, 1.0f, PlannhColors.TEXT_BADGE.getColor(), false);
-            }
-
-            final Group grp = canvas.getGroupForNode(node.id);
-            if (grp != null) {
-                final int gc = groupColor(grp);
-                final String gl = "\u229f " + grp.getHeader();
-                final int glW = Minecraft.getMinecraft().fontRenderer.getStringWidth(gl);
-                GuiDraw.drawText(gl, cw - glW - GROUP_LABEL_RMARGIN, TITLE_TEXT_Y, 1.0f, gc, false);
-            }
-
-            GuiDraw.drawText(
-                "\u2699",
-                cw - GEAR_X_RMARGIN,
-                GEAR_Y,
-                1.0f,
-                configOpen ? PlannhColors.ACCENT_GREEN.getColor() : PlannhColors.TEXT_DIM.getColor(),
-                false);
-
-            // Real mouse position enables NEI's own hover box on recipe stacks.
-            neiWidget.draw(hoverMx, hoverMy);
-            drawThroughputInfo();
-            drawConfigContent();
-            repeatHeldZone();
-            drawCloseButtonPixel(getArea().width, getArea().height);
-            drawPorts();
-            drawGroupMembershipBar();
-            glPopAttrib();
-            glTranslatef(0, 0, Z_POP);
-        } else {
-            final int w = getArea().width;
-            final int h = getArea().height;
-
-            GuiDraw.drawRect(0, 0, w, h, PlannhColors.NODE_BG.getColor());
-            GuiHelper.drawRectBorder(0, 0, w, h, 1, PlannhColors.NODE_BORDER.getColor());
-
-            assert node.machineName != null;
-            GuiDraw.drawText(
-                node.machineName.isEmpty() ? "?" : node.machineName,
-                SIMPLE_TEXT_INSET_X,
-                SIMPLE_TEXT_INSET_Y,
-                1.0f,
-                PlannhColors.TEXT_LIGHT.getColor(),
-                false);
-
-            final Balancer.NodeBalance simpleNb = getNodeBalance();
-            final double simpleOps = simpleNb != null ? simpleNb.operations() : 1;
-            final int simpleDurPerOp = simpleNb != null ? simpleNb.durationPerOp() : node.getRecipeDuration();
-            final StringBuilder simpleTiming = new StringBuilder();
-            if (simpleOps > 0) {
-                simpleTiming.append("\u00d7")
-                    .append(GuiHelper.formatCount(simpleOps));
-            }
-            if (simpleDurPerOp > 0) {
-                if (!simpleTiming.isEmpty()) simpleTiming.append("  ");
-                simpleTiming.append(simpleDurPerOp)
-                    .append("t (")
-                    .append(String.format(Locale.ROOT, "%.1f", (float) simpleDurPerOp / GuiHelper.TICKS_PER_SECOND))
-                    .append("s)");
-            }
-            final String tier = collapsedVoltageTier();
-            if (!tier.isEmpty()) {
-                simpleTiming.append("  ")
-                    .append(tier);
-            }
-            GuiDraw.drawText(
-                simpleTiming.toString(),
-                SIMPLE_TEXT_INSET_X,
-                h - BOTTOM_TIMING_Y_FROM_BOTTOM,
-                1.0f,
-                PlannhColors.ACCENT_BLUE.getColor(),
-                false);
-
-            final ItemStack primary = getFirstItemOutput();
-            if (primary != null) {
-                final int is = ICON_SIZE;
-                GuiDraw.drawItem(primary, w - is - ICON_RMARGIN, ICON_Y, is, is, context.getCurrentDrawingZ());
-            }
-
-            final Group grp2 = canvas.getGroupForNode(node.id);
-            if (grp2 != null) {
-                GuiDraw.drawText(
-                    "\u229f " + grp2.getHeader(),
-                    SIMPLE_TEXT_INSET_X,
-                    SIMPLE_GROUP_LABEL_Y,
-                    1.0f,
-                    groupColor(grp2),
-                    false);
-            }
-
-            drawCloseButtonPixel(w, h);
-            drawPorts();
-            drawGroupMembershipBar();
-        }
+        /*
+         * ensureRecipeHandler();
+         * // Widget-local mouse while hovered; parked far away otherwise so NEI's stack hover box
+         * // only shows on the node actually under the mouse.
+         * if (isHovering()) {
+         * hoverMx = canvas.getCanvasMouseX() - Math.round(node.getX());
+         * hoverMy = canvas.getCanvasMouseY() - Math.round(node.getY());
+         * } else {
+         * hoverMx = -10000;
+         * hoverMy = -10000;
+         * }
+         * if (neiWidget != null && handlerRef != null) {
+         * final long now = Minecraft.getSystemTime();
+         * if (now - lastHandlerUpdate > NEI_HANDLER_THROTTLE_MS) {
+         * lastHandlerUpdate = now;
+         * handlerRef.handler.onUpdate();
+         * }
+         * glPushAttrib(GL_ENABLE_BIT | GL_LIGHTING_BIT | GL_COLOR_BUFFER_BIT);
+         * glTranslatef(0, 0, Z_PUSH);
+         * GuiContainerManager.enable2DRender();
+         * glColor4f(1, 1, 1, 1);
+         * final int cw = neiWidget.w + NEI_PAD_W;
+         * final int ch = neiWidget.h + NEI_PAD_H;
+         * BG_TEXTURE.draw(-TEXTURE_OFF, -TEXTURE_OFF, cw + TEXTURE_EXTRA, ch + TEXTURE_EXTRA, BORDER_9P, BORDER_9P,
+         * BORDER_9P, BORDER_9P);
+         * glEnable(GL_TEXTURE_2D);
+         * final int titleCol = PlannhColors.titleColor(recipeName);
+         * GuiDraw.drawRect(CONTENT_INSET, CONTENT_INSET, cw - TITLE_BAR_RMARGIN, TITLE_BAR_H, titleCol);
+         * GuiDraw.drawRect(CONTENT_INSET, CONTENT_TOP, cw - TITLE_BAR_RMARGIN, TITLE_UL_H,
+         * PlannhColors.NODE_TITLE_LINE.getColor());
+         * final int titleW = Minecraft.getMinecraft().fontRenderer.getStringWidth(recipeName);
+         * GuiDraw.drawText(
+         * recipeName,
+         * (float) neiWidget.w / 2 - (float) titleW / 2,
+         * TITLE_TEXT_Y,
+         * 1.0f,
+         * PlannhColors.textOn(titleCol),
+         * false);
+         * final Group grp = canvas.getGroupForNode(node.getId());
+         * if (grp != null) {
+         * final int gc = groupColor(grp);
+         * final String gl = "\u229f " + grp.getHeader();
+         * final int glW = Minecraft.getMinecraft().fontRenderer.getStringWidth(gl);
+         * GuiDraw.drawText(gl, cw - glW - GROUP_LABEL_RMARGIN, TITLE_TEXT_Y, 1.0f, gc, false);
+         * }
+         * GuiDraw.drawText(
+         * "\u2699",
+         * cw - GEAR_X_RMARGIN,
+         * GEAR_Y,
+         * 1.0f,
+         * configOpen ? PlannhColors.ACCENT_GREEN.getColor() : PlannhColors.TEXT_DIM.getColor(),
+         * false);
+         * // Real mouse position enables NEI's own hover box on recipe stacks.
+         * neiWidget.draw(hoverMx, hoverMy);
+         * drawThroughputInfo();
+         * drawConfigContent();
+         * repeatHeldZone();
+         * drawCloseButtonPixel(getArea().width, getArea().height);
+         * drawPorts();
+         * drawGroupMembershipBar();
+         * glPopAttrib();
+         * glTranslatef(0, 0, Z_POP);
+         * } else {
+         * final int w = getArea().width;
+         * final int h = getArea().height;
+         * GuiDraw.drawRect(0, 0, w, h, PlannhColors.NODE_BG.getColor());
+         * GuiHelper.drawRectBorder(0, 0, w, h, 1, PlannhColors.NODE_BORDER.getColor());
+         * assert node.getMachineName() != null;
+         * GuiDraw.drawText(
+         * node.getMachineName().isEmpty() ? "?" : node.getMachineName(),
+         * zq(SIMPLE_TEXT_INSET_X),
+         * zq(SIMPLE_TEXT_INSET_Y),
+         * z,
+         * PlannhColors.TEXT_LIGHT.getColor(),
+         * false);
+         * final NodeBalance simpleNb = getNodeBalance();
+         * final int simpleOps = simpleNb != null ? simpleNb.operations : 1;
+         * final int simpleDurPerOp = simpleNb != null ? simpleNb.durationPerOp : node.getDurationTicks();
+         * final StringBuilder simpleTiming = new StringBuilder();
+         * if (simpleOps > 0) {
+         * simpleTiming.append("\u00d7")
+         * .append(GuiHelper.formatCount(simpleOps));
+         * }
+         * if (simpleDurPerOp > 0) {
+         * if (!simpleTiming.isEmpty()) simpleTiming.append("  ");
+         * simpleTiming.append(simpleDurPerOp)
+         * .append("t (")
+         * .append(String.format("%.1f", (float) simpleDurPerOp / GuiHelper.TICKS_PER_SECOND))
+         * .append("s)");
+         * }
+         * final Object rawVoltage = node.getMachineConfig().getSettings().get("voltage");
+         * if (rawVoltage instanceof final String v && !"OFF".equals(v)) {
+         * simpleTiming.append("  ").append(v);
+         * }
+         * GuiDraw.drawText(
+         * simpleTiming.toString(),
+         * SIMPLE_TEXT_INSET_X,
+         * h - BOTTOM_TIMING_Y_FROM_BOTTOM,
+         * 1.0f,
+         * PlannhColors.ACCENT_BLUE.getColor(),
+         * false);
+         * final ItemStack primary = getFirstItemOutput();
+         * if (primary != null) {
+         * final int is = ICON_SIZE;
+         * GuiDraw.drawItem(primary, w - is - ICON_RMARGIN, ICON_Y, is, is, context.getCurrentDrawingZ());
+         * }
+         * final Group grp2 = canvas.getGroupForNode(node.getId());
+         * if (grp2 != null) {
+         * GuiDraw.drawText("\u229f " + grp2.getHeader(), SIMPLE_TEXT_INSET_X, SIMPLE_GROUP_LABEL_Y, 1.0f,
+         * groupColor(grp2), false);
+         * }
+         * drawCloseButtonPixel(w, h);
+         * drawPorts();
+         * drawGroupMembershipBar();
+         * }
+         */
     }
 
     private void drawCloseButtonPixel(final int w, final int h) {
-        GuiHelper.drawCloseButton(
-            w,
-            CLOSE_W,
-            CLOSE_MARGIN,
-            PlannhColors.BTN_DELETE_BG.getColor(),
-            PlannhColors.ACCENT_RED_X.getColor());
+        /*
+         * GuiHelper.drawCloseButton(
+         * canvas.getGraph()
+         * .getZoom(),
+         * w,
+         * CLOSE_W,
+         * CLOSE_MARGIN,
+         * PlannhColors.BTN_DELETE_BG.getColor(),
+         * PlannhColors.ACCENT_RED_X.getColor());
+         */
     }
 
     public int getOutputPortAt(final int mx, final int my) {
-        final int half = PORT_HALF;
-        final int px = getArea().width - PORT_SIZE;
-        for (int i = 0; i < node.outputs.size(); i++) {
+        final int half = zq(PORT_HALF);
+        final int px = getArea().width - zq(PORT_SIZE);
+        for (int i = 0; i < node.getOutputs()
+            .size(); i++) {
             final int py = portTopY(i) - half;
             if (mx >= px && mx < px + PORT_SIZE && my >= py && my < py + PORT_SIZE) return i;
         }
@@ -483,8 +421,9 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     }
 
     public int getInputPortAt(final int mx, final int my) {
-        final int half = PORT_HALF;
-        for (int i = 0; i < node.inputs.size(); i++) {
+        final int half = zq(PORT_HALF);
+        for (int i = 0; i < node.getInputs()
+            .size(); i++) {
             final int py = portTopY(i) - half;
             if (mx >= 0 && mx < PORT_SIZE && my >= py && my < py + PORT_SIZE) return i;
         }
@@ -492,7 +431,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     }
 
     private void drawGroupMembershipBar() {
-        final Group group = canvas.getGroupForNode(node.id);
+        final Group group = canvas.getGroupForNode(node.getId());
         if (group == null) return;
         final int gc = groupColor(group);
         GuiDraw.drawRect(
@@ -511,17 +450,21 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
         final int ps = PORT_SIZE;
         final int half = PORT_HALF;
 
-        for (int i = 0; i < node.outputs.size(); i++) {
+        for (int i = 0; i < node.getOutputs()
+            .size(); i++) {
             final int py = portTopY(i) - half;
-            final int color = node.outputs.get(i)
+            final int color = node.getOutputs()
+                .get(i)
                 .getPinColor(false);
             // Contrast outline keeps the pin visible against any world background.
             GuiDraw.drawRect(getArea().width - ps - 1, py - 1, ps + 2, ps + 2, IngredientColors.outlineFor(color));
             GuiDraw.drawRect(getArea().width - ps, py, ps, ps, color);
         }
-        for (int i = 0; i < node.inputs.size(); i++) {
+        for (int i = 0; i < node.getInputs()
+            .size(); i++) {
             final int py = portTopY(i) - half;
-            final int color = node.inputs.get(i)
+            final int color = node.getInputs()
+                .get(i)
                 .getPinColor(true);
             GuiDraw.drawRect(-1, py - 1, ps + 2, ps + 2, IngredientColors.outlineFor(color));
             GuiDraw.drawRect(0, py, ps, ps, color);
@@ -529,61 +472,37 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     }
 
     private void drawThroughputInfo() {
-        if (neiWidget == null) return;
-
-        final int x = LEFT_CONTENT_X;
-        int y = CONTENT_TOP + neiWidget.h + THROUGHPUT_GAP;
-
-        final Balancer.NodeBalance nb = getNodeBalance();
-        final float sec = nb != null && nb.totalDurationTicks() > 0
-            ? (float) nb.totalDurationTicks() / GuiHelper.TICKS_PER_SECOND
-            : node.getRecipeDuration() > 0 ? (float) node.getRecipeDuration() / GuiHelper.TICKS_PER_SECOND : 1f;
-        final double ops = nb != null ? nb.operations() : 1;
-
-        final int durPerOp = nb != null ? nb.durationPerOp() : node.getRecipeDuration();
-        final StringBuilder opsLine = new StringBuilder();
-        // No balance (unpinned Auto): show the recipe duration only - no count, and below, no
-        // throughput rows. An unpinned chart is wiring, not a solved plan; per-machine rates
-        // would be numbers with no anchor.
-        if (ops > 0) {
-            opsLine.append("\u00d7")
-                .append(GuiHelper.formatCount(ops));
-        }
-        if (durPerOp > 0) {
-            if (!opsLine.isEmpty()) opsLine.append("  ");
-            opsLine.append(durPerOp)
-                .append("t (")
-                .append(String.format(Locale.ROOT, "%.2f", (float) durPerOp / GuiHelper.TICKS_PER_SECOND))
-                .append("s)");
-        }
-        GuiDraw.drawText(opsLine.toString(), x, y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
-        y += LINE_H;
-        if (nb != null && nb.rejection() != null) {
-            GuiDraw.drawText(
-                Minecraft.getMinecraft().fontRenderer.trimStringToWidth(nb.rejection(), neiWidget.w),
-                x,
-                y,
-                1.0f,
-                PlannhColors.ACCENT_RED_X.getColor(),
-                false);
-            y += LINE_H;
-        }
-        if (nb != null) {
-            for (final String detail : nb.details()) {
-                GuiDraw.drawText(
-                    Minecraft.getMinecraft().fontRenderer.trimStringToWidth(detail, neiWidget.w),
-                    x,
-                    y,
-                    1.0f,
-                    PlannhColors.TEXT_MUTED.getColor(),
-                    false);
-                y += LINE_H;
-            }
-        }
-        if (ops <= 0) return;
-
-        y = drawPortList(x, y, node.inputs, nb, sec, false);
-        drawPortList(x, y, node.outputs, nb, sec, true);
+        /*
+         * if (neiWidget == null) return;
+         * final int x = LEFT_CONTENT_X;
+         * int y = CONTENT_TOP + neiWidget.h + THROUGHPUT_GAP;
+         * final Balancer.NodeBalance nb = getNodeBalance();
+         * final float sec = nb != null && nb.durationPerOp() > 0
+         * ? (float) nb.durationPerOp() / GuiHelper.TICKS_PER_SECOND
+         * : node.getRecipeDuration() > 0 ? (float) node.getRecipeDuration() / GuiHelper.TICKS_PER_SECOND : 1f;
+         * final double ops = nb != null ? nb.operations() : 1;
+         * final int durPerOp = nb != null ? nb.durationPerOp() : node.getRecipeDuration();
+         * final StringBuilder opsLine = new StringBuilder();
+         * // No balance (unpinned Auto): show the recipe duration only - no count, and below, no
+         * // throughput rows. An unpinned chart is wiring, not a solved plan; per-machine rates
+         * // would be numbers with no anchor.
+         * if (ops > 0) {
+         * opsLine.append("\u00d7")
+         * .append(GuiHelper.formatCount(ops));
+         * }
+         * if (durPerOp > 0) {
+         * if (!opsLine.isEmpty()) opsLine.append("  ");
+         * opsLine.append(durPerOp)
+         * .append("t (")
+         * .append(String.format(Locale.ROOT, "%.2f", (float) durPerOp / GuiHelper.TICKS_PER_SECOND))
+         * .append("s)");
+         * }
+         * GuiDraw.drawText(opsLine.toString(), x, y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
+         * y += LINE_H;
+         * if (ops <= 0) return;
+         * y = drawPortList(x, y, node.inputs, nb, sec, false);
+         * drawPortList(x, y, node.outputs, nb, sec, true);
+         */
     }
 
     private int drawPortList(final int x, int y, final List<Port<?>> ports, final Balancer.NodeBalance nb,
@@ -601,7 +520,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     @Nullable
     private String portLabel(final Port<?> port, final int index, final Balancer.NodeBalance nb, final float sec,
         final boolean output) {
-        if (!hasVisibleAmount(port)) return null;
+        if (!port.hasVisibleAmount()) return null;
         // Both directions read the balance's effective totals so exact rates sit next to exact
         // rates on the same node.
         final float total = effectiveTotal(nb, index, output, port.getAmount());
@@ -630,80 +549,65 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
 
     @Override
     public @Nonnull Result onMousePressed(final int mouseButton) {
-        // Right-click on a settings row clears that setting, so the machine's value applies. It is the
-        // only way back to unset: a row stepped away and back stays overridden.
-        if (mouseButton == 1 && configOpen) {
-            final int mx = getContext().getMouseX();
-            final int my = getContext().getMouseY();
-            for (final ClickZone zone : configZones) {
-                if (zone.resetKey() != null && zone.contains(mx, my)) {
-                    PlanAPI.recordEdit(canvas.getGraph(), () -> node.machineConfig.clear(zone.resetKey()));
-                    onConfigChanged();
-                    return Result.SUCCESS;
-                }
-            }
-        }
-        if (mouseButton == 0) {
-            final int mx = getContext().getMouseX();
-            final int my = getContext().getMouseY();
-            if (GuiHelper.isInsideCloseButton(mx, my, getArea().width, CLOSE_W, CLOSE_MARGIN)) {
-                canvas.removeNode(node.id);
-                return Result.SUCCESS;
-            }
-
-            if (neiWidget != null) {
-                final int cw = neiWidget.w + NEI_PAD_W;
-                // title bar left of the gear: opens the machine picker
-                if (mx >= CONTENT_INSET && mx < cw - GEAR_HIT_LEFT_OFF
-                    && my >= CONTENT_INSET
-                    && my < CONTENT_INSET + TITLE_BAR_H
-                    && hasMachineChoice()) {
-                    canvas.openMachinePicker(node);
-                    return Result.SUCCESS;
-                }
-                if (mx >= cw - GEAR_HIT_LEFT_OFF && mx <= cw - GEAR_HIT_RIGHT_OFF
-                    && my >= GEAR_HIT_TOP
-                    && my <= GEAR_HIT_BOTTOM) {
-                    configOpen = !configOpen;
-                    resizeForZoom(
-                        canvas.getGraph()
-                            .getZoom());
-                    return Result.SUCCESS;
-                }
-                if (configOpen) {
-                    for (final ClickZone zone : configZones) {
-                        if (zone.action() != null && zone.contains(mx, my)) {
-                            // Held repeats mutate outside this bracket and fold into this entry.
-                            PlanAPI.recordEdit(canvas.getGraph(), zone.action);
-                            if (zone.repeat()) {
-                                zoneHeld = true;
-                                heldZoneMx = mx;
-                                heldZoneMy = my;
-                                zoneHoldStart = System.currentTimeMillis();
-                                zoneLastRepeat = zoneHoldStart;
-                            }
-                            return Result.SUCCESS;
-                        }
-                    }
-                }
-            }
-
-            if (getOutputPortAt(mx, my) >= 0) return Result.IGNORE;
-
-            if (doubleClick.check()) {
-                doubleClickPending = true;
-                return Result.SUCCESS;
-            }
-            doubleClickPending = false;
-            dragging = true;
-            dragEditToken = PlanAPI.undoHistory()
-                .beginEdit(canvas.getGraph());
-            dragStartMouseX = getContext().getAbsMouseX();
-            dragStartMouseY = getContext().getAbsMouseY();
-            nodeStartX = node.x;
-            nodeStartY = node.y;
-            return Result.SUCCESS;
-        }
+        /*
+         * if (mouseButton == 0) {
+         * final int mx = getContext().getMouseX();
+         * final int my = getContext().getMouseY();
+         * if (GuiHelper.isInsideCloseButton(
+         * mx,
+         * my,
+         * canvas.getGraph()
+         * .getZoom(),
+         * getArea().width,
+         * CLOSE_W,
+         * CLOSE_MARGIN)) {
+         * canvas.removeNode(node.getId());
+         * return Result.SUCCESS;
+         * }
+         * if (neiWidget != null) {
+         * final int cw = neiWidget.w + NEI_PAD_W;
+         * if (mx >= cw - GEAR_HIT_LEFT_OFF && mx <= cw - GEAR_HIT_RIGHT_OFF
+         * && my >= GEAR_HIT_TOP
+         * && my <= GEAR_HIT_BOTTOM) {
+         * configOpen = !configOpen;
+         * resizeForZoom(
+         * canvas.getGraph()
+         * .getZoom());
+         * return Result.SUCCESS;
+         * }
+         * if (configOpen) {
+         * for (final ClickZone zone : configZones) {
+         * if (zone.contains(mx, my)) {
+         * // Held repeats mutate outside this bracket and fold into this entry.
+         * PlanAPI.recordEdit(canvas.getGraph(), zone.action);
+         * if (zone.repeat()) {
+         * zoneHeld = true;
+         * heldZoneMx = mx;
+         * heldZoneMy = my;
+         * zoneHoldStart = System.currentTimeMillis();
+         * zoneLastRepeat = zoneHoldStart;
+         * }
+         * return Result.SUCCESS;
+         * }
+         * }
+         * }
+         * }
+         * if (getOutputPortAt(mx, my) >= 0) return Result.IGNORE;
+         * if (doubleClick.check()) {
+         * doubleClickPending = true;
+         * return Result.SUCCESS;
+         * }
+         * doubleClickPending = false;
+         * dragging = true;
+         * dragEditToken = PlanAPI.undoHistory()
+         * .beginEdit(canvas.getGraph());
+         * dragStartMouseX = getContext().getAbsMouseX();
+         * dragStartMouseY = getContext().getAbsMouseY();
+         * nodeStartX = node.getX();
+         * nodeStartY = node.getY();
+         * return Result.SUCCESS;
+         * }
+         */
         return Result.IGNORE;
     }
 
@@ -719,9 +623,9 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
             // A machine group is one machine, so a node running another recipe handler has no place
             // in it. There is nowhere to say so - the canvas has no message popup - so the drag
             // simply does not take: the node goes back where it was picked up from.
-            if (dragging && canvas.refusesNode(node)) {
-                node.x = nodeStartX;
-                node.y = nodeStartY;
+            if (dragging) {
+                node.setX(nodeStartX);
+                node.setY(nodeStartY);
                 syncTransform(
                     canvas.getGraph()
                         .getZoom(),
@@ -747,9 +651,9 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
             final int dy = getContext().getAbsMouseY() - dragStartMouseY;
             final float z = canvas.getGraph()
                 .getZoom();
-            node.x = nodeStartX + Math.round(dx / z);
-            node.y = nodeStartY + Math.round(dy / z);
-            canvas.clampNodeToGroup(node);
+            node.setX(nodeStartX + Math.round(dx / z));
+            node.setY(nodeStartY + Math.round(dy / z));
+            // canvas.clampNodeToGroup(node);
             syncTransform(
                 z,
                 canvas.getGraph()
@@ -759,80 +663,6 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
         }
     }
 
-    /** The selected machine's name, or the recipe name when no machine is selected. */
-    private String titleText() {
-        final MachineVariant machine = MachineVariants.selected(recipeContext(), node.machineConfig.settings);
-        return machine == null ? recipeName : machine.label();
-    }
-
-    private boolean hasMachineChoice() {
-        return MachineVariants.candidates(recipeContext())
-            .size() > 1;
-    }
-
-    /**
-     * The tier the collapsed node runs at. Reading only the stored key would print nothing for a node with no stored
-     * tier, which under a sparse map is most nodes.
-     */
-    private String collapsedVoltageTier() {
-        final SettingDef<?> def = node.machineConfig.getProfile()
-            .setting(Settings.VOLTAGE.key());
-        if (def == null) return "";
-        final List<String> options = def.options(recipeContext());
-        if (options.isEmpty()) return "";
-        final String stored = node.machineConfig.getString(def.key);
-        return options.contains(stored) ? stored : def.defaultOption(recipeContext(), options);
-    }
-
-    /**
-     * Cached against the identity of the wrapped map. Sizing and drawing one node calls recipeContext() about a dozen
-     * times a frame, and a fresh wrapper would allocate on every call.
-     */
-    @Nullable
-    private Map<RecipeProperty<?>, Object> contextProperties;
-    @Nullable
-    private RecipeContext context;
-
-    private RecipeContext recipeContext() {
-        if (node.properties != contextProperties) {
-            contextProperties = node.properties;
-            context = new RecipeContext(node.properties);
-        }
-        return context;
-    }
-
-    /**
-     * The rows this node draws. A setting hidden by the profile must not add a badge or size the panel.
-     *
-     * <p>
-     * FIXME sizing and drawing one node call this six times a frame, and each call runs every visibility predicate in
-     * the profile. Memoizing it requires an invalidation signal, and this widget has none: the settings map is edited
-     * through several paths, not all of which bump the graph.
-     */
-    private List<SettingDef<?>> visibleSettings() {
-        final MachineConfig c = node.machineConfig;
-        return c.getProfile()
-            .visibleSettings(recipeContext(), c.settings);
-    }
-
-    private String buildConfigBadge() {
-        final MachineConfig c = node.machineConfig;
-        final StringBuilder sb = new StringBuilder();
-
-        for (final SettingDef<?> def : visibleSettings()) {
-            // a stored key is a user choice, so a value set back to the declared default still badges
-            final Object val = c.settings.get(def.key);
-            if (val == null) continue;
-            final String badge = def.badge(val, c);
-            if (badge == null) continue;
-            sb.append(badge)
-                .append(' ');
-        }
-
-        if (!sb.isEmpty()) sb.setLength(sb.length() - 1);
-        return sb.toString();
-    }
-
     private void drawConfigContent() {
         configZones.clear();
         if (!configOpen) return;
@@ -840,6 +670,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
 
         final int x = LEFT_CONTENT_X;
         final int y0 = CONTENT_TOP + neiWidget.h + THROUGHPUT_GAP + calcInfoHeight();
+        final MachineProfile profile = node.getMachineConfig()
+            .getProfile();
         final int panelH = configRowsHeight() + 4;
         GuiDraw.drawRect(
             x - CONFIG_PANEL_INSET,
@@ -848,53 +680,16 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
             panelH,
             PlannhColors.SETTINGS_PANEL_BG.getColor());
 
-        final MachineConfig c = node.machineConfig;
+        final MachineConfig c = node.getMachineConfig();
         int y = y0;
 
-        // Advanced is drawn last, below the targets: it switches the whole panel's mode and is not a
-        // machine setting. Among the settings it would read as one. Guarded like every GTSettings
-        // reference here: touching that class loads GregTech, which a pack may not have.
-        final String advancedKey = Compat.GREGTECH.isLoaded ? GTSettings.ADVANCED : null;
-        SettingDef<?> advanced = null;
-        for (final SettingDef<?> def : visibleSettings()) {
-            if (def.key.equals(advancedKey)) {
-                advanced = def;
-                continue;
-            }
-            y = drawSetting(x, y, def, c);
-        }
+        // The fixed toggle and the per-output target rows used to live here, the rows behind a
+        // screen-level rate editor. Both are TargetList's now, inside the node's own widget tree.
 
-        y = drawDerivedRows(x, y, c);
-
-        // One row per output: pin the rate the chart should produce. The row opens a text
-        // editor; rates are typed, not stepped.
-        final FontRenderer font = Minecraft.getMinecraft().fontRenderer;
-        for (final int idx : targetableOutputs()) {
-            final double current = node.targetOutputRates.getOrDefault(idx, 0.0);
-            // Scale suffixes but not the port's formatter: this row is what the rate editor writes
-            // back, and the editor takes a plain number. "1.2k" is the same quantity as 1200, but a
-            // fluid's "1.0B" is 1000 litres in a field that wants litres.
-            final String value = current > 0 ? GuiHelper.formatRate((float) current) + "/s" : "off";
-            final int valueW = font.getStringWidth(value);
-            final String label = font.trimStringToWidth(
-                "Tgt " + node.outputs.get(idx)
-                    .getDisplayName(),
-                TARGET_ROW_W - valueW - 6);
-            GuiDraw.drawText(label, x, y, 1.0f, PlannhColors.TEXT_LIGHT.getColor(), false);
-            GuiDraw.drawText(
-                value,
-                x + TARGET_ROW_W - valueW,
-                y,
-                1.0f,
-                current > 0 ? PlannhColors.SETTING_ON.getColor() : PlannhColors.TEXT_MUTED.getColor(),
-                false);
-            final int out = idx;
-            configZones
-                .add(new ClickZone(x, y, x + TARGET_ROW_W, y + CLICK_H, () -> canvas.openTargetEditor(node, out)));
-            y += LINE_H;
-        }
-
-        if (advanced != null) y = drawSetting(x, y, advanced, c);
+        // for (final SettingDef<?> def : profile
+        // .visibleSettings(new RecipeContext(node.getProperties()), c.getSettings())) {
+        // y = drawSetting(x, y, def, c);
+        // }
 
         if (node.getAvailableExtractors()
             .size() > 1) {
@@ -902,7 +697,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
                 .getExtractorName() + " [\u00BB]";
             GuiDraw.drawText(label, x, y, 1.0f, PlannhColors.ACCENT_GREEN.getColor(), false);
             configZones.add(new ClickZone(x, y, x + EXTRACTOR_BTN_W, y + CLICK_H, () -> {
-                node.switchExtractor();
+                node.switchExtractor(1);
                 onConfigChanged();
             }));
         }
@@ -917,7 +712,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
         final long now = System.currentTimeMillis();
         if (now - zoneHoldStart < HOLD_REPEAT_DELAY_MS || now - zoneLastRepeat < HOLD_REPEAT_INTERVAL_MS) return;
         for (final ClickZone zone : configZones) {
-            if (zone.repeat() && zone.action() != null && zone.contains(heldZoneMx, heldZoneMy)) {
+            if (zone.repeat() && zone.contains(heldZoneMx, heldZoneMy)) {
                 zone.action.run();
                 zoneLastRepeat = now;
                 return;
@@ -925,186 +720,50 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
         }
     }
 
-    /**
-     * Draws a row and tags every zone it added with the setting it edits, so right-clicking anywhere on the row resets
-     * the setting. Tagging at each {@code configZones.add} would put reset logic into all three row shapes (stepper,
-     * checkbox, list).
-     */
     private int drawSetting(final int x, final int y, final SettingDef<?> def, final MachineConfig c) {
-        final int firstZone = configZones.size();
-        final int next = drawSettingRow(x, y, def, c);
-        // Spans the whole row, so a right-click on the label also resets. Added last, because the click
-        // search takes the first zone that contains the click.
-        configZones.add(ClickZone.resetOnly(x, y, x + CONFIG_ROW_W, y + CLICK_H));
-        for (int i = firstZone; i < configZones.size(); i++) {
-            configZones.set(
-                i,
-                configZones.get(i)
-                    .withReset(def.key));
-        }
-        return next;
-    }
-
-    /**
-     * The auto values the user left unset, drawn read-only and greyed above the targets. These are the advanced rows,
-     * hidden on a minimised node. Without them the user can't tell a machine that required no configuring from one
-     * PlanNH failed to configure. They are edited through the Advanced toggle.
-     */
-    private int drawDerivedRows(final int x, int y, final MachineConfig c) {
-        // A non-GregTech node has no advanced key, but the guard is still required: touching GTSettings
-        // loads GregTech, which a pack may not have.
-        if (Compat.GREGTECH.isLoaded && GTSettings.isAdvanced(c.settings)) return y;
-        for (final SettingDef<?> def : c.getProfile()
-            .settings()) {
-            final String value = derivedValue(def, c);
-            if (value == null) continue;
-            GuiDraw.drawText(def.label + " " + value, x, y, 1.0f, PlannhColors.TEXT_DIM.getColor(), false);
-            y += LINE_H;
-        }
-        return y;
-    }
-
-    /**
-     * The text an untouched advanced row prints, or null for no row. Null when the setting is set or already visible,
-     * when its value is neutral, or when its badge() returns null. A null badge is how an off flag is hidden without
-     * this method listing which flags exist.
-     */
-    @Nullable
-    private String derivedValue(final SettingDef<?> def, final MachineConfig c) {
-        if (!def.isAuto() || c.settings.containsKey(def.key)) return null;
-        if (def.isVisible(recipeContext(), c.settings)) return null;
-
-        if (def.type == Boolean.class) {
-            final boolean on = def.effectiveBool(recipeContext(), c.settings);
-            return def.badge(on, c) == null ? null : on ? "\u2713" : null;
-        }
-        if (def.type != Integer.class) return null;
-
-        final int value = def.effectiveInt(recipeContext(), c.settings);
-        if (def.isNeutral(value)) return null;
-        return def.badge(value, c) == null ? null : intRowValue(def, value);
-    }
-
-    private int derivedRowCount() {
-        final MachineConfig c = node.machineConfig;
-        if (Compat.GREGTECH.isLoaded && GTSettings.isAdvanced(c.settings)) return 0;
-        int rows = 0;
-        for (final SettingDef<?> def : c.getProfile()
-            .settings()) {
-            if (derivedValue(def, c) != null) rows++;
-        }
-        return rows;
-    }
-
-    private static boolean machineCountRow(final SettingDef<?> def) {
-        return Settings.MACHINES.key()
-            .equals(def.key);
-    }
-
-    /**
-     * The machine-count row's value. An unpinned node follows the solve, so the row prints the solver's count. Typing
-     * into the row pins it. A SettingDef auto value can't supply this: it gets only the recipe and the settings map,
-     * never the node or its graph. The count stays fractional to match the throughput line, so a node running 1.37
-     * operations does not read as two machines. The steppers round in the direction clicked.
-     */
-    private double solvedMachineCount(final MachineConfig c) {
-        if (c.isMachineCountPinned()) return c.getMachineCount();
-        final Balancer.NodeBalance nb = getNodeBalance();
-        // Not floored at one. A node at 0.8 operations is under one full machine, and printing "1" would
-        // hide that the rest of the chart is held back by this node. Stepping up from it lands on a whole
-        // machine.
-        return nb == null ? 1 : nb.operations();
-    }
-
-    private int drawSettingRow(final int x, final int y, final SettingDef<?> def, final MachineConfig c) {
-        if (def.type == Integer.class) {
-            // An auto row prints the machine's effective value, since a stored 0 means "ask the machine".
-            // It can't be stepped past the machine's limit.
-            final double shown = machineCountRow(def) ? solvedMachineCount(c)
-                : def.isAuto() ? def.effectiveInt(recipeContext(), c.settings) : c.getInt(def.key);
-            // Called for every row: a row can have a machine-set ceiling without being auto, and
-            // effectiveMax() falls back to the declared maximum otherwise.
-            final int max = def.effectiveMax(recipeContext(), c.settings);
-            // A stored key is a user choice, so the row is green. Muted means the value follows the
-            // machine or the solve.
-            final boolean chosen = c.settings.containsKey(def.key);
-            return drawConfigIntField(
-                x,
-                y,
-                def.label + " " + intRowValue(def, shown),
-                shown,
-                def.effectiveMin(recipeContext(), c.settings),
-                max,
-                chosen,
-                v -> {
-                    c.setInt(def.key, v);
-                    onConfigChanged();
-                });
-        } else if (def.type == Boolean.class) {
-            final boolean val = def.isAuto() ? def.effectiveBool(recipeContext(), c.settings) : c.getBoolean(def.key);
-            final String label = (val ? "[\u2713] " : "[  ] ") + def.label;
-            GuiDraw.drawText(
-                label,
-                x,
-                y,
-                1.0f,
-                val ? PlannhColors.SETTING_ON.getColor() : PlannhColors.SETTING_OFF.getColor(),
-                false);
-            configZones.add(new ClickZone(x, y, x + BOOL_CLICK_W, y + CLICK_H, () -> {
-                c.setBoolean(def.key, !val);
-                onConfigChanged();
-            }));
-            return y + LINE_H;
-        } else if (def.type == String.class && def.hasOptions()) {
-            final List<String> options = def.options(recipeContext());
-            if (options.isEmpty()) return y;
-
-            // The map is read directly: getString() returns the declared default, which would make an
-            // untouched row look chosen. An unset row prints defaultOption(), so a node on the default
-            // serializes nothing. A stored value missing from the list is a machine the pack removed.
-            // It is flagged and left as stored, so the user's chart is not rewritten.
-            final boolean chosen = c.settings.containsKey(def.key);
-            final String stored = chosen ? c.getString(def.key) : "";
-            final int cur = options.indexOf(stored);
-            final boolean missing = chosen && cur < 0;
-            final String shown = chosen ? stored : def.defaultOption(recipeContext());
-            final int color = missing ? PlannhColors.ACCENT_RED_X.getColor()
-                : chosen ? PlannhColors.SETTING_ON.getColor() : PlannhColors.TEXT_MUTED.getColor();
-            // Machine names run far longer than a tier abbreviation, and the steppers sit at a fixed
-            // offset, so an untrimmed row draws straight through them.
-            final String row = def.label + " " + def.display(shown) + (missing ? " ?" : "");
-            GuiDraw.drawText(
-                Minecraft.getMinecraft().fontRenderer.trimStringToWidth(row, SETTING_DEC_X - SETTING_LABEL_GAP),
-                x,
-                y,
-                1.0f,
-                color,
-                false);
-
-            final int decX = x + SETTING_DEC_X;
-            final int incX = decX + SETTING_BTN_W;
-            GuiDraw.drawText("[-]", decX, y, 1.0f, PlannhColors.TEXT_MUTED.getColor(), false);
-            GuiDraw.drawText("[+]", incX, y, 1.0f, PlannhColors.TEXT_MUTED.getColor(), false);
-
-            configZones.add(new ClickZone(decX, y, incX, y + CLICK_H, () -> cycleOption(def, c, -1), true));
-            configZones
-                .add(new ClickZone(incX, y, incX + SETTING_BTN_W, y + CLICK_H, () -> cycleOption(def, c, +1), true));
-            return y + LINE_H;
-        }
-        return y + LINE_H;
-    }
-
-    /** Steps an enum row, clamped at both ends of the list. An unknown stored value steps from the first option. */
-    private void cycleOption(final SettingDef<?> def, final MachineConfig c, final int step) {
-        final List<String> options = def.options(recipeContext());
-        if (options.isEmpty()) return;
-        // Stepping starts from the value the row prints. Treating unset as "no index" would make the
-        // first click rewrite the value already on screen.
-        final String current = c.settings.containsKey(def.key) ? c.getString(def.key)
-            : def.defaultOption(recipeContext());
-        final int shown = Math.max(0, options.indexOf(current));
-        c.setString(def.key, options.get(Math.min(options.size() - 1, Math.max(0, shown + step))));
-        onConfigChanged();
+        /*
+         * if (def.type == Integer.class) {
+         * return drawConfigIntField(x, y, def.label, c.getInt(def.key), def.minInt, def.maxInt, v -> {
+         * c.setInt(def.key, v);
+         * onConfigChanged();
+         * });
+         * } else if (def.type == Boolean.class) {
+         * final boolean val = c.getBoolean(def.key);
+         * final String label = (val ? "[\u2713] " : "[  ] ") + def.label;
+         * GuiDraw.drawText(
+         * label,
+         * x,
+         * y,
+         * 1.0f,
+         * val ? PlannhColors.SETTING_ON.getColor() : PlannhColors.SETTING_OFF.getColor(),
+         * false);
+         * configZones.add(new ClickZone(x, y, x + BOOL_CLICK_W, y + CLICK_H, () -> {
+         * c.setBoolean(def.key, !val);
+         * onConfigChanged();
+         * }));
+         * return y + LINE_H;
+         * } else if (def.type == String.class && def.hasOptions()) {
+         * final String val = c.getString(def.key);
+         * GuiDraw.drawText(def.label + " " + val, x, y, 1.0f, PlannhColors.SETTING_ON.getColor(), false);
+         * final int decX = x + SETTING_DEC_X;
+         * final int incX = decX + SETTING_BTN_W;
+         * GuiDraw.drawText("[-]", decX, y, 1.0f, PlannhColors.TEXT_MUTED.getColor(), false);
+         * GuiDraw.drawText("[+]", incX, y, 1.0f, PlannhColors.TEXT_MUTED.getColor(), false);
+         * assert def.options != null;
+         * configZones.add(new ClickZone(decX, y, incX, y + CLICK_H, () -> {
+         * final int cur = def.options.indexOf(c.getString(def.key));
+         * c.setString(def.key, def.options.get(Math.max(0, (Math.max(cur, 0)) - 1)));
+         * onConfigChanged();
+         * }, true));
+         * configZones.add(new ClickZone(incX, y, incX + SETTING_BTN_W, y + CLICK_H, () -> {
+         * final int cur = def.options.indexOf(c.getString(def.key));
+         * c.setString(def.key, def.options.get(Math.min(def.options.size() - 1, (Math.max(cur, 0)) + 1)));
+         * onConfigChanged();
+         * }, true));
+         * return y + LINE_H;
+         * }
+         */
+        return 0;
     }
 
     private int computeConfigPanelHeight() {
@@ -1112,53 +771,47 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     }
 
     private int configRowsHeight() {
-        int h = (visibleSettings().size() + 2 + targetableOutputs().size() + derivedRowCount()) * LINE_H;
-        if (node.getAvailableExtractors()
-            .size() > 1) h += LINE_H;
-        return h;
+        // int h = (node.getMachineConfig()
+        // .getProfile()
+        // .visibleSettings(
+        // new RecipeContext(node.getProperties()),
+        // node.getMachineConfig()
+        // .getSettings())
+        // .size() + 2
+        // + targetableOutputs().size()) * LINE_H;
+        // if (node.getAvailableExtractors()
+        // .size() > 1) h += LINE_H;
+        // return h;
+        return 0;
     }
 
     /** Output indices that get a target row: the same ports the throughput list shows. */
     private List<Integer> targetableOutputs() {
         final List<Integer> result = new ArrayList<>();
-        for (int i = 0; i < node.outputs.size(); i++) {
-            if (hasVisibleAmount(node.outputs.get(i))) {
+        for (int i = 0; i < node.getOutputs()
+            .size(); i++) {
+            if (node.getOutputs()
+                .get(i)
+                .hasVisibleAmount()) {
                 result.add(i);
             }
         }
         return result;
     }
 
-    /**
-     * An integer row's printed value, through the setting's display() so a tier can print as its block. A fractional
-     * value comes from the solve and no setting renders one, so it is formatted like the throughput line.
-     */
-    @Nonnull
-    private static String intRowValue(final SettingDef<?> def, final double value) {
-        if (value != Math.rint(value)) return GuiHelper.formatCount(value);
-        return def.display(String.valueOf((int) value));
-    }
-
-    /**
-     * A stepper row. The value is a double because the machine count follows a fractional solve. The steppers land on
-     * the whole numbers either side of it, which for a whole value is -1 and +1.
-     */
-    private int drawConfigIntField(final int x, final int y, final String text, final double value, final int min,
-        final int max, final boolean chosen, final IntConsumer setter) {
-        final int color = chosen ? PlannhColors.SETTING_ON.getColor() : PlannhColors.TEXT_LIGHT.getColor();
-        GuiDraw.drawText(text, x, y, 1.0f, color, false);
+    private int drawConfigIntField(final int x, final int y, final String label, final int value, final int min,
+        final int max, final IntConsumer setter) {
+        GuiDraw.drawText(label + " " + value, x, y, 1.0f, PlannhColors.TEXT_LIGHT.getColor(), false);
         GuiDraw.drawText("[-]", x + SETTING_DEC_X, y, 1.0f, PlannhColors.TEXT_MUTED.getColor(), false);
         GuiDraw.drawText("[+]", x + SETTING_INC_X, y, 1.0f, PlannhColors.TEXT_MUTED.getColor(), false);
 
-        final int down = (int) Math.ceil(value) - 1;
-        final int up = (int) Math.floor(value) + 1;
         configZones.add(
             new ClickZone(
                 x + SETTING_DEC_X,
                 y,
                 x + SETTING_INC_X,
                 y + CLICK_H,
-                () -> { if (down >= min) setter.accept(down); },
+                () -> { if (value > min) setter.accept(value - 1); },
                 true));
         configZones.add(
             new ClickZone(
@@ -1166,25 +819,29 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
                 y,
                 x + SETTING_INC_X + SETTING_BTN_W,
                 y + CLICK_H,
-                () -> { if (up <= max) setter.accept(up); },
+                () -> { if (value < max) setter.accept(value + 1); },
                 true));
         return y + LINE_H;
     }
 
     private void onConfigChanged() {
-        canvas.onNodeConfigChanged(node);
+        canvas.getGraph()
+            .bumpVersion();
+        resizeForZoom(
+            canvas.getGraph()
+                .getZoom());
     }
 
     @Nullable
     private ItemStack getFirstItemOutput() {
-        for (final Port<?> port : node.outputs) {
+        for (final Port<?> port : node.getOutputs()) {
             if (port.getType() == RecipePropertyAPI.ITEM) return (ItemStack) port.getValue();
         }
         return null;
     }
 
     private void openNeiRecipe() {
-        for (final Port<?> port : node.outputs) {
+        for (final Port<?> port : node.getOutputs()) {
             if (port.getType() == RecipePropertyAPI.ITEM && port.getValue() != null) {
                 GuiCraftingRecipe.openRecipeGui("item", port.getValue());
                 return;
@@ -1225,8 +882,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     @Nullable
     private IngredientHit ingredientUnderMouse() {
         // World-space widget-local mouse; independent of whatever viewport state NEI calls us in.
-        final int mx = canvas.getCanvasMouseX() - Math.round(node.x);
-        final int my = canvas.getCanvasMouseY() - Math.round(node.y);
+        final int mx = canvas.getCanvasMouseX() - Math.round(node.getX());
+        final int my = canvas.getCanvasMouseY() - Math.round(node.getY());
 
         if (neiWidget != null && handlerRef != null) {
             final PositionedStack gridStack = neiWidget.getPositionedStackMouseOver(mx, my);
@@ -1235,18 +892,27 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
             }
         }
 
-        final int out = getOutputPortAt(mx, my);
-        if (out >= 0) return hitFor(node.outputs.get(out), true, out);
-        final int in = getInputPortAt(mx, my);
-        if (in >= 0) return hitFor(node.inputs.get(in), false, in);
+        // final int out = getOutputPortAt(mx, my);
+        // if (out >= 0) return hitFor(
+        // node.getOutputs()
+        // .get(out),
+        // true,
+        // out);
+        // final int in = getInputPortAt(mx, my);
+        // if (in >= 0) return hitFor(
+        // node.getInputs()
+        // .get(in),
+        // false,
+        // in);
         return null;
     }
 
     @Nullable
     private IngredientHit hitFor(final Port<?> port, final boolean output, final int index) {
-        final ItemStack stack = port.getDisplayStack();
-        if (stack == null) return null;
-        return new IngredientHit(stack, new NodeLookupContext(node.id, output, index));
+        // final ItemStack stack = port.getDisplayStack();
+        // if (stack == null) return null;
+        // return new IngredientHit(stack, new NodeLookupContext(node.getId(), output, index));
+        return null;
     }
 
     /** Whether a hovered grid slot sits on the recipe's input side, by slot position. */
@@ -1272,28 +938,16 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
 
     @Nullable
     private NodeLookupContext portMatching(final ItemStack stack, final boolean output) {
-        final List<Port<?>> ports = output ? node.outputs : node.inputs;
-        for (int i = 0; i < ports.size(); i++) {
-            if (displayMatches(ports.get(i), stack)) return new NodeLookupContext(node.id, output, i);
-        }
+        final List<Port<?>> ports = output ? node.getOutputs() : node.getInputs();
+        // for (int i = 0; i < ports.size(); i++) {
+        // if (displayMatches(ports.get(i), stack)) return new NodeLookupContext(node.getId(), output, i);
+        // }
         return null;
     }
 
     private static boolean displayMatches(final Port<?> port, final ItemStack stack) {
-        final ItemStack display = port.getDisplayStack();
-        return display != null && display.isItemEqual(stack);
-    }
-
-    /** Whether the port draws a throughput row: it holds a value with a positive amount. */
-    private static boolean hasVisibleAmount(final Port<?> port) {
-        if (port.getType() == RecipePropertyAPI.ITEM) {
-            final ItemStack stack = (ItemStack) port.getValue();
-            return stack != null && stack.stackSize > 0;
-        }
-        if (port.getType() == RecipePropertyAPI.FLUID) {
-            final FluidStack fs = (FluidStack) port.getValue();
-            return fs != null && fs.amount > 0;
-        }
+        // final ItemStack display = port.getDisplayStack();
+        // return display != null && display.isItemEqual(stack);
         return false;
     }
 

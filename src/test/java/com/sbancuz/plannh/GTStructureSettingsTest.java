@@ -5,16 +5,16 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.HashMap;
-import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
+import com.google.gson.JsonObject;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
+import com.sbancuz.plannh.data.provider.gregtech.GTNodeState;
 import com.sbancuz.plannh.data.provider.gregtech.GTSettings;
 import com.sbancuz.plannh.data.provider.gregtech.StructureState;
 
-import gregtech.api.enums.HeatingCoilLevel;
 import gregtech.api.logic.ModifierKind;
 
 /**
@@ -26,15 +26,10 @@ class GTStructureSettingsTest {
     private static final RecipeContext EMPTY = new RecipeContext(new HashMap<RecipeProperty<?>, Object>());
 
     @Test
-    void theCoilRowIsTheCoilKindsRow() {
-        assertEquals("gt_coil", GTSettings.COIL, "charts saved before kinds were namespaced use this key");
-        assertEquals(GTSettings.COIL, GTSettings.structureKey(ModifierKind.COIL));
-        assertEquals("gt_pipe_casing", GTSettings.structureKey(ModifierKind.PIPE_CASING));
-    }
-
-    @Test
     void aStoredValueIsWhatThePlayerChose() {
-        final StructureState state = GTSettings.resolve(EMPTY, Map.of(GTSettings.COIL, 2), 5);
+        final GTNodeState node = GTNodeState.load(new JsonObject());
+        node.setStructure(ModifierKind.COIL.id, 2L);
+        final StructureState state = GTSettings.resolve(EMPTY, node, 5, 0);
 
         assertEquals(
             2L,
@@ -45,7 +40,7 @@ class GTStructureSettingsTest {
     /** Unset values open on the chart's floor, or the best value on a chart with no floor. */
     @Test
     void unsetValuesOpenOnTheChartsFloor() {
-        final StructureState state = GTSettings.resolve(EMPTY, Map.of(), 5);
+        final StructureState state = GTSettings.resolve(EMPTY, GTNodeState.load(new JsonObject()), 5, 0);
 
         assertTrue(
             state.structure()
@@ -65,25 +60,5 @@ class GTStructureSettingsTest {
                 .containsKey(ModifierKind.LENGTH),
             "anything else reads as the spec's best");
         assertEquals(5, state.voltageTier());
-    }
-
-    /** HV is Nichrome, GregTech's coil tier 2. */
-    @Test
-    void aSavedCoilNameBecomesItsTier() {
-        final Map<String, Object> settings = new HashMap<>(Map.of(GTSettings.COIL, HeatingCoilLevel.HV.name()));
-
-        GTSettings.migrateLegacyNode(settings);
-
-        assertEquals(2, settings.get(GTSettings.COIL));
-    }
-
-    /** A junk name must not read as Cupronickel. */
-    @Test
-    void aSavedNameNoCoilHasIsDropped() {
-        final Map<String, Object> settings = new HashMap<>(Map.of(GTSettings.COIL, "NOT_A_COIL"));
-
-        GTSettings.migrateLegacyNode(settings);
-
-        assertFalse(settings.containsKey(GTSettings.COIL));
     }
 }

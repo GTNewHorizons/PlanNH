@@ -1,20 +1,16 @@
 package com.sbancuz.plannh.data.provider.gregtech;
 
-import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.OptionalInt;
-import java.util.Set;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.sbancuz.plannh.PlanNH;
-import com.sbancuz.plannh.data.Settings;
 
 import gregtech.api.interfaces.metatileentity.IMetaTileEntity;
 import gregtech.api.logic.ModifierKind;
-import gregtech.api.logic.ModifierRange;
 import gregtech.api.logic.ProcessingInputs;
 import gregtech.api.logic.ProcessingSpec;
 import gregtech.api.logic.ResolvedRecipe;
@@ -58,15 +54,14 @@ public record GTMachineSpec(ProcessingSpec spec) {
         final ProcessingInputs.Builder inputs = spec.bestInputs()
             .energyHatch(ProcessingInputs.EnergyHatch.exotic(state.voltageTier(), state.amperage()))
             .mode(state.mode());
-        final Map<ModifierKind, ModifierRange> declared = new LinkedHashMap<>();
-        for (final ModifierRange range : spec.getModifiers()) declared.put(range.kind(), range);
         state.floors()
             .forEach((kind, floor) -> {
-                final ModifierRange range = declared.get(kind);
-                if (range != null) put(inputs, kind, Math.max(range.min(), Math.min(range.max(), floor)));
+                final ModifierKind.Range range = spec.getModifiers()
+                    .get(kind);
+                if (range != null) inputs.value(kind, Math.max(range.min(), Math.min(range.max(), floor)));
             });
         state.structure()
-            .forEach((kind, value) -> put(inputs, kind, value));
+            .forEach(inputs::value);
         return inputs.build();
     }
 
@@ -77,8 +72,11 @@ public record GTMachineSpec(ProcessingSpec spec) {
     @Nonnull
     public ProcessingInputs inputs(@Nonnull final StructureState state, @Nonnull final GTRecipe recipe) {
         ProcessingInputs inputs = inputs(state);
-        for (final ModifierRange range : spec.getModifiers()) {
-            if (!(range.kind() instanceof final ModifierKind.IntKind kind) || !kind.ordered
+        for (final ModifierKind modifier : spec.getModifiers()
+            .keySet()) {
+            // runtime kinds start at their best
+            if (!(modifier instanceof final ModifierKind.IntKind kind) || !kind.ordered
+                || kind.source == ModifierKind.Source.RUNTIME
                 || state.structure()
                     .containsKey(kind))
                 continue;
@@ -92,13 +90,6 @@ public record GTMachineSpec(ProcessingSpec spec) {
         return inputs;
     }
 
-    private static void put(final ProcessingInputs.Builder inputs, final ModifierKind kind, final long value) {
-        switch (kind) {
-            case ModifierKind.IntKind tier -> inputs.value(tier, Math.toIntExact(value));
-            case ModifierKind.LongKind amount -> inputs.value(amount, value);
-        }
-    }
-
     @Nonnull
     public ResolvedRecipe resolve(@Nonnull final GTRecipe recipe, @Nonnull final StructureState state) {
         return spec.resolve(recipe, inputs(state, recipe));
@@ -109,17 +100,10 @@ public record GTMachineSpec(ProcessingSpec spec) {
      * planned at their best and have no row.
      */
     @Nonnull
-    public Map<ModifierKind, ModifierRange> structure() {
-        final Map<ModifierKind, ModifierRange> structure = new LinkedHashMap<>();
-        for (final ModifierRange range : spec.getModifiers()) {
-            if (range.kind().source != ModifierKind.Source.RUNTIME) structure.put(range.kind(), range);
-        }
+    public Map<ModifierKind, ModifierKind.Range> structure() {
+        final Map<ModifierKind, ModifierKind.Range> structure = new LinkedHashMap<>();
+        spec.getModifiers()
+            .forEach((kind, range) -> { if (kind.source != ModifierKind.Source.RUNTIME) structure.put(kind, range); });
         return structure;
-    }
-
-    /** Rows outside the structure that change a number for this machine. */
-    @Nonnull
-    public Set<Settings> settings() {
-        return spec.variesByMode() ? EnumSet.of(Settings.GT_MODE) : EnumSet.noneOf(Settings.class);
     }
 }

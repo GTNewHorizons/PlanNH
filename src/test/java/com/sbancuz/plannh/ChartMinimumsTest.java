@@ -7,13 +7,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
-import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.flowchart.Graph;
-import com.sbancuz.plannh.data.flowchart.Serializer;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceResult;
 import com.sbancuz.plannh.data.provider.gregtech.GTSettings;
+import com.sbancuz.plannh.data.serialization.Serializer;
 
 import gregtech.api.enums.GTValues;
+import gregtech.api.logic.ModifierKind;
 
 /**
  * The structure tiers a chart is planned with. They set the value every untouched node in the chart
@@ -22,9 +22,9 @@ import gregtech.api.enums.GTValues;
  */
 class ChartMinimumsTest {
 
-    private static final String COIL = Settings.GT_COIL.key();
-    private static final String PIPE_CASING = Settings.GT_PIPE_CASING.key();
-    private static final String VOLTAGE = Settings.VOLTAGE.key();
+    private static final String COIL = ModifierKind.COIL.id;
+    private static final String PIPE_CASING = ModifierKind.PIPE_CASING.id;
+    private static final String VOLTAGE = GTSettings.VOLTAGE_FLOOR;
 
     /** A chart with no minimums set is planned at the best the game offers. */
     @Test
@@ -46,7 +46,7 @@ class ChartMinimumsTest {
         graph.setMinimum(PIPE_CASING, 2);
         graph.setMinimum(VOLTAGE, 5);
 
-        final Graph decoded = Serializer.decode(Serializer.encode(graph));
+        final Graph decoded = Serializer.decodeGraph(Serializer.encodeGraph(graph));
 
         assertEquals(3, decoded.getMinimum(COIL));
         assertEquals(2, decoded.getMinimum(PIPE_CASING));
@@ -56,7 +56,7 @@ class ChartMinimumsTest {
     /** Charts saved before minimums existed have no minimum keys, and must decode with none set. */
     @Test
     void aSaveWithoutTheKeysKeepsTheDefaults() {
-        final Graph decoded = Serializer.decode(Serializer.encode(new Graph("Slot 1")));
+        final Graph decoded = Serializer.decodeGraph(Serializer.encodeGraph(new Graph("Slot 1")));
 
         assertTrue(
             decoded.getMinimums()

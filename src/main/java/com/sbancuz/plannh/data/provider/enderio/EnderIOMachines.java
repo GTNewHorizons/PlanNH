@@ -1,7 +1,6 @@
 package com.sbancuz.plannh.data.provider.enderio;
 
 import java.util.List;
-import java.util.Set;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -9,7 +8,6 @@ import javax.annotation.Nullable;
 import net.minecraft.util.StatCollector;
 
 import com.sbancuz.plannh.data.RecipeContext;
-import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.machine.MachineVariant;
 import com.sbancuz.plannh.data.machine.MachineVariants;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
@@ -34,7 +32,7 @@ public enum EnderIOMachines implements MachineVariant {
 
     private final String id;
     private final String nameKey;
-    private final Set<Settings> settings;
+    private final boolean capacitorDriven;
 
     /**
      * @param id      the id stored in the chart. A PlanNH id, because EnderIO's recipe registry is keyed
@@ -45,7 +43,7 @@ public enum EnderIOMachines implements MachineVariant {
     EnderIOMachines(final String id, final String nameKey, final boolean capacitorDriven) {
         this.id = id;
         this.nameKey = nameKey;
-        this.settings = capacitorDriven ? Set.of(Settings.EIO_CAPACITOR) : Set.of();
+        this.capacitorDriven = capacitorDriven;
     }
 
     @Override
@@ -60,10 +58,9 @@ public enum EnderIOMachines implements MachineVariant {
         return StatCollector.translateToLocal(nameKey);
     }
 
-    @Override
-    @Nonnull
-    public Set<Settings> settings() {
-        return settings;
+    /** Whether the machine's speed comes from a capacitor. The Enchanter runs on experience levels. */
+    public boolean capacitorDriven() {
+        return capacitorDriven;
     }
 
     /**

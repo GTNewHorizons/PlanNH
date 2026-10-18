@@ -23,9 +23,9 @@ import com.sbancuz.plannh.data.flowchart.Graph;
  */
 public final class SolveContext {
 
-    /** Pins, strongest first: explicit extent, target output rate, fixed machine count. */
+    /** Pins, strongest first: explicit extent, target output rate, fixed copy count. */
     private static final List<SolverMessage> PIN_STRENGTH = List
-        .of(SolverMessage.PIN_COUNT, SolverMessage.PIN_TARGET, SolverMessage.PIN_EXTENT);
+        .of(SolverMessage.PIN_COPIES, SolverMessage.PIN_TARGET, SolverMessage.PIN_EXTENT);
 
     public final ModelData model;
     public final Heuristics heuristics;
@@ -73,11 +73,6 @@ public final class SolveContext {
     public final List<Note> stageNotes = new ArrayList<>();
 
     SolveContext(final Graph graph, final Heuristics heuristics, final Budget budget,
-        final Map<UUID, Double> extraExtentPins, final Set<Pin> pins) {
-        this(graph, heuristics, budget, extraExtentPins, pins, Profiler.disabled());
-    }
-
-    SolveContext(final Graph graph, final Heuristics heuristics, final Budget budget,
         final Map<UUID, Double> extraExtentPins, final Set<Pin> pins, final Profiler profiler) {
         this.model = new ModelData(graph, heuristics);
         this.heuristics = heuristics;
@@ -91,13 +86,7 @@ public final class SolveContext {
         boolean any = false;
         for (int m = 0; m < n; m++) {
             final ModelData.Machine md = model.machines.get(m);
-            // A pinned count and a target rate both fix the node's extent. Reported whenever both are set,
-            // even in a mode that uses only one, because the contradiction is in the chart.
-            if (md.targetExtent > 0 && md.fixedExtent != null) {
-                notes.add(new Note(SolverMessage.COUNT_AND_TARGET, md.node.machineName));
-            }
-
-            final Double extra = extraExtentPins.get(md.node.id);
+            final Double extra = extraExtentPins.get(md.node.getId());
             if (pins.contains(Pin.EXTENT) && extra != null) {
                 pinnedExtent[m] = extra;
                 pinKind[m] = SolverMessage.PIN_EXTENT;
@@ -107,9 +96,9 @@ public final class SolveContext {
                 pinKind[m] = SolverMessage.PIN_TARGET;
                 any = true;
                 noteOvershotTargets(m, md.targetExtent);
-            } else if (pins.contains(Pin.FIXED_COUNT) && md.fixedExtent != null) {
+            } else if (pins.contains(Pin.FIXED_COPIES) && md.fixedExtent != null) {
                 pinnedExtent[m] = md.fixedExtent;
-                pinKind[m] = SolverMessage.PIN_COUNT;
+                pinKind[m] = SolverMessage.PIN_COPIES;
                 any = true;
             } else {
                 // NaN, not 0: a machine pinned to a zero count is a real pin (it must NOT run),
@@ -127,17 +116,18 @@ public final class SolveContext {
     private void noteOvershotTargets(final int m, final double chosenExtent) {
         final ModelData.Machine md = model.machines.get(m);
         final double tieRel = heuristics.numerics().tieRel;
-        for (final Map.Entry<Integer, Double> t : md.node.targetOutputRates.entrySet()) {
-            if (t.getValue() == null || t.getValue() <= 0) continue;
-            final int i = t.getKey();
-            if (i < 0 || i >= md.outQty.length || md.outQty[i] <= 0) continue;
-            final double actual = chosenExtent * md.outQty[i];
+        for (final Map.Entry<Integer, Double> t : md.node.getMachineConfig()
+            .getRates()
+            .liveTargets(md.outQty)
+            .entrySet()) {
+            final double actual = chosenExtent * md.outQty[t.getKey()];
             if (actual > t.getValue() * (1 + tieRel)) {
                 notes.add(
                     new Note(
                         SolverMessage.OVERSHOOTS_TARGET,
-                        md.node.machineName,
-                        md.node.outputs.get(i)
+                        md.node.getMachineName(),
+                        md.node.getOutputs()
+                            .get(t.getKey())
                             .getDisplayName(),
                         actual,
                         t.getValue()));
@@ -239,7 +229,7 @@ public final class SolveContext {
 
     public PortRef refOf(final int port) {
         final ModelData.ConnectedPort p = model.connectedPorts.get(port);
-        return new PortRef(model.machines.get(p.machine()).node.id, p.portIndex(), p.input());
+        return new PortRef(model.machines.get(p.machine()).node.getId(), p.portIndex(), p.input());
     }
 
     public @Nullable PortRef anchorOf(final int gate) {
@@ -316,7 +306,7 @@ public final class SolveContext {
                     + "["
                     + port.portIndex()
                     + "] of '"
-                    + model.machines.get(port.machine()).node.machineName
+                    + model.machines.get(port.machine()).node.getMachineName()
                     + "' residual "
                     + residual;
             }
@@ -348,7 +338,7 @@ public final class SolveContext {
                 if (saved.size() == pinned.size() - 1) return null; // one pin left: not a conflict
                 saved.put(m, pinnedExtent[m]);
                 pinnedExtent[m] = Double.NaN;
-                dropped.add("'" + model.machines.get(m).node.machineName + "' (" + pinKind[m].describe() + ")");
+                dropped.add("'" + model.machines.get(m).node.getMachineName() + "' (" + pinKind[m].describe() + ")");
             }
         } finally {
             saved.forEach((m, value) -> pinnedExtent[m] = value);

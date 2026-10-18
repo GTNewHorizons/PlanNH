@@ -1,6 +1,7 @@
 package com.sbancuz.plannh;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.HashMap;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.Test;
 
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.flowchart.balancer.Pin;
 import com.sbancuz.plannh.harness.GtnhFlowLoader;
 import com.sbancuz.plannh.harness.GtnhFlowLoader.LoadedChart;
 import com.sbancuz.plannh.harness.TestIngredients;
@@ -58,13 +60,26 @@ class GtnhFlowLoadTest {
 
         // 0.25s fusion recipe -> 5 ticks.
         final Node fusion = chart.machine(0);
-        assertEquals("fusion reactor", fusion.machineName);
-        assertEquals(5, fusion.properties.get(GtnhFlowLoader.DURATION_TICKS));
+        assertEquals("fusion reactor", fusion.getMachineName());
+        assertEquals(
+            5,
+            fusion.getProperties()
+                .get(GtnhFlowLoader.DURATION_TICKS));
 
         // The target pin lands on the node itself: output 0 is the fuel, pinned at 10/s. The
         // count stays free - AUTO derives the exact fractional extent from the rate.
-        assertTrue(!fusion.machineConfig.isMachineCountPinned(), "a target: pin must not fix the machine count");
-        assertEquals(10.0, fusion.targetOutputRates.get(0), 1e-9, "10/s on the fuel output");
+        assertNotEquals(
+            Pin.FIXED_COPIES,
+            fusion.getMachineConfig()
+                .getTargetKind(),
+            "a target: pin must not fix the machine count");
+        assertEquals(
+            10.0,
+            fusion.getMachineConfig()
+                .getRates()
+                .rate(0),
+            1e-9,
+            "10/s on the fuel output");
     }
 
     @Test
@@ -82,8 +97,16 @@ class GtnhFlowLoadTest {
                 .size());
 
         final Node dt = chart.machine(0);
-        assertTrue(dt.machineConfig.isMachineCountPinned(), "number: pin must fix the machine count");
-        assertEquals(1, dt.machineConfig.getMachineCount());
+        assertEquals(
+            Pin.FIXED_COPIES,
+            dt.getMachineConfig()
+                .getTargetKind(),
+            "number: pin must fix the machine count");
+        assertEquals(
+            1,
+            dt.getMachineConfig()
+                .getCopies()
+                .copies());
     }
 
     @Test
@@ -92,8 +115,10 @@ class GtnhFlowLoadTest {
         // reproduce them exactly enough for ratio math (they are read back as amount * chance).
         final LoadedChart chart = GtnhFlowLoader.load("palladium_line");
         for (final Node node : chart.machines()) {
-            node.inputs.forEach(p -> assertTrue(TestIngredients.quantityOf(p) > 0));
-            node.outputs.forEach(p -> assertTrue(TestIngredients.quantityOf(p) > 0));
+            node.getInputs()
+                .forEach(p -> assertTrue(TestIngredients.quantityOf(p) > 0));
+            node.getOutputs()
+                .forEach(p -> assertTrue(TestIngredients.quantityOf(p) > 0));
         }
     }
 
@@ -155,11 +180,12 @@ class GtnhFlowLoadTest {
     private static int componentCount(final LoadedChart chart) {
         final Map<UUID, UUID> parent = new HashMap<>();
         for (final Node machine : chart.machines()) {
-            parent.put(machine.id, machine.id);
+            parent.put(machine.getId(), machine.getId());
         }
         for (final Edge edge : chart.graph()
-            .getEdges()) {
-            parent.put(find(parent, edge.sourceNodeId), find(parent, edge.targetNodeId));
+            .getEdges()
+            .values()) {
+            parent.put(find(parent, edge.getSourceNodeId()), find(parent, edge.getTargetNodeId()));
         }
         final Set<UUID> roots = new HashSet<>();
         for (final UUID id : parent.keySet()) {

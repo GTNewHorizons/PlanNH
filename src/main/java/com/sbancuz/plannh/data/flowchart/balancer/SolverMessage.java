@@ -27,7 +27,6 @@ public enum SolverMessage {
     WIRING_IMPORT(Severity.INFO, "plannh.solver.wiring_import"),
     WIRING_UNLINKED(Severity.WARN, "plannh.solver.wiring_unlinked"),
     OVERSHOOTS_TARGET(Severity.WARN, "plannh.solver.overshoots_target"),
-    COUNT_AND_TARGET(Severity.ERROR, "plannh.solver.count_and_target"),
 
     // -----------------------------------------------------------------------------------------
     // The alternatives search - the honesty notes a truncated or overridden answer owes the reader
@@ -58,7 +57,7 @@ public enum SolverMessage {
     // -----------------------------------------------------------------------------------------
     PIN_EXTENT(Severity.INFO, "plannh.solver.pin_extent"),
     PIN_TARGET(Severity.INFO, "plannh.solver.pin_target"),
-    PIN_COUNT(Severity.INFO, "plannh.solver.pin_count"),
+    PIN_COPIES(Severity.INFO, "plannh.solver.pin_copies"),
     PREF_FEWEST_GATES(Severity.INFO, "plannh.solver.pref_fewest_gates"),
     PREF_FEWEST_IMPORTS(Severity.INFO, "plannh.solver.pref_fewest_imports"),
     PREF_LEAST_EXCESS(Severity.INFO, "plannh.solver.pref_least_excess"),

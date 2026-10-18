@@ -1,17 +1,17 @@
 package com.sbancuz.plannh.data.effect;
 
-import java.util.Map;
 import java.util.function.Predicate;
 import java.util.function.ToIntBiFunction;
 
 import javax.annotation.Nonnull;
 
 import com.sbancuz.plannh.api.RecipePropertyAPI;
-import com.sbancuz.plannh.data.MachineProfile;
+import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.machine.MachineVariant;
 import com.sbancuz.plannh.data.machine.MachineVariants;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
+import com.sbancuz.plannh.data.setting.IntegerSettingDef;
 
 public final class Effects {
 
@@ -29,12 +29,12 @@ public final class Effects {
     }
 
     public static EffectComputer durationFromTotal(final RecipeProperty<? extends Number> prop,
-        final String rateKey, final int defaultRate) {
+                                                   final IntegerSettingDef rateKey) {
         return (s, ctx) -> {
             final Object dur = ctx.properties().get(RecipePropertyAPI.DURATION_TICKS);
             int duration = dur instanceof final Number n ? n.intValue() : 0;
             if (duration <= 0) {
-                final int rate = MachineProfile.getInt(s, rateKey, defaultRate);
+                final int rate = s.get(rateKey);
                 final Number total = ctx.getOrDefault(prop, null);
                 if (rate > 0 && total != null && total.longValue() > 0) {
                     duration = Math.max(1, (int) (total.longValue() / rate));
@@ -44,7 +44,7 @@ public final class Effects {
         };
     }
 
-    public static EffectComputer durationFromFormula(final ToIntBiFunction<RecipeContext, Map<String, Object>> formula) {
+    public static EffectComputer durationFromFormula(final ToIntBiFunction<RecipeContext, MachineConfig> formula) {
         return (s, ctx) -> {
             final Object dur = ctx.properties().get(RecipePropertyAPI.DURATION_TICKS);
             int duration = dur instanceof final Number n ? n.intValue() : 0;
@@ -55,7 +55,7 @@ public final class Effects {
         };
     }
 
-    public static EffectComputer onlyIf(final Predicate<Map<String, Object>> condition,
+    public static EffectComputer onlyIf(final Predicate<MachineConfig> condition,
         final EffectComputer delegate) {
         return (s, ctx) -> {
             if (condition.test(s)) return delegate.compute(s, ctx);

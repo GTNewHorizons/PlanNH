@@ -10,7 +10,6 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 import com.sbancuz.plannh.data.flowchart.Graph;
-import com.sbancuz.plannh.data.flowchart.Serializer;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
 import com.sbancuz.plannh.data.flowchart.balancer.Balancer.Answer;
@@ -19,6 +18,7 @@ import com.sbancuz.plannh.data.flowchart.balancer.SolverMessage;
 import com.sbancuz.plannh.data.flowchart.balancer.alternatives.Alternative;
 import com.sbancuz.plannh.data.flowchart.balancer.alternatives.Alternatives;
 import com.sbancuz.plannh.data.flowchart.balancer.alternatives.Rank;
+import com.sbancuz.plannh.data.serialization.Serializer;
 import com.sbancuz.plannh.harness.GtnhFlowLoader;
 import com.sbancuz.plannh.harness.GtnhFlowLoader.LoadedChart;
 
@@ -291,7 +291,7 @@ class AlternativesTest {
         // Minecraft-free ingredient type, so a reloaded corpus chart has no ports to re-solve
         // against. What matters is that the key itself is node ids and port indices, with nothing
         // in it that a rebuild could invalidate.
-        final Graph reloaded = Serializer.decode(Serializer.encode(chart.graph()));
+        final Graph reloaded = Serializer.decodeGraph(Serializer.encodeGraph(chart.graph()));
         assertEquals(picked, reloaded.getExcessChoice(), "gate anchors are ports, so they survive a save");
     }
 

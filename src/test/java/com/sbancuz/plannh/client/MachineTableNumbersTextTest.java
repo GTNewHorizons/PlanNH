@@ -28,7 +28,7 @@ class MachineTableNumbersTextTest {
                     .build()));
 
         for (final String key : new String[] { "par=", "dur=", "eu=", "cost=", "ocD=", "ocE=", "noOC=", "heat=", "hOC=",
-            "hDisc=", "rHeat=", "skips=" }) {
+            "hDisc=", "skips=" }) {
             assertTrue(text.contains(key), key + " missing from " + text);
         }
     }

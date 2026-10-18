@@ -1,15 +1,9 @@
 package com.sbancuz.plannh;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.List;
-import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.provider.gregtech.GTSettings;
 
 import gregtech.api.enums.GTValues;
@@ -30,39 +24,19 @@ class GTVoltageFloorTest {
     }
 
     @Test
-    void theOfferedTiersStartAtTheMinimumAndOffIsNotOneOfThem() {
-        final List<String> options = GTSettings.voltageOptions(480L);
-
-        assertEquals(GTValues.VN[3], options.getFirst(), "the list starts at the recipe's own tier");
-        assertFalse(options.contains("OFF"), "a GT node always draws power");
-        assertFalse(options.contains(GTValues.VN[2]), "a tier that cannot run the recipe is not a choice");
-        assertTrue(options.contains(GTValues.VN[GTValues.VN.length - 2]), "MAX is still reachable");
-    }
-
-    @Test
     void anUnsetTierMeansTheRecipeMinimum() {
-        assertEquals(3, GTSettings.voltageTier(480L, Map.of()));
+        assertEquals(3, GTSettings.voltageTier(480L, null));
     }
 
-    /** Old charts stored "OFF", and charts can be hand-edited. Neither may go below the floor. */
+    /** A stored tier below the recipe's, or a name GregTech does not have, is raised to the recipe's tier. */
     @Test
     void aStoredTierBelowTheMinimumIsFloored() {
-        assertEquals(3, GTSettings.voltageTier(480L, Map.of(Settings.VOLTAGE.key(), GTValues.VN[1])));
-        assertEquals(3, GTSettings.voltageTier(480L, Map.of(Settings.VOLTAGE.key(), "OFF")));
+        assertEquals(3, GTSettings.voltageTier(480L, GTValues.VN[1]));
+        assertEquals(3, GTSettings.voltageTier(480L, "OFF"));
     }
 
     @Test
     void aStoredTierAboveTheMinimumIsHonoured() {
-        assertEquals(7, GTSettings.voltageTier(480L, Map.of(Settings.VOLTAGE.key(), GTValues.VN[7])));
-    }
-
-    /** A recipe with no EU cost still gets every tier, not an empty list. */
-    @Test
-    void afreeRecipeStillOffersEveryTier() {
-        assertEquals(0, GTSettings.minimumVoltageTier(0L));
-        assertEquals(
-            GTValues.VN[0],
-            GTSettings.voltageOptions(0L)
-                .getFirst());
+        assertEquals(7, GTSettings.voltageTier(480L, GTValues.VN[7]));
     }
 }
