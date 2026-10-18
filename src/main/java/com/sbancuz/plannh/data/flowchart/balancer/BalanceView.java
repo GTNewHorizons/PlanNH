@@ -85,6 +85,11 @@ public final class BalanceView {
         final Set<PortRef> wired = new HashSet<>();
         for (final Edge edge : graph.getEdges()
             .values()) {
+            final Node source = graph.getNodes()
+                .get(edge.getSourceNodeId());
+            final Node target = graph.getNodes()
+                .get(edge.getTargetNodeId());
+            if (!edge.isActive(source, target)) continue;
             wired.add(new PortRef(edge.getSourceNodeId(), edge.getSourceOutputItemIndex(), false));
             wired.add(new PortRef(edge.getTargetNodeId(), edge.getTargetInputItemIndex(), true));
         }
@@ -100,6 +105,7 @@ public final class BalanceView {
     /** One {@link Boundary} per unwired port of {@code node}, rated by its configured count. */
     private static void collectConfigured(final Node node, final Set<PortRef> wired, final boolean input,
         final List<Boundary> out) {
+        if (!node.isAvailable()) return;
         final MachineConfig cfg = node.getMachineConfig();
         final double count = cfg.configuredCopies();
         if (count <= 0) return;

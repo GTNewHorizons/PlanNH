@@ -238,6 +238,7 @@ public final class Balancer {
         final Map<UUID, Double> counts = new HashMap<>();
         for (final Node node : graph.getNodes()
             .values()) {
+            if (!node.isAvailable()) continue;
             counts.put(
                 node.getId(),
                 (double) node.getMachineConfig()
@@ -261,7 +262,7 @@ public final class Balancer {
         int totalDuration = 0;
 
         for (final Node node : graph.getNodes().values()) {
-            if (node.getExtractor() == null) continue; // incorrectly loaded node
+            if (!node.isAvailable()) continue;
             final double count = copyCounts.getOrDefault(node.getId(), 0.0);
             totalOps += count;
 

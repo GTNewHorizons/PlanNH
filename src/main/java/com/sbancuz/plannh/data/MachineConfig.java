@@ -6,6 +6,7 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.google.gson.annotations.SerializedName;
 import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.flowchart.balancer.Pin;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
@@ -22,6 +23,7 @@ import lombok.Setter;
 @Setter
 public class MachineConfig {
 
+    @SerializedName("profile")
     private String profileId;
     @Getter(AccessLevel.NONE)
     private final Map<SettingDef<?>, Object> settings;
@@ -60,6 +62,18 @@ public class MachineConfig {
 
         for (final SettingDef<?> def : profile.defs()) this.settings.putIfAbsent(def, def.getDefaultValue());
         this.settings.putIfAbsent(Settings.MACHINES, Settings.MACHINES.getDefaultValue());
+    }
+
+    /** A detached configuration for recipe extraction, which may fail before publication. */
+    public MachineConfig(final MachineConfig source) {
+        profileId = source.profileId;
+        settings = new HashMap<>(source.settings);
+        copies.setCopies(source.copies.copies());
+        rates.rates()
+            .putAll(source.rates.rates());
+        targetKind = source.targetKind;
+        inputConsumption.putAll(source.inputConsumption);
+        outputProductivity.putAll(source.outputProductivity);
     }
 
     /** The copies target is the one that stands in for {@link Settings#MACHINES} as a row. */

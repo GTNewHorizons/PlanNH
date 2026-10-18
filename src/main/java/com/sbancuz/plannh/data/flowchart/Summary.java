@@ -326,6 +326,7 @@ public final class Summary extends GraphData {
         // Accumulate scaled flows per resource across all ports, connected and unconnected alike.
         for (final Node node : graph.getNodes()
             .values()) {
+            if (!node.isAvailable()) continue;
             final var nb = balance.nodeBalances()
                 .get(node.id);
             if (nb == null) continue;
@@ -423,6 +424,7 @@ public final class Summary extends GraphData {
         final List<Line<?>> out = new ArrayList<>();
         for (final Node node : graph.getNodes()
             .values()) {
+            if (!node.isAvailable()) continue;
             final var nb = balance.nodeBalances()
                 .get(node.id);
             if (nb == null) continue;
