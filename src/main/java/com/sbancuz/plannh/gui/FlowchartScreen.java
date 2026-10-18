@@ -1,13 +1,6 @@
 package com.sbancuz.plannh.gui;
 
-import static codechicken.lib.gui.GuiDraw.drawMultilineTip;
-
-import java.util.List;
-
 import net.minecraft.client.Minecraft;
-import net.minecraft.item.ItemStack;
-
-import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
@@ -39,7 +32,6 @@ import com.sbancuz.plannh.nei.NEIPlanConfig;
 
 import codechicken.nei.LayoutManager;
 import codechicken.nei.NEIClientConfig;
-import codechicken.nei.guihook.GuiContainerManager;
 import lombok.Getter;
 
 public class FlowchartScreen extends ModularScreen {
@@ -278,7 +270,7 @@ public class FlowchartScreen extends ModularScreen {
                         .child(
                             new ButtonWidget<>().name("share.copy")
                                 .onMousePressed(_ -> {
-                                    PlanAPI.copyToClipboard(canvas.getGraph());
+                                    if (!PlanAPI.copyToClipboard(canvas.getGraph())) return true;
                                     PlanAPI.showMessage("plannh.share.copy_to_clipboard");
                                     return true;
                                 })
@@ -338,31 +330,6 @@ public class FlowchartScreen extends ModularScreen {
             return true;
         }
         return super.onKeyPressed(typedChar, keyCode);
-    }
-
-    @Override
-    public void drawForeground() {
-        super.drawForeground();
-        drawHoveredIngredientTooltip();
-    }
-
-    /**
-     * Mouse-anchored NEI tooltip for the hovered ingredient (recipe-grid stacks and port
-     * pins), drawn in the foreground phase with depth off so nodes can never bury it. NEI's
-     * own tooltip pass is suppressed on MUI screens while a widget is hovered.
-     */
-    private void drawHoveredIngredientTooltip() {
-        // stackUnderMouse, not getStackForRecipeViewer: the NEI entry point also arms the
-        // pending-lookup origin, and a per-frame tooltip must not mutate lookup state.
-        if (!(getContext().getTopHovered() instanceof final RecipeNodeWidget nodeWidget)) return;
-        final ItemStack stack = nodeWidget.stackUnderMouse();
-        if (stack == null) return;
-        final List<String> lines = GuiContainerManager.itemDisplayNameMultiline(stack, null, true);
-        if (lines.isEmpty()) return;
-        GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_DEPTH_BUFFER_BIT);
-        GL11.glDisable(GL11.GL_DEPTH_TEST);
-        drawMultilineTip(getContext().getAbsMouseX() + 12, getContext().getAbsMouseY() - 12, lines);
-        GL11.glPopAttrib();
     }
 
     private static void refreshGraph(CanvasWidget canvas) {

@@ -19,6 +19,7 @@ import com.cleanroommc.modularui.value.BoolValue;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.CycleButtonWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
+import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
@@ -70,7 +71,7 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
 
     public NodeWidget(CanvasWidget canvas, Node data) {
         super(canvas, data);
-        canvas.getNodeWidgets2()
+        canvas.getNodeWidgets()
             .put(data.getId(), this);
 
         coverChildren();
@@ -99,38 +100,49 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
                 .background()
                 .setTextColor(Color.BLACK.main));
 
-        throughputFold = fold(GuiTextures.PROCESSOR, THROUGHPUT_LANG, data::isThroughputOpen, data::setThroughputOpen);
-        propertiesFold = fold(GuiTextures.FILE, PROPERTIES_LANG, data::isPropertiesOpen, data::setPropertiesOpen);
-        targetFold = fold(GuiTextures.GRAPH, TARGET_LANG, data::isTargetOpen, data::setTargetOpen);
-        settingsFold = fold(GuiTextures.GEAR, SETTINGS_LANG, data::isSettingsOpen, data::setSettingsOpen);
-
         topRow.child(new CloseButtonWidget(this));
         mainColumn.child(topRow);
         mainColumn.child(recipeAreaWidget);
 
-        // What this machine is, on the left as the folds that decide what else it says, and on the
-        // right the profile it is being read as - which is what the settings fold below is a list of.
-        Flow optionRow = FlowchartFlow.row(this)
-            .name("node.options")
-            .fullWidth()
-            .coverChildrenHeight()
-            .childPadding(4)
-            .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN);
+        if (data.isAvailable()) {
+            throughputFold = fold(
+                GuiTextures.PROCESSOR,
+                THROUGHPUT_LANG,
+                data::isThroughputOpen,
+                data::setThroughputOpen);
+            propertiesFold = fold(GuiTextures.FILE, PROPERTIES_LANG, data::isPropertiesOpen, data::setPropertiesOpen);
+            targetFold = fold(GuiTextures.GRAPH, TARGET_LANG, data::isTargetOpen, data::setTargetOpen);
+            settingsFold = fold(GuiTextures.GEAR, SETTINGS_LANG, data::isSettingsOpen, data::setSettingsOpen);
 
-        optionRow.child(
-            FlowchartFlow.row(this)
-                .name("node.options.folds")
+            // What this machine is, on the left as the folds that decide what else it says, and on the
+            // right the profile it is being read as - which is what the settings fold below is a list of.
+            Flow optionRow = FlowchartFlow.row(this)
+                .name("node.options")
                 .fullWidth()
                 .coverChildrenHeight()
                 .childPadding(4)
-                .child(throughputFold)
-                .child(propertiesFold)
-                .child(targetFold)
-                .child(settingsFold))
-            .child(extractorSwitcher());
-        mainColumn.child(optionRow);
-        mainColumn.child(new ThroughputInfoWidget(this));
-        mainColumn.child(new ConfigurationAreaWidget(this));
+                .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN);
+
+            optionRow.child(
+                FlowchartFlow.row(this)
+                    .name("node.options.folds")
+                    .fullWidth()
+                    .coverChildrenHeight()
+                    .childPadding(4)
+                    .child(throughputFold)
+                    .child(propertiesFold)
+                    .child(targetFold)
+                    .child(settingsFold))
+                .child(extractorSwitcher());
+            mainColumn.child(optionRow);
+            mainColumn.child(new ThroughputInfoWidget(this));
+            mainColumn.child(new ConfigurationAreaWidget(this));
+        } else {
+            throughputFold = null;
+            propertiesFold = null;
+            targetFold = null;
+            settingsFold = null;
+        }
         child(mainColumn);
     }
 
@@ -180,7 +192,11 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
                     .size() > 1)
             .onMousePressed(clicked -> {
                 if (clicked != 0) return false;
-                commitEdit(() -> data.switchExtractor(delta));
+                commitEdit(
+                    () -> {
+                        if (!data.switchExtractor(delta))
+                            PlanAPI.showMessage("plannh.error.recipe_edit", data.getMachineName());
+                    });
                 return true;
             })
             .tooltipBuilder(
@@ -191,10 +207,15 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
 
     /** Records an edit to this node's machine, so undo can take it back and the chart is re-solved. */
     public void commitEdit(final Runnable change) {
-        PlanAPI.recordEdit(canvas.getGraph(), change);
-        canvas.getGraph()
-            .bumpVersion();
-        PlanAPI.save();
+        try {
+            PlanAPI.recordEdit(canvas.getGraph(), change);
+            canvas.getGraph()
+                .bumpVersion();
+            PlanAPI.save();
+        } catch (final Exception | LinkageError failure) {
+            PlanNH.LOG.error("Failed to edit recipe for " + data.getMachineName(), failure);
+            PlanAPI.showMessage("plannh.error.recipe_edit", data.getMachineName());
+        }
     }
 
     @Override
@@ -243,7 +264,7 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
         // The graph's own removal, not just the widget's: it also takes this node's edges with it.
         canvas.getGraph()
             .removeNode(data.getId());
-        canvas.getNodeWidgets2()
+        canvas.getNodeWidgets()
             .remove(data.getId());
         arrowWidgets.forEach(ArrowWidget::removeFromGraph);
     }

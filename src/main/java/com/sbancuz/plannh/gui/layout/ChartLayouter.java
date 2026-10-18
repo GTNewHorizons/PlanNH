@@ -107,7 +107,7 @@ public final class ChartLayouter {
     private void addNode(final List<LayoutMachine> out, final Node node, final @Nullable UUID groupId ) {
         int width = 0;
         int height = 0;
-        if (canvas.getNodeWidgets2()
+        if (canvas.getNodeWidgets()
             .get(node.getId()) instanceof final NodeWidget widget) {
             width = widget.getArea()
                 .width;

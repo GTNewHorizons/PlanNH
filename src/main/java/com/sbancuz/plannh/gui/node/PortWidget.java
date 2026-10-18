@@ -257,7 +257,9 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     }
 
     public boolean canConnect(PortWidget other) {
-        return portType.canConnect(other.portType) && port.canConnect(other.port);
+        return node.isAvailable() && other.node.isAvailable()
+            && portType.canConnect(other.portType)
+            && port.canConnect(other.port);
     }
 
     private boolean configurable() {
@@ -371,12 +373,18 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     }
 
     public static void addArrow(CanvasWidget canvas, PortWidget source, PortWidget target) {
-        SortedMap<UUID, Edge> edges = canvas.getGraph()
+        if (!source.canConnect(target)) return;
+        if (canvas.getNodeWidgets()
+            .get(source.node.getId()) != source.parent
+            || canvas.getNodeWidgets()
+                .get(target.node.getId()) != target.parent) {
+            PlanAPI.showMessage("plannh.error.connection");
+            return;
+        }
+
+        final SortedMap<UUID, Edge> edges = canvas.getGraph()
             .getEdges();
-
-        if (target.notConfigured() && target.configurable()) target.setPermutationToStack(source.stack.item);
-
-        edges.values()
+        final List<Edge> replaced = edges.values()
             .stream()
             .filter(
                 edge -> edge.getSourceOutputIndex()
@@ -386,17 +394,26 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
                         .leftInt() == target.index.leftInt()
                     && edge.getTargetNodeId()
                         .equals(target.node.getId()))
-            .findAny()
-            .ifPresent(
-                edge -> canvas.getArrowWidgets()
-                    .get(edge.getId())
-                    .removeFromGraph());
+            .toList();
+        final Edge edge = new Edge(source, target);
+        final ArrowWidget arrow = new ArrowWidget(canvas, edge);
+        if (target.notConfigured() && target.configurable()) target.setPermutationToStack(source.stack.item);
 
-        Edge edge = new Edge(source, target);
+        for (final Edge old : replaced) {
+            final ArrowWidget oldArrow = canvas.getArrowWidgets()
+                .get(old.getId());
+            if (oldArrow == null) {
+                edges.remove(old.getId());
+                continue;
+            }
+            source.parent.getArrowWidgets()
+                .remove(oldArrow);
+            target.parent.getArrowWidgets()
+                .remove(oldArrow);
+            oldArrow.removeFromGraph();
+        }
         canvas.getGraph()
             .addEdge(edge);
-
-        ArrowWidget arrow = new ArrowWidget(canvas, edge);
         canvas.child(arrow);
     }
 

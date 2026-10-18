@@ -46,7 +46,6 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
 
     private static long lastHandlerUpdate = 0;
     private boolean success = true;
-
     @Getter
     private int recipeWidth = 0;
 
@@ -55,13 +54,15 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
         this.parent = parent;
         Node data = parent.getData();
 
-        handlerRef = RecipeHandlerRef.of(data.getRecipeId());
-        if (handlerRef == null) {
+        handlerRef = data.getHandlerRef();
+        if (!data.isAvailable() || handlerRef == null) {
             neiWidget = null;
             success = false;
             child(
-                IKey.str("AN ERROR OCCURRED DURING LOADING: handler is null")
+                IKey.lang("plannh.gui.node.unavailable")
                     .asWidget());
+            recipeWidth = 166;
+            size(recipeWidth, 20);
             return;
         }
         neiWidget = new RecipeWidget(handlerRef);
@@ -83,14 +84,6 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
 
         List<Port<?>> inputs = data.getInputs();
         List<Port<?>> outputs = data.getOutputs();
-        if (inputs == null || outputs == null) {
-            success = false;
-            child(
-                IKey.str("AN ERROR OCCURRED DURING LOADING: inputs/outputs is null")
-                    .asWidget());
-            return;
-        }
-
         accessor.plannh$setInputs(
             inputs.stream()
                 .map(Port::getAllStacks)
@@ -156,7 +149,6 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
 
         glEnable(GL_TEXTURE_2D);
         neiWidget.draw(0, 0);
-
         glDisable(GL_TEXTURE_2D);
     }
 
