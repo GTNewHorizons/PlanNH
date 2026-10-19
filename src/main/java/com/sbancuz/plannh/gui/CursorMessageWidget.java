@@ -29,6 +29,7 @@ public final class CursorMessageWidget extends ParentWidget<CursorMessageWidget>
         name("screen.message");
         coverChildren();
         padding(PADDING);
+        excludeAreaInRecipeViewer();
         final MessageText text = new MessageText(message).maxWidth(maxWidth)
             .textAlign(Alignment.TopLeft)
             .shadow(false)
@@ -66,11 +67,11 @@ public final class CursorMessageWidget extends ParentWidget<CursorMessageWidget>
     }
 
     static float opacity(final float progress) {
-        return Math.max(0, Math.min(1, (1 - progress) * DURATION_MS / FADE_MS));
+        return Math.clamp((1 - progress) * DURATION_MS / FADE_MS, 0, 1);
     }
 
     static int clampPosition(final int position, final int size, final int screenSize) {
-        return Math.max(MARGIN, Math.min(position, screenSize - size - MARGIN));
+        return Math.clamp(position, MARGIN, screenSize - size - MARGIN);
     }
 
     @Override
@@ -105,9 +106,5 @@ public final class CursorMessageWidget extends ParentWidget<CursorMessageWidget>
             return false;
         }
 
-        @Override
-        public boolean canClickThrough() {
-            return true;
-        }
     }
 }
