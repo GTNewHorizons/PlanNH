@@ -72,8 +72,11 @@ public enum Compat {
         public static final String GALACTICRAFT = "Galacticraft";
         public static final String GENDUSTRY = "gendustry";
         public static final String GREGTECH = "gregtech";
+        public static final String GTNHLIB = "gtnhlib";
         public static final String HARVESTCRAFT = "harvestcraft";
         public static final String LOGISTICSPIPES = "LogisticsPipes";
+        public static final String MODULARUI2 = "modularui2";
+        public static final String NEI = "NotEnoughItems";
         public static final String PROJECTBLUE = "ProjectBlue";
         public static final String RAILCRAFT = "Railcraft";
         public static final String RANDOMTHINGS = "RandomThings";

@@ -36,9 +36,9 @@ public class ClientProxy extends CommonProxy {
 
     @Override
     public void construct(final FMLConstructionEvent event) {
-        // Not preInit: after a halt there, mods whose init never ran still have tick handlers registered.
-        // On 2.8.4 Angelica's handler throws every tick, and the error screen never draws its text.
-        UnsupportedPackException.throwIfUnsupported();
+        // A halt in preInit() leaves running the tick handlers of mods whose preInit() ran and whose init() never ran.
+        // On GT New Horizons 2.8.4, Angelica's tick handler then throws every tick, and the error screen stays blank.
+        UnsupportedPackException.throwIfPackUnsupported();
     }
 
     @Override
