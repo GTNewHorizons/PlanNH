@@ -22,12 +22,17 @@ import cpw.mods.fml.common.versioning.ComparableVersion;
  * The loading error for a pack older than PlanNH supports. Below the GregTech minimum, the required
  * GTNEIDefaultHandler mixin fails to apply, and the game freezes on the loading screen.
  * <p>
- * FML logs the message before {@code refreshResources()} loads the lang files, so the message is fixed English.
+ * FML logs the message before {@code refreshResources()} loads the lang files, so the message uses no lang key:
+ *
+ * <pre>
+ *     unsupported.pack plannh=0.1.8-git.3+c3ed15be94-dirty minimumPack=2.9.0-RC-2 outdated=[OutdatedMod[name=NotEnoughItems, version=2.8.44-GTNH, minimumVersion=2.8.148-GTNH], …]
+ * </pre>
+ *
  * {@link #initGui} runs after that refresh and reads the screen text from the lang file.
  */
 public class UnsupportedPackException extends CustomModLoadingErrorDisplayException {
 
-    /** The first GT New Horizons release in which no mod is below {@link #MINIMUM_VERSIONS}. */
+    /** The first GT New Horizons release with no mod below {@link #MINIMUM_VERSIONS}. */
     private static final String MINIMUM_PACK = "2.9.0-RC-2";
     /** Oldest supported version of each mod, keyed by mod id. */
     private static final SortedMap<String, String> MINIMUM_VERSIONS = ImmutableSortedMap.<String, String>naturalOrder()

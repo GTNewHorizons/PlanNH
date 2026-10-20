@@ -3,6 +3,7 @@ package com.sbancuz.plannh.client;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,24 +21,24 @@ import cpw.mods.fml.common.ModContainer;
 import cpw.mods.fml.common.ModMetadata;
 
 /**
- * Checks {@link UnsupportedPackException#findOutdatedMods} on the mcmod.info versions of real packs, with the
- * {@code -GTNH} and {@code -1.7.10} suffixes.
+ * Checks {@link UnsupportedPackException#findOutdatedMods} on version strings in each mod's mcmod.info format, with
+ * the {@code -GTNH} and {@code -1.7.10} suffixes.
  */
 class UnsupportedPackTest {
 
     /**
-     * Per mod id, a {@link String#format} pattern that takes the minor and patch numbers, and the minimum's two
-     * numbers.
+     * Per mod id, a {@link String#format} pattern that takes the minor and patch numbers, and the first supported
+     * release.
      */
     private static final SortedMap<String, VersionFormat> VERSION_FORMATS = ImmutableSortedMap.of(
         Compat.IDs.GREGTECH,
-        new VersionFormat("5.09.%d.%d", 54, 192),
+        new VersionFormat("5.09.%d.%d", new Release(54, 192)),
         Compat.IDs.NEI,
-        new VersionFormat("2.%d.%d-GTNH", 8, 148),
+        new VersionFormat("2.%d.%d-GTNH", new Release(8, 148)),
         Compat.IDs.MODULARUI2,
-        new VersionFormat("2.%d.%d-1.7.10", 3, 55),
+        new VersionFormat("2.%d.%d-1.7.10", new Release(3, 55)),
         Compat.IDs.GTNHLIB,
-        new VersionFormat("0.%d.%d", 11, 5));
+        new VersionFormat("0.%d.%d", new Release(11, 5)));
 
     @Test
     void gtnh284IsRejectedOnEveryLibrary() {
@@ -89,67 +90,58 @@ class UnsupportedPackTest {
     }
 
     @Test
-    void eachMinimumIsTheFirstSupportedRelease() {
-        final List<OutdatedMod> atMinimum = UnsupportedPackException.findOutdatedMods(
-            createModContainers(
-                Map.of(
-                    Compat.IDs.GREGTECH,
-                    "5.09.54.192",
-                    Compat.IDs.NEI,
-                    "2.8.148-GTNH",
-                    Compat.IDs.MODULARUI2,
-                    "2.3.55-1.7.10",
-                    Compat.IDs.GTNHLIB,
-                    "0.11.5")));
-        assertTrue(atMinimum.isEmpty(), atMinimum.toString());
-
-        final List<OutdatedMod> belowMinimum = UnsupportedPackException.findOutdatedMods(
-            createModContainers(
-                Map.of(
-                    Compat.IDs.GREGTECH,
-                    "5.09.54.191",
-                    Compat.IDs.NEI,
-                    "2.8.147-GTNH",
-                    Compat.IDs.MODULARUI2,
-                    "2.3.54-1.7.10",
-                    Compat.IDs.GTNHLIB,
-                    "0.11.4")));
-        assertEquals(4, belowMinimum.size(), belowMinimum.toString());
-    }
-
-    @Test
     void rejectsEveryVersionBelowTheMinimumAndNoOther() {
         final int CASES_PER_MOD = 500;
         final Random random = new Random(20261019);
         for (final Map.Entry<String, VersionFormat> entry : VERSION_FORMATS.entrySet()) {
-            final VersionFormat format = entry.getValue();
+            final Release minimum = entry.getValue()
+                .minimum();
+            // The boundary cases are one patch either side of the minimum, a lower minor with a higher patch, and a
+            // higher minor with patch 0.
+            final List<Release> releases = new ArrayList<>(
+                List.of(
+                    new Release(minimum.minor(), minimum.patch() - 1),
+                    minimum,
+                    new Release(minimum.minor() - 1, 2 * minimum.patch()),
+                    new Release(minimum.minor() + 1, 0)));
             for (int i = 0; i < CASES_PER_MOD; i++) {
-                final int minor = format.minimumMinor() - 1 + random.nextInt(3);
-                final int patch = random.nextInt(2 * format.minimumPatch() + 1);
-                final String version = String.format(format.pattern(), minor, patch);
+                releases
+                    .add(new Release(minimum.minor() - 1 + random.nextInt(3), random.nextInt(2 * minimum.patch() + 1)));
+            }
 
-                final boolean isOlder = minor < format.minimumMinor()
-                    || (minor == format.minimumMinor() && patch < format.minimumPatch());
+            for (final Release release : releases) {
+                final String version = entry.getValue()
+                    .format(release);
                 final List<OutdatedMod> outdated = UnsupportedPackException
                     .findOutdatedMods(createModContainers(Map.of(entry.getKey(), version)));
-                assertEquals(isOlder, !outdated.isEmpty(), version);
+                assertEquals(release.isOlderThan(minimum), !outdated.isEmpty(), version);
             }
         }
     }
 
     @Test
-    void absentModsAreNotReported() {
-        // GregTech is optional, so a pack without GregTech is judged on the other libraries alone
-        final List<OutdatedMod> outdated = UnsupportedPackException.findOutdatedMods(
-            createModContainers(
-                Map.of(
-                    Compat.IDs.NEI,
-                    "2.8.155-GTNH",
-                    Compat.IDs.MODULARUI2,
-                    "2.3.92-1.7.10",
-                    Compat.IDs.GTNHLIB,
-                    "0.11.52")));
-        assertTrue(outdated.isEmpty(), outdated.toString());
+    void absentModIsNeverReported() {
+        for (final String absentModId : VERSION_FORMATS.keySet()) {
+            final Map<String, String> versionsByModId = new HashMap<>();
+            for (final Map.Entry<String, VersionFormat> entry : VERSION_FORMATS.entrySet()) {
+                if (entry.getKey()
+                    .equals(absentModId)) continue;
+                versionsByModId.put(
+                    entry.getKey(),
+                    entry.getValue()
+                        .format(new Release(0, 0)));
+            }
+
+            final List<OutdatedMod> outdated = UnsupportedPackException
+                .findOutdatedMods(createModContainers(versionsByModId));
+            assertEquals(VERSION_FORMATS.size() - 1, outdated.size(), outdated.toString());
+            assertTrue(
+                outdated.stream()
+                    .noneMatch(
+                        mod -> mod.name()
+                            .equals(absentModId)),
+                outdated.toString());
+        }
     }
 
     private static Map<String, ModContainer> createModContainers(final Map<String, String> versionsByModId) {
@@ -164,5 +156,17 @@ class UnsupportedPackTest {
         return modsById;
     }
 
-    private record VersionFormat(String pattern, int minimumMinor, int minimumPatch) {}
+    private record Release(int minor, int patch) {
+
+        boolean isOlderThan(final Release other) {
+            return minor < other.minor || (minor == other.minor && patch < other.patch);
+        }
+    }
+
+    private record VersionFormat(String pattern, Release minimum) {
+
+        String format(final Release release) {
+            return String.format(pattern, release.minor(), release.patch());
+        }
+    }
 }
