@@ -13,13 +13,14 @@ import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableSortedMap;
 import com.sbancuz.plannh.Compat;
+import com.sbancuz.plannh.client.UnsupportedPackException.OutdatedMod;
 
 import cpw.mods.fml.common.DummyModContainer;
 import cpw.mods.fml.common.ModContainer;
 import cpw.mods.fml.common.ModMetadata;
 
 /**
- * Checks {@link UnsupportedPackException#describeOutdatedMods} on the mcmod.info versions of real packs, with the
+ * Checks {@link UnsupportedPackException#findOutdatedMods} on the mcmod.info versions of real packs, with the
  * {@code -GTNH} and {@code -1.7.10} suffixes.
  */
 class UnsupportedPackTest {
@@ -40,7 +41,7 @@ class UnsupportedPackTest {
 
     @Test
     void gtnh284IsRejectedOnEveryLibrary() {
-        final List<String> outdated = UnsupportedPackException.describeOutdatedMods(
+        final List<OutdatedMod> outdated = UnsupportedPackException.findOutdatedMods(
             createModContainers(
                 Map.of(
                     Compat.IDs.GREGTECH,
@@ -56,7 +57,7 @@ class UnsupportedPackTest {
 
     @Test
     void gtnh290Rc2IsAccepted() {
-        final List<String> outdated = UnsupportedPackException.describeOutdatedMods(
+        final List<OutdatedMod> outdated = UnsupportedPackException.findOutdatedMods(
             createModContainers(
                 Map.of(
                     Compat.IDs.GREGTECH,
@@ -73,7 +74,7 @@ class UnsupportedPackTest {
     @Test
     void gtnh290Rc1IsRejectedOnGregTechAndNei() {
         // RC-1 predates both APIs the required mixins inject into
-        final List<String> outdated = UnsupportedPackException.describeOutdatedMods(
+        final List<OutdatedMod> outdated = UnsupportedPackException.findOutdatedMods(
             createModContainers(
                 Map.of(
                     Compat.IDs.GREGTECH,
@@ -89,7 +90,7 @@ class UnsupportedPackTest {
 
     @Test
     void eachMinimumIsTheFirstSupportedRelease() {
-        final List<String> atMinimum = UnsupportedPackException.describeOutdatedMods(
+        final List<OutdatedMod> atMinimum = UnsupportedPackException.findOutdatedMods(
             createModContainers(
                 Map.of(
                     Compat.IDs.GREGTECH,
@@ -102,7 +103,7 @@ class UnsupportedPackTest {
                     "0.11.5")));
         assertTrue(atMinimum.isEmpty(), atMinimum.toString());
 
-        final List<String> belowMinimum = UnsupportedPackException.describeOutdatedMods(
+        final List<OutdatedMod> belowMinimum = UnsupportedPackException.findOutdatedMods(
             createModContainers(
                 Map.of(
                     Compat.IDs.GREGTECH,
@@ -129,8 +130,8 @@ class UnsupportedPackTest {
 
                 final boolean isOlder = minor < format.minimumMinor()
                     || (minor == format.minimumMinor() && patch < format.minimumPatch());
-                final List<String> outdated = UnsupportedPackException
-                    .describeOutdatedMods(createModContainers(Map.of(entry.getKey(), version)));
+                final List<OutdatedMod> outdated = UnsupportedPackException
+                    .findOutdatedMods(createModContainers(Map.of(entry.getKey(), version)));
                 assertEquals(isOlder, !outdated.isEmpty(), version);
             }
         }
@@ -139,7 +140,7 @@ class UnsupportedPackTest {
     @Test
     void absentModsAreNotReported() {
         // GregTech is optional, so a pack without GregTech is judged on the other libraries alone
-        final List<String> outdated = UnsupportedPackException.describeOutdatedMods(
+        final List<OutdatedMod> outdated = UnsupportedPackException.findOutdatedMods(
             createModContainers(
                 Map.of(
                     Compat.IDs.NEI,

@@ -7,6 +7,7 @@ import java.util.SortedMap;
 
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.GuiErrorScreen;
+import net.minecraft.util.StatCollector;
 
 import com.google.common.collect.ImmutableSortedMap;
 import com.sbancuz.plannh.Compat;
@@ -20,22 +21,14 @@ import cpw.mods.fml.common.versioning.ComparableVersion;
 /**
  * The loading error for a pack older than PlanNH supports. Below the GregTech minimum, the required
  * GTNEIDefaultHandler mixin fails to apply, and the game freezes on the loading screen.
- *
- * <pre>
- *     PlanNH 0.1.8-git.2+863f3d3f7a-dirty does not support this version of GT New Horizons.
- *
- *     GregTech 5.09.51.482 is older than 5.09.54.192
- *
- *     Remove PlanNH from the mods folder, or update to GT New Horizons 2.9.0-RC-2 or newer.
- * </pre>
  * <p>
- * The text is English: FML logs the message before {@code refreshResources()} loads the lang files.
+ * FML logs the message before {@code refreshResources()} loads the lang files, so the message is fixed English.
+ * {@link #initGui} runs after that refresh and reads the screen text from the lang file.
  */
 public class UnsupportedPackException extends CustomModLoadingErrorDisplayException {
 
-    private static final String HEADER_FORMAT = "PlanNH %s does not support this version of GT New Horizons.";
-    private static final String FOOTER = "Remove PlanNH from the mods folder, or update to GT New Horizons 2.9.0-RC-2 or newer.";
-
+    /** The first GT New Horizons release in which no mod is below {@link #MINIMUM_VERSIONS}. */
+    private static final String MINIMUM_PACK = "2.9.0-RC-2";
     /** Oldest supported version of each mod, keyed by mod id. */
     private static final SortedMap<String, String> MINIMUM_VERSIONS = ImmutableSortedMap.<String, String>naturalOrder()
         // first version with GTNEIDefaultHandler.drawDescription(CachedDefaultRecipe, int)
@@ -48,31 +41,29 @@ public class UnsupportedPackException extends CustomModLoadingErrorDisplayExcept
         .put(Compat.IDs.GTNHLIB, "0.11.5")
         .build();
 
-    private final List<String> lines;
+    private final List<OutdatedMod> outdatedMods;
     private final List<String> wrapped = new ArrayList<>();
 
-    private UnsupportedPackException(final List<String> lines) {
-        super(String.join("\n", lines), null);
-        this.lines = lines;
+    private UnsupportedPackException(final List<OutdatedMod> outdatedMods) {
+        super(
+            String.format(
+                "unsupported.pack plannh=%s minimumPack=%s outdated=%s",
+                Tags.VERSION,
+                MINIMUM_PACK,
+                outdatedMods),
+            null);
+        this.outdatedMods = outdatedMods;
     }
 
     public static void throwIfPackUnsupported() {
-        final List<String> outdated = describeOutdatedMods(
+        final List<OutdatedMod> outdatedMods = findOutdatedMods(
             Loader.instance()
                 .getIndexedModList());
-        if (outdated.isEmpty()) return;
-
-        final List<String> lines = new ArrayList<>();
-        lines.add(String.format(HEADER_FORMAT, Tags.VERSION));
-        lines.add("");
-        lines.addAll(outdated);
-        lines.add("");
-        lines.add(FOOTER);
-        throw new UnsupportedPackException(lines);
+        if (!outdatedMods.isEmpty()) throw new UnsupportedPackException(outdatedMods);
     }
 
-    public static List<String> describeOutdatedMods(final Map<String, ModContainer> modsById) {
-        final List<String> outdated = new ArrayList<>();
+    public static List<OutdatedMod> findOutdatedMods(final Map<String, ModContainer> modsById) {
+        final List<OutdatedMod> outdatedMods = new ArrayList<>();
         for (final Map.Entry<String, String> minimum : MINIMUM_VERSIONS.entrySet()) {
             final ModContainer mod = modsById.get(minimum.getKey());
             if (mod == null) continue;
@@ -82,14 +73,28 @@ public class UnsupportedPackException extends CustomModLoadingErrorDisplayExcept
 
             final ComparableVersion version = new ComparableVersion(rawVersion);
             if (version.compareTo(new ComparableVersion(minimum.getValue())) < 0) {
-                outdated.add(String.format("%s %s is older than %s", mod.getName(), rawVersion, minimum.getValue()));
+                outdatedMods.add(new OutdatedMod(mod.getName(), rawVersion, minimum.getValue()));
             }
         }
-        return outdated;
+        return outdatedMods;
     }
 
     @Override
     public void initGui(final GuiErrorScreen errorScreen, final FontRenderer fontRenderer) {
+        final List<String> lines = new ArrayList<>();
+        lines.add(StatCollector.translateToLocalFormatted("plannh.unsupported_pack.header", Tags.VERSION));
+        lines.add("");
+        for (final OutdatedMod mod : outdatedMods) {
+            lines.add(
+                StatCollector.translateToLocalFormatted(
+                    "plannh.unsupported_pack.outdated_mod",
+                    mod.name(),
+                    mod.version(),
+                    mod.minimumVersion()));
+        }
+        lines.add("");
+        lines.add(StatCollector.translateToLocalFormatted("plannh.unsupported_pack.footer", MINIMUM_PACK));
+
         final int TEXT_MARGIN = 20;
         wrapped.clear();
         for (final String line : lines) {
@@ -110,4 +115,7 @@ public class UnsupportedPackException extends CustomModLoadingErrorDisplayExcept
             y += fontRenderer.FONT_HEIGHT;
         }
     }
+
+    /** A mod older than its entry in {@link #MINIMUM_VERSIONS}. */
+    public record OutdatedMod(String name, String version, String minimumVersion) {}
 }
