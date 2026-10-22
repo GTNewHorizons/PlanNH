@@ -13,6 +13,7 @@ import com.sbancuz.plannh.client.ChatHandler;
 import com.sbancuz.plannh.client.GPUProgram;
 import com.sbancuz.plannh.client.ImportCommand;
 import com.sbancuz.plannh.client.OffscreenHandler;
+import com.sbancuz.plannh.client.UnsupportedPackException;
 import com.sbancuz.plannh.client.WorldHandler;
 import com.sbancuz.plannh.gui.FlowchartScreen;
 import com.sbancuz.plannh.gui.layout.ElkLayoutStrategy;
@@ -20,6 +21,7 @@ import com.sbancuz.plannh.gui.layout.ElkLayoutStrategy;
 import cpw.mods.fml.client.registry.ClientRegistry;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.Loader;
+import cpw.mods.fml.common.event.FMLConstructionEvent;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
@@ -31,6 +33,13 @@ public class ClientProxy extends CommonProxy {
         "key.neiflowchart.open",
         Keyboard.KEY_F8,
         "key.categories.neiflowchart");
+
+    @Override
+    public void construct(final FMLConstructionEvent event) {
+        // A halt in preInit() leaves running the tick handlers of mods whose preInit() ran and whose init() never ran.
+        // On GT New Horizons 2.8.4, Angelica's tick handler then throws every tick, and the error screen stays blank.
+        UnsupportedPackException.throwIfPackUnsupported();
+    }
 
     @Override
     public void preInit(FMLPreInitializationEvent event) {

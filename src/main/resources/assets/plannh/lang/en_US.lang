@@ -295,3 +295,9 @@ plannh.gui.rate.day.suffix=/d
 ## GUI - Numbers
 ## How a count of something is written, beside the thing it counts
 plannh.gui.number.multiple=×%s
+
+## Unsupported pack screen
+## FML shows this screen at startup in place of the main menu, when a mod is older than PlanNH supports
+plannh.unsupported_pack.header=PlanNH %s needs newer versions of these mods:
+plannh.unsupported_pack.outdated_mod=%s %s is older than %s
+plannh.unsupported_pack.footer=Remove PlanNH from the mods folder, or update to GT New Horizons %s or newer.
