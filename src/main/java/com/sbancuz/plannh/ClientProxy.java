@@ -12,6 +12,7 @@ import com.cleanroommc.modularui.screen.ModularContainer;
 import com.sbancuz.plannh.client.ChatHandler;
 import com.sbancuz.plannh.client.GPUProgram;
 import com.sbancuz.plannh.client.ImportCommand;
+import com.sbancuz.plannh.client.MessageHandler;
 import com.sbancuz.plannh.client.OffscreenHandler;
 import com.sbancuz.plannh.client.UnsupportedPackException;
 import com.sbancuz.plannh.client.WorldHandler;
@@ -70,6 +71,9 @@ public class ClientProxy extends CommonProxy {
         FMLCommonHandler.instance()
             .bus()
             .register(this);
+        FMLCommonHandler.instance()
+            .bus()
+            .register(new MessageHandler());
 
         Minecraft.getMinecraft()
             .func_152344_a(ElkLayoutStrategy::warmUp);

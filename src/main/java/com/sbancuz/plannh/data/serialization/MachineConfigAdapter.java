@@ -1,154 +1,107 @@
 package com.sbancuz.plannh.data.serialization;
 
-import java.lang.reflect.Type;
-import java.util.HashMap;
-import java.util.Map;
+import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 
-import javax.annotation.Nullable;
-
-import com.google.gson.JsonDeserializationContext;
-import com.google.gson.JsonDeserializer;
+import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
-import com.google.gson.JsonPrimitive;
-import com.google.gson.JsonSerializationContext;
-import com.google.gson.JsonSerializer;
-import com.sbancuz.plannh.PlanNH;
+import com.google.gson.TypeAdapter;
+import com.google.gson.TypeAdapterFactory;
+import com.google.gson.reflect.TypeToken;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
-import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.flowchart.balancer.Pin;
 import com.sbancuz.plannh.data.setting.SettingDef;
 import com.sbancuz.plannh.data.setting.Settings;
 
 /**
- * Writes a machine config as its profile, the settings that differ from that profile, and the
- * targets the balancer holds the machine to.
- *
- * <p>
- * The targets are here rather than left to reflection because the config has this adapter at all:
- * a hand-written one has to name every field it means to keep, and these three moved onto the
- * config from the node that owns it.
+ * Adds the save-format rules around Gson's reflective {@link MachineConfig} adapter. Ordinary config
+ * fields stay reflective, while settings and target cleanup retain the compact current shape.
  */
-public class MachineConfigAdapter implements JsonSerializer<MachineConfig>, JsonDeserializer<MachineConfig> {
+public final class MachineConfigAdapter implements TypeAdapterFactory {
 
     @Override
-    public JsonElement serialize(MachineConfig src, Type typeOfSrc, JsonSerializationContext context) {
-        JsonObject obj = new JsonObject();
-        MachineProfile profile = src.getProfile();
+    public <T> TypeAdapter<T> create(final Gson gson, final TypeToken<T> type) {
+        if (type.getRawType() != MachineConfig.class) return null;
 
-        obj.addProperty("profile", src.getProfileId());
+        final TypeAdapter<T> delegate = gson.getDelegateAdapter(this, type);
+        final TypeAdapter<JsonElement> jsonElementAdapter = gson.getAdapter(JsonElement.class);
+        return new TypeAdapter<T>() {
 
-        JsonObject settingsObj = new JsonObject();
-        for (SettingDef<?> def : profile.defs()) {
-            final Object val = src.get(def);
-            if (val == null || val.equals(def.getDefaultValue())) continue;
-            final JsonElement saved = def.serialize(val, Object.class, context);
-            if (saved != null && !saved.isJsonNull()) settingsObj.add(def.getKey(), saved);
-        }
-        obj.add("settings", settingsObj);
+            @Override
+            public void write(final JsonWriter out, final T value) throws IOException {
+                final JsonElement tree = delegate.toJsonTree(value);
+                final JsonObject object = tree.getAsJsonObject();
+                final MachineConfig config = (MachineConfig) value;
+                final Set<String> profileSettings = new HashSet<>();
+                for (final SettingDef<?> def : config.getProfile()
+                    .defs()) profileSettings.add(def.getKey());
 
-        // Which target counts, when there is one. Absent means the balance picks the machine's own setting.
-        final Pin kind = src.getTargetKind();
-        if (kind != null) obj.addProperty("targetKind", kind.name());
+                object.getAsJsonObject("settings")
+                    .entrySet()
+                    .removeIf(entry -> !profileSettings.contains(entry.getKey()));
 
-        // The targets themselves, always remembered whether or not they are the one in use: the
-        // switcher shows the other kind's number, so it has to survive a save either way.
-        final JsonObject copies = new JsonObject();
-        copies.addProperty(
-            "copies",
-            src.getCopies()
-                .copies());
-        obj.add("copies", copies);
-
-        final JsonObject ratesObj = new JsonObject();
-        for (final Map.Entry<Integer, Double> entry : src.getRates()
-            .rates()
-            .entrySet()) {
-            final Double rate = entry.getValue();
-            if (rate == null || rate <= 0) continue;
-            ratesObj.add(String.valueOf(entry.getKey()), new JsonPrimitive(rate));
-        }
-        if (!ratesObj.entrySet()
-            .isEmpty()) obj.add("rates", ratesObj);
-
-        return obj;
-    }
-
-    @Override
-    public MachineConfig deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
-        throws JsonParseException {
-        JsonObject obj = json.getAsJsonObject();
-        MachineProfile p = MachineProfileRegistry.get(
-            obj.get("profile")
-                .getAsString());
-
-        Map<SettingDef<?>, Object> settings = new HashMap<>();
-        for (Map.Entry<String, JsonElement> entry : obj.getAsJsonObject("settings")
-            .entrySet()) {
-            final SettingDef<?> setting = Settings.get(entry.getKey());
-            if (setting == null) continue;
-            final Object value = setting.deserialize(entry.getValue(), Object.class, context);
-            if (value != null) settings.put(setting, value);
-        }
-
-        final MachineConfig config = new MachineConfig(p, settings);
-
-        final JsonElement kind = obj.get("targetKind");
-        if (kind != null && kind.isJsonPrimitive()) {
-            final String name = legacyPin(kind.getAsString());
-            try {
-                config.setTargetKind(Pin.valueOf(name));
-            } catch (final IllegalArgumentException e) {
-                // A save from a build that knew a kind this one does not. The machine runs unpinned
-                // rather than the save failing to load.
-                PlanNH.LOG.warn("Unknown balance target {}; leaving the machine unpinned", kind);
+                final JsonObject rates = object.getAsJsonObject("rates")
+                    .getAsJsonObject("rates");
+                rates.entrySet()
+                    .removeIf(
+                        entry -> entry.getValue()
+                            .isJsonNull()
+                            || !(entry.getValue()
+                                .getAsDouble() > 0));
+                object.remove("rates");
+                if (!rates.entrySet()
+                    .isEmpty()) object.add("rates", rates);
+                jsonElementAdapter.write(out, object);
             }
-        }
 
-        final Integer copies = readCopies(obj);
-        if (copies != null) config.getCopies()
-            .setCopies(copies);
-
-        final JsonElement rates = obj.get("rates");
-        if (rates != null && rates.isJsonObject()) {
-            for (final Map.Entry<String, JsonElement> entry : rates.getAsJsonObject()
-                .entrySet()) {
-                try {
-                    final double rate = entry.getValue()
-                        .getAsDouble();
-                    if (rate > 0) config.getRates()
-                        .rates()
-                        .put(Integer.valueOf(entry.getKey()), rate);
-                } catch (final NumberFormatException | UnsupportedOperationException ignored) {
-                    // A port index that is not one. Dropping the entry keeps the rest of the targets.
+            @Override
+            public T read(final JsonReader in) throws IOException {
+                final JsonObject object = jsonElementAdapter.read(in)
+                    .getAsJsonObject();
+                // Malformed optional targets leave the constructor defaults intact.
+                for (final String field : new String[] { "copies", "rates" }) {
+                    if (object.has(field) && !object.get(field)
+                        .isJsonObject()) object.remove(field);
                 }
+                if (object.has("targetKind") && !object.get("targetKind")
+                    .isJsonPrimitive()) object.remove("targetKind");
+                if (object.has("rates")) {
+                    final JsonObject rates = object.getAsJsonObject("rates");
+                    rates.entrySet()
+                        .removeIf(entry -> {
+                            try {
+                                Integer.parseInt(entry.getKey());
+                                return !(entry.getValue()
+                                    .getAsDouble() > 0);
+                            } catch (final RuntimeException ignored) {
+                                return true;
+                            }
+                        });
+                    final JsonObject wrapper = new JsonObject();
+                    wrapper.add("rates", rates);
+                    object.add("rates", wrapper);
+                }
+                final T value = delegate.fromJsonTree(object);
+                if (value == null) return null;
+
+                final MachineConfig config = (MachineConfig) value;
+                final MachineProfile profile = config.getProfile();
+                if (!profile.id()
+                    .equals(config.getProfileId())) config.setProfileId(profile.id());
+                for (final SettingDef<?> def : profile.defs()) config.get(def);
+                config.get(Settings.MACHINES);
+                if (config.getTargetKind() == null) config.setTargetKind(Pin.NONE);
+                config.getCopies()
+                    .setCopies(
+                        config.getCopies()
+                            .copies());
+                return value;
             }
-        }
-
-        return config;
-    }
-
-    /**
-     * A pin name as it was before the copy target was renamed out of "machine count". Plans are
-     * shareable, so a save written by an older build has to keep its pin rather than silently
-     * dropping to unpinned.
-     */
-    private static String legacyPin(final String name) {
-        return "FIXED_COUNT".equals(name) ? "FIXED_COPIES" : name;
-    }
-
-    /** The pinned copy count, from the current key or from either key an older save wrote. */
-    private static @Nullable Integer readCopies(final JsonObject obj) {
-        for (final String[] path : new String[][] { { "copies", "copies" }, { "count", "machines" },
-            { "count", "copies" } }) {
-            final JsonElement outer = obj.get(path[0]);
-            if (outer == null || !outer.isJsonObject()) continue;
-            final JsonElement inner = outer.getAsJsonObject()
-                .get(path[1]);
-            if (inner != null && inner.isJsonPrimitive()) return inner.getAsInt();
-        }
-        return null;
+        }.nullSafe();
     }
 }

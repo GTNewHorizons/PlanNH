@@ -14,13 +14,14 @@ import codechicken.nei.recipe.Recipe;
 public class RecipeIdAdapter implements JsonSerializer<Recipe.RecipeId>, JsonDeserializer<Recipe.RecipeId> {
 
     @Override
-    public Recipe.RecipeId deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
-        throws JsonParseException {
+    public Recipe.RecipeId deserialize(final JsonElement json, final Type typeOfT,
+        final JsonDeserializationContext context) throws JsonParseException {
         return Recipe.RecipeId.of(json.getAsJsonObject());
     }
 
     @Override
-    public JsonElement serialize(Recipe.RecipeId src, Type typeOfSrc, JsonSerializationContext context) {
+    public JsonElement serialize(final Recipe.RecipeId src, final Type typeOfSrc,
+        final JsonSerializationContext context) {
         return src.toJsonObject();
     }
 }

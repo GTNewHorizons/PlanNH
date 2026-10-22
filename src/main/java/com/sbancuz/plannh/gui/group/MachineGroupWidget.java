@@ -45,6 +45,7 @@ public class MachineGroupWidget extends GroupWidget<MachineGroup> {
             .stream()
             .filter(graphData -> graphData instanceof Node)
             .map(graphData -> (Node) graphData)
+            .filter(Node::isAvailable)
             .findFirst()
             .orElse(null);
     }
@@ -64,6 +65,7 @@ public class MachineGroupWidget extends GroupWidget<MachineGroup> {
      * name, which a player can rewrite.
      */
     public boolean acceptsNode(final Node node) {
+        if (!node.isAvailable()) return true;
         if (mainNode == null) {
             mainNode = node;
             return true;
@@ -77,9 +79,10 @@ public class MachineGroupWidget extends GroupWidget<MachineGroup> {
     public void joinGroup(FlowchartWidget<?, ?> widget) {
         super.joinGroup(widget);
 
-        if (widget instanceof NodeWidget nodeWidget && nodeWidget.getData() != mainNode) nodeWidget.getData()
-            .getMachineConfig()
-            .copySettingsFrom(mainNode.getMachineConfig());
+        if (widget instanceof NodeWidget nodeWidget && nodeWidget.getData()
+            .isAvailable() && mainNode != null && nodeWidget.getData() != mainNode) nodeWidget.getData()
+                .getMachineConfig()
+                .copySettingsFrom(mainNode.getMachineConfig());
     }
 
     @Override
@@ -89,6 +92,7 @@ public class MachineGroupWidget extends GroupWidget<MachineGroup> {
             .stream()
             .filter(graphData -> graphData instanceof Node)
             .map(graphData -> (Node) graphData)
+            .filter(Node::isAvailable)
             .findFirst()
             .orElse(null);
     }

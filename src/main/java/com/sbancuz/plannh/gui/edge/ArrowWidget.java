@@ -51,12 +51,12 @@ public class ArrowWidget extends ParentWidget<ArrowWidget> {
             canvas.getArrowWidgets()
                 .put(edge.getId(), this);
 
-            canvas.getNodeWidgets2()
+            canvas.getNodeWidgets()
                 .get(edge.getTargetNodeId())
                 .getArrowWidgets()
                 .add(this);
 
-            NodeWidget source = canvas.getNodeWidgets2()
+            NodeWidget source = canvas.getNodeWidgets()
                 .get(edge.getSourceNodeId());
             source.getArrowWidgets()
                 .add(this);

@@ -118,7 +118,7 @@ public final class ModelData {
     ModelData(final Graph graph, final Heuristics heuristics) {
         for (final Node node : graph.getNodes()
             .values()) {
-            if (node.getExtractor() == null) continue; // incorrectly loaded node
+            if (!node.isAvailable()) continue;
             machineIndex.put(node.getId(), machines.size());
             machines.add(new Machine(node));
         }
@@ -128,6 +128,7 @@ public final class ModelData {
             final Integer src = machineIndex.get(edge.getSourceNodeId());
             final Integer dst = machineIndex.get(edge.getTargetNodeId());
             if (src == null || dst == null) continue;
+            if (!edge.isActive(machines.get(src).node, machines.get(dst).node)) continue;
             // Edges keep the port indices they were saved with, while port lists can shrink (a
             // settings change, or a recipe that lost an output between modpack versions). Drop the
             // dangling edge rather than indexing past the node's ports.

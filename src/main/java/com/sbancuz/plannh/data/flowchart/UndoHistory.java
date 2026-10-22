@@ -2,7 +2,9 @@ package com.sbancuz.plannh.data.flowchart;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.function.Consumer;
 
+import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.serialization.Serializer;
 
 /**
@@ -33,8 +35,7 @@ public final class UndoHistory {
     /** Records the pre-edit state; no-op edits leave no trace. */
     public void commitEdit(final String before, final Graph graph) {
         if (before == null || before.equals(encodeNormalized(graph))) return;
-        undoStack.push(before);
-        if (undoStack.size() > MAX_DEPTH) undoStack.removeLast();
+        pushLimited(undoStack, before);
         redoStack.clear();
     }
 
@@ -48,14 +49,50 @@ public final class UndoHistory {
 
     /** Camera fields come back at defaults. */
     public Graph undo(final Graph current) {
-        redoStack.push(encodeNormalized(current));
-        return Serializer.decodeGraph(undoStack.pop());
+        return undo(current, ignored -> {});
+    }
+
+    /**
+     * Restores the next undo graph through {@code adopter}. History is changed only after the
+     * adopter returns, so a failed widget rebuild leaves both stacks untouched.
+     */
+    public Graph undo(final Graph current, final Consumer<Graph> adopter) {
+        return restore(current, adopter, undoStack, redoStack);
     }
 
     /** Camera fields come back at defaults. */
     public Graph redo(final Graph current) {
-        undoStack.push(encodeNormalized(current));
-        return Serializer.decodeGraph(redoStack.pop());
+        return redo(current, ignored -> {});
+    }
+
+    /** See {@link #undo(Graph, Consumer)}. */
+    public Graph redo(final Graph current, final Consumer<Graph> adopter) {
+        return restore(current, adopter, redoStack, undoStack);
+    }
+
+    private Graph restore(final Graph current, final Consumer<Graph> adopter, final Deque<String> source,
+        final Deque<String> destination) {
+        if (source.isEmpty()) return current;
+
+        final String target = source.peek();
+        final String currentSnapshot = encodeNormalized(current);
+        final Graph restored = Serializer.decodeGraph(target);
+        if (restored == null) {
+            PlanAPI.showMessage("plannh.error.history");
+            return current;
+        }
+
+        // Adoption may rebuild a widget tree and is allowed to fail. Do not touch either stack first.
+        adopter.accept(restored);
+
+        pushLimited(destination, currentSnapshot);
+        source.pop();
+        return restored;
+    }
+
+    private static void pushLimited(final Deque<String> stack, final String snapshot) {
+        stack.push(snapshot);
+        while (stack.size() > MAX_DEPTH) stack.removeLast();
     }
 
     /**
