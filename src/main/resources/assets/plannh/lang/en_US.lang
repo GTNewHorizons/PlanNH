@@ -43,6 +43,9 @@ plannh.settings.vis_per_tick=Vis/t
 ## Settings - Forestry
 plannh.settings.forestry_rf_per_tick=For. RF/t
 
+## Settings - Ender IO
+plannh.settings.eio_capacitor=Capacitor
+
 ## Settings - BloodMagic
 plannh.settings.lp_per_tick=BM LP/t
 

@@ -1,6 +1,7 @@
 package com.sbancuz.plannh.data.provider;
 
 import java.lang.reflect.Field;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,8 +10,10 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.sbancuz.plannh.api.RecipePropertyAPI;
+import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
+import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.effect.steps.CoFHCompat;
@@ -21,6 +24,7 @@ import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
+import crazypants.enderio.config.Config;
 import crazypants.enderio.nei.AlloySmelterRecipeHandler;
 import crazypants.enderio.nei.AlloySmelterRecipeHandler.AlloySmelterRecipe;
 import crazypants.enderio.nei.EnchanterRecipeHandler;
@@ -32,13 +36,36 @@ import crazypants.enderio.nei.SoulBinderRecipeHandler;
 import crazypants.enderio.nei.SoulBinderRecipeHandler.SoulBinderRecipeNEI;
 import crazypants.enderio.nei.VatRecipeHandler;
 import crazypants.enderio.nei.VatRecipeHandler.InnerVatRecipe;
+import crazypants.enderio.power.Capacitors;
 
 public class EnderIOProvider implements PropertyProvider {
 
-    // TODO: Make a PR to expose these constants
-    // EnderIO machines run at 80 RF/t base (crazypants.enderio.machine.AbstractPowerConsumerEntity)
-    private static final int RF_PER_TICK = 80;
     private static final String PROFILE_ID = "enderio";
+    private static final int[] CAPACITOR_RF_PER_T = Arrays.stream(Capacitors.VALUES)
+        .mapToInt(capacitor -> capacitor.capacitor.getMaxEnergyExtracted())
+        .distinct()
+        .toArray();
+
+    static final RecipeProperty<Integer> FIXED_RF_PER_TICK = RecipeProperty
+        .<Integer>builder("enderio.fixed_rf_per_tick", 0)
+        .build();
+
+    static int durationTicks(final RecipeContext ctx, final MachineConfig settings) {
+        final long energy = energy(ctx);
+        final int rate = rfPerTick(ctx, settings);
+        return (int) ((energy + rate - 1) / rate);
+    }
+
+    private static long energy(final RecipeContext ctx) {
+        return ((Number) ctx.properties()
+            .getOrDefault(CoFHCompat.RF_COST, 0L)).longValue();
+    }
+
+    static int rfPerTick(final RecipeContext ctx, final MachineConfig settings) {
+        return ctx.getOrDefault(
+            FIXED_RF_PER_TICK,
+            CAPACITOR_RF_PER_T[Math.clamp(settings.get(Settings.EIO_CAPACITOR), 0, CAPACITOR_RF_PER_T.length - 1)]);
+    }
 
     public static final RecipeProperty<Integer> EXPERIENCE = RecipeProperty.<Integer>builder("enderio.experience", 0)
         .build();
@@ -59,10 +86,15 @@ public class EnderIOProvider implements PropertyProvider {
             MachineProfile.builder(PROFILE_ID, "EnderIO")
                 .setting(Settings.MACHINES)
                 .setting(Settings.TICK_MODIFIER)
+                .setting(
+                    Settings.EIO_CAPACITOR,
+                    (ctx, _) -> energy(ctx) > 0 && !ctx.properties()
+                        .containsKey(FIXED_RF_PER_TICK))
                 .effect(
-                    Effects.durationFromHandler()
-                        .withCostPerT(CoFHCompat.RF_PER_T, (current, s, ctx) -> (long) RF_PER_TICK)
-                        .computeTotal(CoFHCompat.RF_COST)
+                    Effects.durationFromFormula(EnderIOProvider::durationTicks)
+                        .withCostPerT(
+                            CoFHCompat.RF_PER_T,
+                            (current, settings, ctx) -> energy(ctx) > 0 ? (long) rfPerTick(ctx, settings) : 0L)
                         .applyParallelism())
                 .build());
 
@@ -115,13 +147,13 @@ public class EnderIOProvider implements PropertyProvider {
             if (r.getExperience() > 0) props.put(EXPERIENCE, r.getExperience());
         } else if (cached instanceof final InnerVatRecipe r) {
             applyEnergy(props, r.getEnergy());
+            props.put(FIXED_RF_PER_TICK, Config.vatPowerUserPerTickRF);
         }
 
         return props;
     }
 
     private static void applyEnergy(final Map<RecipeProperty<?>, Object> props, final int energy) {
-        props.put(RecipePropertyAPI.DURATION_TICKS, energy / RF_PER_TICK);
         props.put(CoFHCompat.RF_COST, (long) energy);
     }
 
