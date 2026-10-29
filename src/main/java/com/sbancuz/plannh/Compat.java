@@ -4,7 +4,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.sbancuz.plannh.api.RecipePropertyAPI;
-import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.provider.AE2Provider;
 import com.sbancuz.plannh.data.provider.AvaritiaProvider;
@@ -113,7 +112,6 @@ public enum Compat {
     }
 
     public static void init() {
-        MachineProfileRegistry.reset();
         RecipePropertyAPI.reset();
         DefaultProvider.INSTANCE.register();
         new VanillaProvider().register();

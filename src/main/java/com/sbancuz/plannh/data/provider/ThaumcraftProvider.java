@@ -1,7 +1,6 @@
 package com.sbancuz.plannh.data.provider;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -9,6 +8,9 @@ import javax.annotation.Nullable;
 import net.minecraft.client.Minecraft;
 import net.minecraft.item.ItemStack;
 
+import com.cleanroommc.modularui.api.drawable.IDrawable;
+import com.cleanroommc.modularui.drawable.GuiTextures;
+import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.gtnewhorizons.aspectrecipeindex.nei.AlchemyRecipeHandler;
 import com.gtnewhorizons.aspectrecipeindex.nei.AspectCombinationHandler;
 import com.gtnewhorizons.aspectrecipeindex.nei.InfusionRecipeHandler;
@@ -18,10 +20,9 @@ import com.gtnewhorizons.aspectrecipeindex.nei.arcaneworkbench.ShapelessArcaneRe
 import com.gtnewhorizons.aspectrecipeindex.nei.arcaneworkbench.WandRecipeHandler;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
-import com.sbancuz.plannh.data.MachineProfileRegistry;
+import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.effect.Effects;
-import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.properties.SummaryProperty;
@@ -38,8 +39,18 @@ import thaumcraft.api.crafting.CrucibleRecipe;
 import thaumcraft.api.crafting.InfusionRecipe;
 import thaumcraft.api.crafting.ShapedArcaneRecipe;
 import thaumcraft.api.crafting.ShapelessArcaneRecipe;
+import thaumcraft.common.config.ConfigBlocks;
 
 public class ThaumcraftProvider implements PropertyProvider {
+
+    @Nonnull
+    private IDrawable icon(final IRecipeHandler handler, final int recipeIndex) {
+        if (ConfigBlocks.blockTable == null || ConfigBlocks.blockStoneDevice == null) return GuiTextures.BOOKMARK;
+        if (handler instanceof InfusionRecipeHandler) return new ItemDrawable(ConfigBlocks.blockStoneDevice, 2);
+        if (handler instanceof ShapedArcaneRecipeHandler || handler instanceof ShapelessArcaneRecipeHandler
+            || handler instanceof WandRecipeHandler) return new ItemDrawable(ConfigBlocks.blockTable);
+        return GuiTextures.BOOKMARK;
+    }
 
     public static final RecipeProperty<int[]> VIS_COST = SummaryProperty.builder("thaumcraft.vis_cost", new int[6])
         .build();
@@ -57,6 +68,32 @@ public class ThaumcraftProvider implements PropertyProvider {
 
     public static final RecipeProperty<Integer> NUM_COMPONENTS = RecipeProperty
         .<Integer>builder("thaumcraft.num_components", 0)
+        .build();
+
+    private final MachineProfile ARCANE = MachineProfile.builder("thaumcraft:arcane")
+        .setting(Settings.MACHINES)
+        .setting(Settings.VIS_PER_TICK)
+        .setting(Settings.TICK_MODIFIER)
+        .effect(
+            Effects.durationFromTotal(TOTAL_VIS, Settings.VIS_PER_TICK)
+                .amortizeCost(TOTAL_VIS)
+                .applyParallelism())
+        .provider(this)
+        .icon(this::icon)
+        .build();
+
+    private final MachineProfile INFUSION = MachineProfile.builder("thaumcraft:infusion")
+        .setting(Settings.MACHINES)
+        .setting(Settings.TICK_MODIFIER)
+        .effect(Effects.durationFromFormula((cfg, ctx) -> {
+            final int tv = ctx.getOrDefault(TOTAL_VIS, 0);
+            final int nc = ctx.getOrDefault(NUM_COMPONENTS, 0);
+            return tv * 10 + nc * 60;
+        })
+            .amortizeCost(TOTAL_VIS)
+            .applyParallelism())
+        .provider(this)
+        .icon(this::icon)
         .build();
 
     private static final String[] PRIMAL_TAGS = { "aer", "terra", "ignis", "aqua", "ordo", "perditio" };
@@ -78,40 +115,19 @@ public class ThaumcraftProvider implements PropertyProvider {
         RecipePropertyAPI.registerExtractor(AlchemyRecipeHandler.class, this);
         RecipePropertyAPI.registerExtractor(InfusionRecipeHandler.class, this);
 
-        MachineProfileRegistry.register(
-            MachineProfile.builder("thaumcraft:arcane", "Arcane Workbench")
-                .setting(Settings.MACHINES)
-                .setting(Settings.VIS_PER_TICK)
-                .setting(Settings.TICK_MODIFIER)
-                .effect(
-                    Effects.durationFromTotal(TOTAL_VIS, Settings.VIS_PER_TICK)
-                        .amortizeCost(TOTAL_VIS)
-                        .applyParallelism())
-                .build());
-        MachineProfileRegistry.register(
-            MachineProfile.builder("thaumcraft:infusion", "Infusion Altar")
-                .setting(Settings.MACHINES)
-                .setting(Settings.TICK_MODIFIER)
-                .effect(Effects.durationFromFormula((ctx, s) -> {
-                    final int tv = ctx.getOrDefault(TOTAL_VIS, 0);
-                    final int nc = ctx.getOrDefault(NUM_COMPONENTS, 0);
-                    return tv * 10 + nc * 60;
-                })
-                    .amortizeCost(TOTAL_VIS)
-                    .applyParallelism())
-                .build());
     }
 
     @Override
-    @Nullable
-    public String getProfileId(final IRecipeHandler handler, final int recipeIndex) {
-        if (!(handler instanceof TemplateRecipeHandler)) return null;
+    public List<MachineProfile> getProfiles(final IRecipeHandler handler, final int recipeIndex) {
+        if (!canCraft(handler, recipeIndex)) return List.of();
+        if (!(handler instanceof TemplateRecipeHandler)) return List.of();
         final String overlay = handler.getOverlayIdentifier();
-        if (overlay == null) return null;
+        if (overlay == null) return List.of();
         return switch (overlay) {
-            case "thaumcraft.arcane.shaped", "thaumcraft.arcane.shapeless", "thaumcraft.wands", "thaumcraft.alchemy" -> "thaumcraft:arcane";
-            case "thaumcraft.infusion" -> "thaumcraft:infusion";
-            default -> null;
+            case "thaumcraft.arcane.shaped", "thaumcraft.arcane.shapeless", "thaumcraft.wands", "thaumcraft.alchemy" -> List
+                .of(ARCANE);
+            case "thaumcraft.infusion" -> List.of(INFUSION);
+            default -> List.of();
         };
     }
 
@@ -127,28 +143,27 @@ public class ThaumcraftProvider implements PropertyProvider {
     }
 
     @Override
-    @Nonnull
-    public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler, final int recipeIndex) {
-        final Map<RecipeProperty<?>, Object> props = new HashMap<>(PropertyProvider.super.extract(node, handler, recipeIndex));
-        if (!(handler instanceof final TemplateRecipeHandler trh)) return props;
+    public void populate(final RecipeContext.Builder recipe, final IRecipeHandler handler, final int recipeIndex) {
+        PropertyProvider.super.populate(recipe, handler, recipeIndex);
+        if (!(handler instanceof final TemplateRecipeHandler trh)) return;
 
         final var recipes = RecipeHandlerAccess.getArecipes(trh);
-        if (recipeIndex < 0 || recipeIndex >= recipes.size()) return props;
+        if (recipeIndex < 0 || recipeIndex >= recipes.size()) return;
 
         final TemplateRecipeHandler.CachedRecipe cached = recipes.get(recipeIndex);
         final String overlay = trh.getOverlayIdentifier();
-        if (overlay == null) return props;
+        if (overlay == null) return;
 
         final var resultPos = cached.getResult();
-        if (resultPos == null || resultPos.item == null) return props;
+        if (resultPos == null || resultPos.item == null) return;
         final var result = resultPos.item;
 
         switch (overlay) {
             case "thaumcraft.alchemy" -> {
                 final CrucibleRecipe cr = ThaumcraftApi.getCrucibleRecipe(result);
                 if (cr != null && cr.aspects != null) {
-                    props.put(VIS_COST, aspectListToPrimals(cr.aspects));
-                    props.put(TOTAL_VIS, sumVis(cr.aspects));
+                    recipe.property(VIS_COST, aspectListToPrimals(cr.aspects));
+                    recipe.property(TOTAL_VIS, sumVis(cr.aspects));
                 }
             }
             case "thaumcraft.infusion" -> {
@@ -156,13 +171,13 @@ public class ThaumcraftProvider implements PropertyProvider {
                 if (ir != null) {
                     final AspectList aspects = ir.getAspects();
                     if (aspects != null) {
-                        props.put(VIS_COST, aspectListToPrimals(aspects));
-                        props.put(TOTAL_VIS, sumVis(aspects));
+                        recipe.property(VIS_COST, aspectListToPrimals(aspects));
+                        recipe.property(TOTAL_VIS, sumVis(aspects));
                     }
                     final int instability = ir.getInstability();
-                    if (instability > 0) props.put(INSTABILITY, instability);
+                    if (instability > 0) recipe.property(INSTABILITY, instability);
                     final ItemStack[] comps = ir.getComponents();
-                    props.put(NUM_COMPONENTS, comps != null ? comps.length : 0);
+                    recipe.property(NUM_COMPONENTS, comps != null ? comps.length : 0);
                 }
             }
             case "thaumcraft.arcane.shaped", "thaumcraft.arcane.shapeless", "thaumcraft.wands" -> {
@@ -170,16 +185,16 @@ public class ThaumcraftProvider implements PropertyProvider {
                     if (obj instanceof final ShapedArcaneRecipe ar && result.isItemEqual(ar.getRecipeOutput())) {
                         final AspectList aspects = ar.getAspects();
                         if (aspects != null) {
-                            props.put(VIS_COST, aspectListToPrimals(aspects));
-                            props.put(TOTAL_VIS, sumVis(aspects));
+                            recipe.property(VIS_COST, aspectListToPrimals(aspects));
+                            recipe.property(TOTAL_VIS, sumVis(aspects));
                         }
                         break;
                     }
                     if (obj instanceof final ShapelessArcaneRecipe ar && result.isItemEqual(ar.getRecipeOutput())) {
                         final AspectList aspects = ar.getAspects();
                         if (aspects != null) {
-                            props.put(VIS_COST, aspectListToPrimals(aspects));
-                            props.put(TOTAL_VIS, sumVis(aspects));
+                            recipe.property(VIS_COST, aspectListToPrimals(aspects));
+                            recipe.property(TOTAL_VIS, sumVis(aspects));
                         }
                         break;
                     }
@@ -188,9 +203,7 @@ public class ThaumcraftProvider implements PropertyProvider {
         }
 
         final String researchKey = findResearchKey(handler, recipeIndex);
-        if (researchKey != null) props.put(RESEARCH_KEY, researchKey);
-
-        return props;
+        if (researchKey != null) recipe.property(RESEARCH_KEY, researchKey);
     }
 
     @Nullable

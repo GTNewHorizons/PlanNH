@@ -22,14 +22,14 @@ public class GTSteamOverclockStep implements EffectStep, EffectComputer {
     }
 
     @Override
-    public EffectResult compute(final MachineConfig config, final RecipeContext ctx) {
+    public EffectResult compute(final MachineConfig cfg, final RecipeContext ctx) {
         final Object dur = ctx.properties().get(RecipePropertyAPI.DURATION_TICKS);
         final int d = dur instanceof final Number n ? n.intValue() : 0;
-        return apply(new EffectResult(d, 0, 1), config, ctx);
+        return apply(new EffectResult(d, 0, 1), cfg, ctx);
     }
 
     @Override
-    public EffectResult apply(final EffectResult current, final MachineConfig config, final RecipeContext ctx) {
+    public EffectResult apply(final EffectResult current, final MachineConfig cfg, final RecipeContext ctx) {
         final long recipeEUt = recipeEUt(ctx);
         final int recipeDuration = current.durationTicks();
 
@@ -39,27 +39,32 @@ public class GTSteamOverclockStep implements EffectStep, EffectComputer {
             return current;
         }
 
-        final int eutDiscount = config.get(Settings.STEAM_EUT_DISCOUNT);
-        final int durationModifier = config.get(Settings.STEAM_DURATION_MODIFIER);
-        final int parallels = config.get(Settings.PARALLELS);
-        final int machines = config.get(Settings.MACHINES);
+        final int eutDiscount = cfg.getProfile()
+            .value(Settings.STEAM_EUT_DISCOUNT, cfg, ctx);
+        final int durationModifier = cfg.getProfile()
+            .value(Settings.STEAM_DURATION_MODIFIER, cfg, ctx);
+        final int parallels = cfg.getProfile()
+            .value(Settings.PARALLELS, cfg, ctx);
+        final int machines = cfg.getProfile()
+            .value(Settings.MACHINES, cfg, ctx);
 
-        final long steamPerTick = recipeEUt * eutDiscount / 100;
-        final int duration = Math.max(1, recipeDuration * durationModifier / 100);
+        final long steamPerTick = Math.multiplyExact(recipeEUt, eutDiscount) / 100;
+        final long rawDuration = (long) recipeDuration * durationModifier / 100;
+        final int duration = (int) Math.clamp(rawDuration, 1, Integer.MAX_VALUE);
 
         current.energyPerT(steamPerTick);
         current.durationTicks(duration);
-        current.throughputFactor(parallels * machines);
+        current.throughputFactor(Math.multiplyExact(parallels, machines));
 
-        ctx.properties()
-            .putIfAbsent(STEAM_EU_PERT, steamPerTick);
-        ctx.properties()
-            .putIfAbsent(TOTAL_STEAM_EU, steamPerTick * duration);
+        current.properties()
+            .put(STEAM_EU_PERT, steamPerTick);
+        current.properties()
+            .put(TOTAL_STEAM_EU, Math.multiplyExact(steamPerTick, duration));
 
         // Clear raw EU values so they don't appear in summary
-        ctx.properties()
+        current.properties()
             .put(EU_PER_TICK, 0L);
-        ctx.properties()
+        current.properties()
             .put(TOTAL_EU, 0L);
 
         return current;

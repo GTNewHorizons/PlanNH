@@ -1,19 +1,18 @@
 package com.sbancuz.plannh.data.properties;
 
 import java.util.List;
-import java.util.Map;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.PlanNH;
-import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.MachineProfile;
+import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.flowchart.Port;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.FurnaceRecipeHandler;
 import codechicken.nei.recipe.IRecipeHandler;
+import codechicken.nei.recipe.RecipeHandlerRef;
+import codechicken.nei.recipe.TemplateRecipeHandler;
 import gregtech.nei.GTNEIDefaultHandler;
 
 public interface PropertyProvider {
@@ -26,21 +25,24 @@ public interface PropertyProvider {
 
     void register();
 
+    default RecipeContext extract(final RecipeHandlerRef ref) {
+        final RecipeContext.Builder recipe = RecipeContext.builder();
+        populate(recipe, ref.handler, ref.recipeIndex);
+        return recipe.build();
+    }
+
     /** Other stacks can be products, ingredients, or display-only prerequisites, regardless of burn time. */
     default StackRole otherStackRole(final IRecipeHandler handler, final int recipeIndex, final PositionedStack stack) {
         return handler instanceof FurnaceRecipeHandler ? StackRole.IGNORE : StackRole.OUTPUT;
     }
 
-    default Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler,
-        final int recipeIndex) {
+    default void populate(final RecipeContext.Builder recipe, final IRecipeHandler handler, final int recipeIndex) {
         final List<PositionedStack> ins = handler.getIngredientStacks(recipeIndex);
-        for (final PositionedStack ps : ins) if (ps != null && ps.item != null) node.getInputs()
-            .add(Port.fromStack(ps));
+        for (final PositionedStack ps : ins) if (ps != null && ps.item != null) recipe.input(Port.fromStack(ps));
 
         final PositionedStack result = handler.getResultStack(recipeIndex);
         if (result != null && result.item != null) {
-            node.getOutputs()
-                .add(Port.fromStack(result));
+            recipe.output(Port.fromStack(result));
             // warn if we find any handlers outside gt that have multiple output permutations
             if (result.items.length > 1 && (!Compat.GREGTECH.isLoaded || !(handler instanceof GTNEIDefaultHandler)))
                 PlanNH.LOG.warn("output found with permutations");
@@ -50,29 +52,30 @@ public interface PropertyProvider {
         for (final PositionedStack ps : others) {
             if (ps != null && ps.item != null) {
                 switch (otherStackRole(handler, recipeIndex, ps)) {
-                    case INPUT -> node.getInputs()
-                        .add(Port.fromStack(ps));
-                    case OUTPUT -> node.getOutputs()
-                        .add(Port.fromStack(ps));
+                    case INPUT -> recipe.input(Port.fromStack(ps));
+                    case OUTPUT -> recipe.output(Port.fromStack(ps));
                     case IGNORE -> {}
                 }
             }
         }
-
-        return Map.of();
     }
 
-    @Nullable
-    default String getProfileId(final IRecipeHandler handler, final int recipeIndex) {
-        return null;
+    default List<MachineProfile> getProfiles(final IRecipeHandler handler, final int recipeIndex) {
+        return List.of();
     }
 
     default boolean canCraft(final IRecipeHandler handler, final int recipeIndex) {
         return true;
     }
 
-    @Nonnull
-    default String getExtractorName() {
-        return getClass().getSimpleName();
+    // TODO: Remove?
+    /** Providers with native machine IDs override this; handler names are never identities. */
+    default String getMachineId(final IRecipeHandler handler, final int recipeIndex) {
+        final String overlay = handler instanceof TemplateRecipeHandler template ? template.getOverlayIdentifier()
+            : null;
+        return getClass().getName() + "/"
+            + handler.getClass()
+                .getName()
+            + (overlay == null ? "" : "/" + overlay);
     }
 }

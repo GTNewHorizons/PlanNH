@@ -1,6 +1,7 @@
 package com.sbancuz.plannh.data.setting;
 
 import java.lang.reflect.Type;
+import java.util.List;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
@@ -14,6 +15,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import com.sbancuz.plannh.data.MachineConfig;
+import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
@@ -52,7 +54,22 @@ public abstract class SettingDef<T> implements JsonSerializer<Object>, JsonDeser
      * and the widget hands {@code edit} the change itself: the panel runs it (so undo reaches it),
      * re-solves, saves, and rebuilds the rows, because a value can decide what else is on offer.
      */
-    public abstract IWidget settingsWidget(MachineConfig config, Consumer<Runnable> edit);
+    public abstract IWidget settingsWidget(MachineConfig cfg, RecipeContext ctx, Consumer<Runnable> edit);
+
+    /** Composite editors may describe more than this individual stored setting. */
+    public String getEditorLabel() {
+        return getLabel();
+    }
+
+    /** Composite editors supply their own labels and use the full settings row. */
+    public boolean isFullWidthEditor() {
+        return false;
+    }
+
+    /** Settings changed by this editor, including values owned by a composite editor. */
+    public List<? extends SettingDef<?>> editedSettings() {
+        return List.of(this);
+    }
 
     @Override
     public final JsonElement serialize(final Object value, final Type typeOfSrc,

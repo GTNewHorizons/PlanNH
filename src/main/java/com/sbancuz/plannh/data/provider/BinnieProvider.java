@@ -1,22 +1,20 @@
 package com.sbancuz.plannh.data.provider;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 import net.minecraft.item.ItemStack;
 
+import com.cleanroommc.modularui.api.drawable.IDrawable;
+import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
-import com.sbancuz.plannh.data.MachineProfileRegistry;
+import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.effect.steps.CoFHCompat;
-import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
-import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.setting.Settings;
 
 import binnie.extratrees.machines.lumbermill.Lumbermill;
@@ -45,7 +43,23 @@ import codechicken.nei.recipe.TemplateRecipeHandler;
 
 public final class BinnieProvider implements PropertyProvider {
 
+    @Nonnull
+    private IDrawable icon(final IRecipeHandler handler, final int recipeIndex) {
+        return GuiTextures.COLOR_WHEEL;
+    }
+
     private static final String PROFILE_ID = "binnie:general";
+
+    private final MachineProfile PROFILE = MachineProfile.builder(PROFILE_ID)
+        .setting(Settings.MACHINES)
+        .setting(Settings.TICK_MODIFIER)
+        .effect(
+            Effects.durationFromHandler()
+                .amortizeCost(CoFHCompat.RF_COST)
+                .applyParallelism())
+        .provider(this)
+        .icon(this::icon)
+        .build();
 
     // TODO: Make a PR to expose these values
     // Sequencer: base process length (ticks) from SequencerComponentLogic.getProcessLength()
@@ -80,78 +94,59 @@ public final class BinnieProvider implements PropertyProvider {
         RecipePropertyAPI.registerExtractor(DatabaseRecipeHandler.class, this);
         RecipePropertyAPI.registerExtractor(NEIHandlerLumbermill.class, this);
 
-        MachineProfileRegistry.register(
-            MachineProfile.builder(PROFILE_ID, "Binnie")
-                .setting(Settings.MACHINES)
-                .setting(Settings.TICK_MODIFIER)
-                .effect(
-                    Effects.durationFromHandler()
-                        .amortizeCost(CoFHCompat.RF_COST)
-                        .applyParallelism())
-                .build());
     }
 
     @Override
-    public boolean canCraft(final IRecipeHandler handler, final int recipeIndex) {
-        return getProfileId(handler, recipeIndex) != null;
-    }
-
-    @Override
-    @Nullable
-    public String getProfileId(final IRecipeHandler handler, final int recipeIndex) {
+    public List<MachineProfile> getProfiles(final IRecipeHandler handler, final int recipeIndex) {
         return switch (handler) {
             case GenepoolRecipeHandler _, IsolatorRecipeHandler _, SequencerRecipeHandler _,
                  PolymeriserRecipeHandler _, InoculatorRecipeHandler _, AnalyserRecipeHandler _,
                  IncubatorRecipeHandler _, AcclimatiserRecipeHandler _, SplicerRecipeHandler _,
-                 DatabaseRecipeHandler _, NEIHandlerLumbermill _ -> PROFILE_ID;
-            default -> null;
+                 DatabaseRecipeHandler _, NEIHandlerLumbermill _ -> List.of(PROFILE);
+            default -> List.of();
         };
     }
 
     @Override
-    @Nonnull
-    public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler,
+    public void populate(final RecipeContext.Builder recipe, final IRecipeHandler handler,
         final int recipeIndex) {
-        final Map<RecipeProperty<?>, Object> props = new HashMap<>(
-            PropertyProvider.super.extract(node, handler, recipeIndex));
+        PropertyProvider.super.populate(recipe, handler, recipeIndex);
 
         switch (handler) {
             case GenepoolRecipeHandler _ -> {
-                props.put(RecipePropertyAPI.DURATION_TICKS, Genepool.TIME_PERIOD);
-                props.put(CoFHCompat.RF_COST, (long) Genepool.RF_COST);
+                recipe.property(RecipePropertyAPI.DURATION_TICKS, Genepool.TIME_PERIOD);
+                recipe.property(CoFHCompat.RF_COST, (long) Genepool.RF_COST);
             }
             case IsolatorRecipeHandler _ -> {
-                props.put(RecipePropertyAPI.DURATION_TICKS, Isolator.TIME_PERIOD);
-                props.put(CoFHCompat.RF_COST, (long) Isolator.RF_COST);
+                recipe.property(RecipePropertyAPI.DURATION_TICKS, Isolator.TIME_PERIOD);
+                recipe.property(CoFHCompat.RF_COST, (long) Isolator.RF_COST);
             }
             case AnalyserRecipeHandler _ -> {
-                props.put(RecipePropertyAPI.DURATION_TICKS, Analyser.TIME_PERIOD);
-                props.put(CoFHCompat.RF_COST, (long) Analyser.RF_COST);
+                recipe.property(RecipePropertyAPI.DURATION_TICKS, Analyser.TIME_PERIOD);
+                recipe.property(CoFHCompat.RF_COST, (long) Analyser.RF_COST);
             }
             case NEIHandlerLumbermill _ -> {
-                props.put(RecipePropertyAPI.DURATION_TICKS, Lumbermill.TIME_PERIOD);
-                props.put(CoFHCompat.RF_COST, (long) Lumbermill.RF_COST);
+                recipe.property(RecipePropertyAPI.DURATION_TICKS, Lumbermill.TIME_PERIOD);
+                recipe.property(CoFHCompat.RF_COST, (long) Lumbermill.RF_COST);
             }
             case SequencerRecipeHandler r ->
-                extractSequencer(props, r, recipeIndex);
+                extractSequencer(recipe, r, recipeIndex);
             case PolymeriserRecipeHandler r ->
-                extractPolymeriser(props, r, recipeIndex);
+                extractPolymeriser(recipe, r, recipeIndex);
             case InoculatorRecipeHandler r ->
-                extractInoculator(props, r, recipeIndex);
+                extractInoculator(recipe, r, recipeIndex);
             case SplicerRecipeHandler r ->
-                extractSplicer(props, r, recipeIndex);
+                extractSplicer(recipe, r, recipeIndex);
             case IncubatorRecipeHandler r ->
-                extractIncubator(props, r, recipeIndex);
+                extractIncubator(recipe, r, recipeIndex);
             case AcclimatiserRecipeHandler _ ->
-                props.put(CoFHCompat.RF_COST, (long) ACCLIMATISER_ESTIMATED_RF);
+                recipe.property(CoFHCompat.RF_COST, (long) ACCLIMATISER_ESTIMATED_RF);
             default -> {}
         }
-
-        return props;
     }
 
-    private static void extractSequencer(final Map<RecipeProperty<?>, Object> props,
-        final TemplateRecipeHandler handler, final int recipeIndex) {
+    private static void extractSequencer(final RecipeContext.Builder recipe, final TemplateRecipeHandler handler,
+        final int recipeIndex) {
         final var recipes = RecipeHandlerAccess.getArecipes(handler);
         if (recipeIndex >= recipes.size()) return;
         final var cached = (SequencerRecipeHandler.CachedSequencerRecipe) recipes.get(recipeIndex);
@@ -160,12 +155,12 @@ public final class BinnieProvider implements PropertyProvider {
             - (cached.seq.item.getItemDamage() % (int) SEQUENCER_DAMAGE_MOD) / SEQUENCER_STRENGTH_DIVISOR;
         final float strength = 1.0f - temp * temp * SEQUENCER_STRENGTH_FACTOR;
         final int ticks = Math.max(1, (int) (SEQUENCER_BASE_LENGTH * strength));
-        props.put(RecipePropertyAPI.DURATION_TICKS, ticks);
-        props.put(CoFHCompat.RF_COST, (long) ticks * SEQUENCER_RF_PER_TICK);
+        recipe.property(RecipePropertyAPI.DURATION_TICKS, ticks);
+        recipe.property(CoFHCompat.RF_COST, (long) ticks * SEQUENCER_RF_PER_TICK);
     }
 
-    private static void extractPolymeriser(final Map<RecipeProperty<?>, Object> props,
-        final TemplateRecipeHandler handler, final int recipeIndex) {
+    private static void extractPolymeriser(final RecipeContext.Builder recipe, final TemplateRecipeHandler handler,
+        final int recipeIndex) {
         final var recipes = RecipeHandlerAccess.getArecipes(handler);
         if (recipeIndex >= recipes.size()) return;
         final var cached = (PolymeriserRecipeHandler.CachedPolymeriserRecipe) recipes.get(recipeIndex);
@@ -173,23 +168,23 @@ public final class BinnieProvider implements PropertyProvider {
         final int geneCount = Engineering.getGenes(cached.input.item).length;
         final boolean hasGold = cached.goldNugget != null && cached.goldNugget.item != null;
         final double factor = Math.max(1, geneCount) * (hasGold ? POLYMERISER_GOLD_FACTOR : 1.0);
-        props.put(RecipePropertyAPI.DURATION_TICKS, Math.max(1, (int) (Polymeriser.TIME_PERIOD * factor)));
-        props.put(CoFHCompat.RF_COST, (long) Math.max(1, (int) (Polymeriser.RF_COST * factor)));
+        recipe.property(RecipePropertyAPI.DURATION_TICKS, Math.max(1, (int) (Polymeriser.TIME_PERIOD * factor)));
+        recipe.property(CoFHCompat.RF_COST, (long) Math.max(1, (int) (Polymeriser.RF_COST * factor)));
     }
 
-    private static void extractInoculator(final Map<RecipeProperty<?>, Object> props,
-        final TemplateRecipeHandler handler, final int recipeIndex) {
+    private static void extractInoculator(final RecipeContext.Builder recipe, final TemplateRecipeHandler handler,
+        final int recipeIndex) {
         final var recipes = RecipeHandlerAccess.getArecipes(handler);
         if (recipeIndex >= recipes.size()) return;
         final var cached = (InoculatorRecipeHandler.CachedInoculatorRecipe) recipes.get(recipeIndex);
         final int factor = Math.max(
             1,
             cached.serum != null && cached.serum.item != null ? Engineering.getGenes(cached.serum.item).length : 1);
-        props.put(RecipePropertyAPI.DURATION_TICKS, Math.max(1, Inoculator.TIME_PERIOD * factor));
-        props.put(CoFHCompat.RF_COST, (long) Math.max(1, Inoculator.RF_COST * factor));
+        recipe.property(RecipePropertyAPI.DURATION_TICKS, Math.max(1, Inoculator.TIME_PERIOD * factor));
+        recipe.property(CoFHCompat.RF_COST, (long) Math.max(1, Inoculator.RF_COST * factor));
     }
 
-    private static void extractSplicer(final Map<RecipeProperty<?>, Object> props, final TemplateRecipeHandler handler,
+    private static void extractSplicer(final RecipeContext.Builder recipe, final TemplateRecipeHandler handler,
         final int recipeIndex) {
         final var recipes = RecipeHandlerAccess.getArecipes(handler);
         if (recipeIndex >= recipes.size()) return;
@@ -198,29 +193,29 @@ public final class BinnieProvider implements PropertyProvider {
             1,
             cached.serum != null && cached.serum.item != null ? Engineering.getGenes(cached.serum.item).length : 1) - 1)
             * SPLICER_GENE_FACTOR;
-        props.put(RecipePropertyAPI.DURATION_TICKS, Math.max(1, (int) (Splicer.TIME_PERIOD * factor)));
-        props.put(CoFHCompat.RF_COST, (long) Math.max(1, (int) (Splicer.RF_COST * factor)));
+        recipe.property(RecipePropertyAPI.DURATION_TICKS, Math.max(1, (int) (Splicer.TIME_PERIOD * factor)));
+        recipe.property(CoFHCompat.RF_COST, (long) Math.max(1, (int) (Splicer.RF_COST * factor)));
     }
 
-    private static void extractIncubator(final Map<RecipeProperty<?>, Object> props,
-        final TemplateRecipeHandler handler, final int recipeIndex) {
+    private static void extractIncubator(final RecipeContext.Builder recipe, final TemplateRecipeHandler handler,
+        final int recipeIndex) {
         final var recipes = RecipeHandlerAccess.getArecipes(handler);
         if (recipeIndex >= recipes.size()) return;
         final var cached = (IncubatorRecipeHandler.CachedIncubatorRecipe) recipes.get(recipeIndex);
 
         float tickChance = 1.0f;
         if (cached.input != null && cached.input.item != null) {
-            for (final IIncubatorRecipe recipe : Incubator.RECIPES) {
-                final ItemStack recipeInput = recipe.getInputStack();
+            for (final IIncubatorRecipe incubatorRecipe : Incubator.RECIPES) {
+                final ItemStack recipeInput = incubatorRecipe.getInputStack();
                 if (recipeInput != null && recipeInput.isItemEqual(cached.input.item)) {
-                    tickChance = recipe.getChance();
+                    tickChance = incubatorRecipe.getChance();
                     break;
                 }
             }
         }
         if (tickChance <= 0) tickChance = 1.0f;
         final int ticks = Math.max(1, (int) (1.0f / tickChance));
-        props.put(RecipePropertyAPI.DURATION_TICKS, ticks);
-        props.put(CoFHCompat.RF_COST, (long) (Incubator.ENERGY_PER_TICK / tickChance));
+        recipe.property(RecipePropertyAPI.DURATION_TICKS, ticks);
+        recipe.property(CoFHCompat.RF_COST, (long) (Incubator.ENERGY_PER_TICK / tickChance));
     }
 }

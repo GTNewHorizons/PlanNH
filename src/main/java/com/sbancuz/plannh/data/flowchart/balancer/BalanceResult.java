@@ -20,7 +20,7 @@ public sealed interface BalanceResult permits BalanceResult.Solved,BalanceResult
 
     Map<UUID, Balancer.NodeBalance> nodeBalances();
 
-    Map<RecipeProperty<?>, Long> propertyTotals();
+    Map<RecipeProperty<?>, Double> propertyTotals();
 
     double totalOperations();
 
@@ -31,13 +31,13 @@ public sealed interface BalanceResult permits BalanceResult.Solved,BalanceResult
     /**
      * Every display number plus the solve's {@link SolutionView} and its alternatives.
      */
-    record Solved(Map<UUID, Balancer.NodeBalance> nodeBalances, Map<RecipeProperty<?>, Long> propertyTotals,
+    record Solved(Map<UUID, Balancer.NodeBalance> nodeBalances, Map<RecipeProperty<?>, Double> propertyTotals,
         double totalOperations, int totalDurationTicks, List<Note> notes, SolutionView auto,
         @Nullable Alternatives alternatives) implements BalanceResult {}
 
     /**
      * NONE mode or a stalled solve: the configured counts and any notes, with no solved view.
      */
-    record Fallback(Map<UUID, Balancer.NodeBalance> nodeBalances, Map<RecipeProperty<?>, Long> propertyTotals,
+    record Fallback(Map<UUID, Balancer.NodeBalance> nodeBalances, Map<RecipeProperty<?>, Double> propertyTotals,
         double totalOperations, int totalDurationTicks, List<Note> notes) implements BalanceResult {}
 }

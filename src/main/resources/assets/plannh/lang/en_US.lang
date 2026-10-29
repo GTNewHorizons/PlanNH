@@ -183,11 +183,16 @@ plannh.gui.node.properties.none_hint=This recipe carries no properties to show
 ## The switcher on the node's option row, over how this recipe is read
 plannh.gui.node.extractor.prev=Previous extractor
 plannh.gui.node.extractor.next=Next extractor
+plannh.gui.node.extractor.choose=Click to choose an extractor.
+plannh.gui.node.settings.reset_hint=Middle-click this row to restore the default.
 
 ## GUI - Node settings
 plannh.gui.node.settings=Machine settings
 plannh.gui.node.settings.hide_hint=Click to fold these rows away
 plannh.gui.node.settings.show_hint=Click to show the rows again
+plannh.gui.node.settings.reset=Reset
+plannh.gui.node.settings.automatic=Using recipe defaults.
+plannh.gui.node.settings.manual=Custom value.
 
 ## GUI - Groups
 plannh.gui.group.add_machine_group=Add Machine Group

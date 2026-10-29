@@ -61,8 +61,7 @@ public class MachineGroupWidget extends GroupWidget<MachineGroup> {
 
     /**
      * Whether a machine group would accept this node. The group is one machine, so every member
-     * has to be the same one: identity is the NEI recipe handler rather than the machine's display
-     * name, which a player can rewrite.
+     * has to use the same handler name and profile, not the player's editable header.
      */
     public boolean acceptsNode(final Node node) {
         if (!node.isAvailable()) return true;
@@ -72,7 +71,12 @@ public class MachineGroupWidget extends GroupWidget<MachineGroup> {
         }
 
         return node.getMachineName()
-            .equals(mainNode.getMachineName());
+            .equals(mainNode.getMachineName())
+            && node.getMachineConfig()
+                .getProfile()
+                .equals(
+                    mainNode.getMachineConfig()
+                        .getProfile());
     }
 
     @Override

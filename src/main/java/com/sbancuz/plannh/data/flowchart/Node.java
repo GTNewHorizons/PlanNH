@@ -1,6 +1,5 @@
 package com.sbancuz.plannh.data.flowchart;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,13 +13,14 @@ import net.minecraftforge.fluids.FluidStack;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineConfig;
-import com.sbancuz.plannh.data.MachineProfileRegistry;
+import com.sbancuz.plannh.data.MachineProfile;
+import com.sbancuz.plannh.data.RecipeContext;
+import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.flowchart.resource.LongFluidStack;
 import com.sbancuz.plannh.data.flowchart.resource.LongItemStack;
-import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.properties.ResourceProperty;
-import com.sbancuz.plannh.data.provider.DefaultProvider;
+import com.sbancuz.plannh.data.setting.Settings;
 import com.sbancuz.plannh.mixins.PositionedStackAccessor;
 
 import codechicken.nei.recipe.IRecipeHandler;
@@ -35,8 +35,6 @@ public class Node extends GraphData {
 
     public static final String TYPE = "node";
 
-    private transient List<Port<?>> inputs = new ArrayList<>();
-    private transient List<Port<?>> outputs = new ArrayList<>();
     private final Map<Integer, ItemStack> inputConfigurations = new HashMap<>();
 
     // needed for coloring to be machine specific
@@ -44,7 +42,6 @@ public class Node extends GraphData {
     private final Recipe.RecipeId recipeId;
 
     private MachineConfig machineConfig;
-    private transient Map<RecipeProperty<?>, Object> properties = new HashMap<>();
 
     @Setter
     private transient boolean settingsOpen = true;
@@ -61,14 +58,13 @@ public class Node extends GraphData {
     @Setter
     private transient boolean propertiesOpen = true;
 
-    @Nullable
-    private transient PropertyProvider extractor;
-    private transient List<PropertyProvider> availableExtractors = List.of();
+    private transient MachineProfile selectedProfile;
+    private transient List<MachineProfile> availableProfiles = List.of();
+    private transient RecipeContext context = RecipeContext.builder()
+        .build();
     @Nullable
     private transient RecipeHandlerRef handlerRef;
     private transient boolean initialized;
-    @Setter
-    private int extractorIndex;
 
     public Node(IRecipeHandler handler, int recipeIndex) {
         super(UUID.randomUUID());
@@ -76,6 +72,7 @@ public class Node extends GraphData {
             : Recipe.RecipeId.of(handler, recipeIndex);
         machineName = handler.getRecipeName()
             .trim();
+        machineConfig = new MachineConfig((MachineProfile) null);
         header = machineName;
         init();
     }
@@ -85,9 +82,8 @@ public class Node extends GraphData {
         machineName = source.machineName;
         recipeId = source.recipeId;
         machineConfig = source.machineConfig == null ? null : new MachineConfig(source.machineConfig);
-        availableExtractors = source.availableExtractors;
-        extractorIndex = source.extractorIndex;
-        extractor = source.extractor;
+        selectedProfile = source.selectedProfile;
+        availableProfiles = source.availableProfiles;
         handlerRef = source.handlerRef;
         source.inputConfigurations.forEach((index, stack) -> inputConfigurations.put(index, stack.copy()));
     }
@@ -95,43 +91,99 @@ public class Node extends GraphData {
     /** Extracts only into a detached candidate; callers publish it after this completes. */
     private void readRecipe(final boolean restoreConfigurations) {
         if (!restoreConfigurations) inputConfigurations.clear();
-        final Map<RecipeProperty<?>, Object> extracted = extractor
-            .extract(this, handlerRef.handler, handlerRef.recipeIndex);
-        if (extracted != null) properties.putAll(extracted);
-        deduplicate(inputs);
-        deduplicate(outputs);
-        machineConfig.seedRouteDefaults(properties);
+        context = selectedProfile.getRecipeContext(handlerRef);
         if (!restoreConfigurations) return;
 
         inputConfigurations.keySet()
             .removeIf(
-                index -> index < 0 || index >= inputs.size()
-                    || inputs.get(index)
+                index -> index < 0 || index >= context.inputs()
+                    .size()
+                    || context.inputs()
+                        .get(index)
                         .getAllStacks()
                         .getFirst().items.length <= 1);
         inputConfigurations.forEach(this::setConfiguration);
     }
 
     private void applyRecipe(final Node candidate) {
-        inputs = candidate.inputs;
-        outputs = candidate.outputs;
-        properties = candidate.properties;
+        context = candidate.context;
         machineConfig = candidate.machineConfig;
         handlerRef = candidate.handlerRef;
-        availableExtractors = candidate.availableExtractors;
-        extractorIndex = candidate.extractorIndex;
+        availableProfiles = candidate.availableProfiles;
+        selectedProfile = candidate.selectedProfile;
         inputConfigurations.clear();
         inputConfigurations.putAll(candidate.inputConfigurations);
-        extractor = candidate.extractor;
     }
 
     public boolean isAvailable() {
-        return extractor != null;
+        return selectedProfile != null;
+    }
+
+    // TODO: remove
+    public RecipeContext recipeContext() {
+        return context;
+    }
+
+    public List<Port<?>> getInputs() {
+        return context.inputs();
+    }
+
+    public List<Port<?>> getOutputs() {
+        return context.outputs();
+    }
+
+    public Map<RecipeProperty<?>, Object> getProperties() {
+        return context.properties();
+    }
+
+    // TODO
+    public double inputMultiplier(final int index) {
+        if (!isAvailable() || machineConfig.getProfile() == null)
+            throw new IllegalStateException("Machine profile is unavailable");
+        return machineConfig.getProfile()
+            .inputMultiplier(machineConfig, recipeContext(), index);
+    }
+
+    public double outputMultiplier(final int index) {
+        if (!isAvailable() || machineConfig.getProfile() == null)
+            throw new IllegalStateException("Machine profile is unavailable");
+        return machineConfig.getProfile()
+            .outputMultiplier(machineConfig, recipeContext(), index);
+    }
+
+    // TODO: SEe this
+    public Map<RecipeProperty<?>, Object> displayProperties() {
+        return isAvailable() ? displayProperties(computeEffect()) : getProperties();
+    }
+
+    public Map<RecipeProperty<?>, Object> displayProperties(final EffectResult effect) {
+        final Map<RecipeProperty<?>, Object> values = new HashMap<>(getProperties());
+        values.putAll(effect.properties());
+        return values;
+    }
+
+    public int configuredCopies() {
+        return machineConfig.isCopiesTargeted() ? machineConfig.getCopies()
+            .copies()
+            : isAvailable() ? machineConfig.getProfile()
+                .value(Settings.MACHINES, machineConfig, recipeContext())
+                : machineConfig.getOrDefault(Settings.MACHINES);
+    }
+
+    public EffectResult computeEffect() {
+        if (!isAvailable()) throw new IllegalStateException("Machine profile is unavailable");
+        return machineConfig.computeEffect(recipeContext());
+    }
+
+    // TODO
+    public String getPresetName() {
+        return machineName;
     }
 
     @SuppressWarnings("unchecked")
     private void setConfiguration(int index, ItemStack itemStack) {
-        Port<?> port = inputs.get(index);
+        Port<?> port = context.inputs()
+            .get(index);
         ResourceProperty<?> type = port.getType();
         if (type == RecipePropertyAPI.ITEM) {
             ((Port<LongItemStack>) port).setValue(new LongItemStack(itemStack.copy(), port.getAmount()));
@@ -152,65 +204,54 @@ public class Node extends GraphData {
             });
     }
 
-    private static void deduplicate(List<Port<?>> ports) {
-        for (int i = 0; i < ports.size(); i++) {
-            final Port<?> port = ports.get(i);
-            for (int j = i + 1; j < ports.size();) {
-                if (!port.canConnect(ports.get(j))) {
-                    j++;
-                    continue;
-                }
-                port.merge(ports.remove(j));
-            }
-        }
-    }
+    /** Selects an explicit picker entry, publishing the extracted recipe only after it succeeds. */
+    public boolean selectProfile(final int idx) {
+        if (handlerRef == null || idx < 0 || idx >= availableProfiles.size()) return false;
 
-    public boolean switchExtractor(final int delta) {
-        if (!isAvailable() || availableExtractors.size() < 2) return false;
         final Node candidate = new Node(this);
-        candidate.extractorIndex = Math.floorMod(extractorIndex + delta, availableExtractors.size());
-        candidate.extractor = availableExtractors.get(candidate.extractorIndex);
-        final String pid = candidate.extractor.getProfileId(handlerRef.handler, handlerRef.recipeIndex);
-        candidate.machineConfig.setProfileId(pid == null ? MachineProfileRegistry.defaultId() : pid);
+        candidate.selectedProfile = availableProfiles.get(idx);
+        candidate.machineConfig.selectProfile(candidate.selectedProfile);
+
         candidate.readRecipe(false);
+
         applyRecipe(candidate);
         return true;
-    }
-
-    private static int pickBestExtractor(final List<PropertyProvider> providers, final RecipeHandlerRef ref) {
-        for (int i = 0; i < providers.size(); i++) {
-            if (providers.get(i)
-                .canCraft(ref.handler, ref.recipeIndex)) return i;
-        }
-        return 0;
     }
 
     public void init() {
         if (initialized) return;
         initialized = true;
-        inputs = new ArrayList<>();
-        outputs = new ArrayList<>();
-        properties = new HashMap<>();
-        availableExtractors = List.of();
-        extractor = null;
+        context = RecipeContext.builder()
+            .build();
+        availableProfiles = List.of();
+        selectedProfile = null;
         handlerRef = null;
         try {
+            if (recipeId == null) return;
             final RecipeHandlerRef ref = RecipeHandlerRef.of(recipeId);
             if (ref == null) return;
-            final List<PropertyProvider> providers = RecipePropertyAPI.getExtractors(ref.handler.getClass());
-            int index = extractorIndex;
-            if (index < 0 || index >= providers.size()) index = 0;
-            if (machineConfig == null) index = pickBestExtractor(providers, ref);
+
+            availableProfiles = RecipePropertyAPI.getExtractors(ref.handler.getClass())
+                .stream()
+                .filter(provider -> provider.canCraft(ref.handler, ref.recipeIndex))
+                .flatMap(
+                    provider -> provider.getProfiles(ref.handler, ref.recipeIndex)
+                        .stream())
+                .toList();
+
+            handlerRef = ref;
+            if (availableProfiles.isEmpty()) return;
+            final int index = machineConfig == null ? 0
+                : Math.max(0, availableProfiles.indexOf(machineConfig.getProfile()));
 
             final Node candidate = new Node(this);
             candidate.handlerRef = ref;
-            candidate.availableExtractors = providers;
-            candidate.extractorIndex = index;
-            candidate.extractor = providers.isEmpty() ? DefaultProvider.INSTANCE : providers.get(index);
+            candidate.selectedProfile = availableProfiles.get(index);
             if (candidate.machineConfig == null) {
-                final String pid = candidate.extractor.getProfileId(ref.handler, ref.recipeIndex);
-                candidate.machineConfig = new MachineConfig(
-                    MachineProfileRegistry.get(pid == null ? MachineProfileRegistry.defaultId() : pid));
+                candidate.machineConfig = new MachineConfig(candidate.selectedProfile);
+            } else {
+                // Resolving the transient profile on load must not reset saved user overrides.
+                candidate.machineConfig.setProfile(candidate.selectedProfile);
             }
             candidate.readRecipe(true);
             applyRecipe(candidate);
@@ -233,15 +274,18 @@ public class Node extends GraphData {
     }
 
     // TODO: Find a better way to make the tests work
-    public Node(final UUID id, String name, final int x, final int y) {
+    /** Creates a detached node from an already extracted recipe. */
+    public Node(final UUID id, final String name, final int x, final int y, final MachineProfile profile,
+        final RecipeContext context) {
         super(id);
         this.x = x;
         this.y = y;
-        this.machineConfig = new MachineConfig();
+        this.machineConfig = new MachineConfig(profile);
+        this.context = context;
+        selectedProfile = profile;
+        availableProfiles = List.of(profile);
         recipeId = null;
         machineName = name;
-        extractor = DefaultProvider.INSTANCE;
-        availableExtractors = List.of(DefaultProvider.INSTANCE);
         initialized = true;
     }
 }

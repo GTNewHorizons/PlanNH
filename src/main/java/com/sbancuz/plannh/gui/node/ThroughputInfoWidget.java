@@ -100,9 +100,15 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
         lastOperations = operations;
         lastDuration = duration;
 
+        if (balance != null && !ThroughputFold.hasPlannedThroughput(balance)) {
+            lines.removeAll();
+            row = null;
+            scheduleResize();
+            return;
+        }
+
         final IKey copies;
         if (operations < 0) copies = IKey.lang(LANG + "unbalanced");
-        else if (operations <= 0) copies = IKey.lang(LANG + "unplanned");
         else copies = IKey.comp(IKey.lang(LANG + "copies_needed"), TooltipBuilder.multiple(operations));
 
         lines.removeAll();
@@ -167,10 +173,10 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
         // A mode that pins nothing has nothing to choose between, so there is no fold to describe.
         if (held.isEmpty()) return;
 
-        final MachineConfig config = parent.getData()
+        final MachineConfig cfg = parent.getData()
             .getMachineConfig();
-        final Pin selected = config.getTargetKind();
-        final TargetKind kind = TargetKind.of(config, selected);
+        final Pin selected = cfg.getTargetKind();
+        final TargetKind kind = TargetKind.of(cfg, selected);
 
         out.group(TARGET + "title", rows -> {
             for (final Pin pin : held) {
@@ -185,20 +191,22 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
     @SuppressWarnings("unchecked")
     private void writeSettings(final TooltipBuilder out) {
         final Node node = parent.getData();
-        final MachineConfig config = node.getMachineConfig();
+        final MachineConfig cfg = node.getMachineConfig();
+        final RecipeContext ctx = node.recipeContext();
 
         out.group(LANG + "settings", rows -> {
-            for (final SettingDef<?> def : visible(config, node)) {
-                final Object value = config.get(def);
+            for (final SettingDef<?> def : visible(cfg, ctx)) {
+                final Object value = cfg.getProfile()
+                    .value(def, cfg, ctx);
                 if (value != null) ((SettingDef<Object>) def).tooltip(value)
                     .accept(rows);
             }
         });
     }
 
-    private static List<SettingDef<?>> visible(final MachineConfig config, final Node node) {
-        return config.getProfile()
-            .visibleSettings(new RecipeContext(node.getProperties()), config)
+    private static List<SettingDef<?>> visible(final MachineConfig cfg, final RecipeContext ctx) {
+        return cfg.getProfile()
+            .visibleSettings(cfg, ctx)
             .<SettingDef<?>>map(def -> def)
             .toList();
     }
@@ -226,9 +234,9 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
     /** Every summary property this machine actually spends, sorted so the list does not jump around. */
     @SuppressWarnings("unchecked")
     private static void properties(final TooltipBuilder out, final Node node) {
+        final Map<RecipeProperty<?>, Object> properties = node.displayProperties();
         final List<SummaryProperty> found = new ArrayList<>();
-        for (final Map.Entry<RecipeProperty<?>, Object> entry : node.getProperties()
-            .entrySet()) {
+        for (final Map.Entry<RecipeProperty<?>, Object> entry : properties.entrySet()) {
             if (!(entry.getKey() instanceof final SummaryProperty prop)) continue;
             if (!(entry.getValue() instanceof final Number num) || num.floatValue() == 0) continue;
             found.add(prop);
@@ -237,8 +245,7 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
 
         for (final SummaryProperty prop : found) {
             final String name = prop.formatDisplayName(prop.getDefaultValue());
-            final double value = ((Number) node.getProperties()
-                .get(prop)).doubleValue();
+            final double value = ((Number) properties.get(prop)).doubleValue();
             // A property named per tick is energy, and the pack marks energy wherever it turns up.
             out.detail(name, name.endsWith("/t") ? TooltipTheme.Role.POWER : TooltipTheme.Role.BODY,
                 prop.formatAmount(value));
@@ -247,9 +254,13 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
 
     /** The recipe's own craft time, which a machine knows before it has ever been solved. */
     private static int durationTicks(final Node node) {
-        final Object raw = node.getProperties()
-            .get(RecipePropertyAPI.DURATION_TICKS);
-        return raw instanceof final Number n ? n.intValue() : 0;
+        if (node.isAvailable()) {
+            try {
+                return Math.max(0, node.computeEffect().durationTicks());
+            } catch (final RuntimeException ignored) {}
+        }
+        final Object raw = node.getProperties().get(RecipePropertyAPI.DURATION_TICKS);
+        return raw instanceof final Number n ? Math.max(0, n.intValue()) : 0;
     }
 
     private static RateUnit rateUnit() {

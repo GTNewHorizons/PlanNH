@@ -1,9 +1,12 @@
 package com.sbancuz.plannh.data.provider;
 
+import java.util.List;
+
+import com.cleanroommc.modularui.api.drawable.IDrawable;
+import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
-import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
@@ -17,28 +20,32 @@ public final class DefaultProvider implements PropertyProvider {
 
     private DefaultProvider() {}
 
-    @Override
-    public void register() {
-        MachineProfileRegistry.register(
-            MachineProfile.builder("default", "Default")
-                .setting(Settings.MACHINES)
-                .setting(Settings.TICK_MODIFIER)
-                .setting(Settings.DURATION_TICKS)
-                .effect(DefaultProvider::noopEffect)
-                .build());
+    private IDrawable icon(final IRecipeHandler handler, final int recipeIndex) {
+        return GuiTextures.PROCESSOR;
     }
 
     @Override
-    public String getProfileId(final IRecipeHandler handler, final int recipeIndex) {
-        return "default";
+    public void register() {}
+
+    @Override
+    public List<MachineProfile> getProfiles(final IRecipeHandler handler, final int recipeIndex) {
+        return canCraft(handler, recipeIndex) ? List.of(profile) : List.of();
     }
 
-    public static EffectResult noopEffect(final MachineConfig config, final RecipeContext ctx) {
-        int d = config.get(Settings.DURATION_TICKS);
+    public static EffectResult noopEffect(final MachineConfig cfg, final RecipeContext ctx) {
+        int d = cfg.getOrDefault(Settings.DURATION_TICKS);
         if (d <= 0) {
-            final Object dur = ctx.properties().get(RecipePropertyAPI.DURATION_TICKS);
-            d = dur instanceof final Number n ? n.intValue() : 0;
+            d = ctx.get(RecipePropertyAPI.DURATION_TICKS);
         }
-        return new EffectResult(d, 0, config.get(Settings.MACHINES));
+        return new EffectResult(d, 0, cfg.getOrDefault(Settings.MACHINES));
     }
+
+    private final MachineProfile profile = MachineProfile.builder("default")
+        .setting(Settings.MACHINES)
+        .setting(Settings.TICK_MODIFIER)
+        .setting(Settings.DURATION_TICKS)
+        .effect(DefaultProvider::noopEffect)
+        .icon(this::icon)
+        .provider(this)
+        .build();
 }

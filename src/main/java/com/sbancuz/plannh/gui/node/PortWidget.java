@@ -1,6 +1,5 @@
 package com.sbancuz.plannh.gui.node;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
@@ -17,7 +16,6 @@ import com.cleanroommc.modularui.api.widget.IDraggable;
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.GuiTextures;
-import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
@@ -25,12 +23,9 @@ import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widget.sizer.Area;
-import com.cleanroommc.modularui.widgets.ButtonWidget;
-import com.cleanroommc.modularui.widgets.layout.Grid;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
-import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Plan;
@@ -41,7 +36,8 @@ import com.sbancuz.plannh.data.flowchart.resource.LongItemStack;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.GuiHelper.RateUnit;
-import com.sbancuz.plannh.gui.PlannhColors;
+import com.sbancuz.plannh.gui.common.ItemSelectionGrid;
+import com.sbancuz.plannh.gui.common.SelectionPicker;
 import com.sbancuz.plannh.gui.edge.ArrowWidget;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
@@ -65,7 +61,6 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     // needed for proper positioning of ports
     private static final int PORT_OFFSET_X = 1;
     private static final int PORT_OFFSET_Y = -1;
-    private static final int PORT_CONFIG_GRID_WIDTH = 9;
     private static final int PORT_SIZE = 18;
 
     private final CanvasWidget canvas;
@@ -90,10 +85,9 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     @Getter
     private final boolean input;
 
-    private boolean isConfiguring = false;
-    private final Grid grid;
     private final NodeWidget parent;
     private final Map<IntIntPair, PortWidget> siblingPortWidgets;
+    private SelectionPicker picker;
 
     public PortWidget(NodeWidget parent, IntIntPair index, boolean isInput, PortType portType, int yShift,
         Map<IntIntPair, PortWidget> siblingPortWidgets) {
@@ -126,65 +120,28 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         tooltipAutoUpdate(true);
 
         if (configurable()) {
-            List<ItemStack> items = new ArrayList<>(List.of(stack.items));
-            items.addFirst(null);
-
-            grid = new Grid().name("port.config.grid")
-                .coverChildren()
-                .gridOfWidthElements(
-                    PORT_CONFIG_GRID_WIDTH,
-                    items,
-                    (_, _, _, itemStack) -> createConfigButton(itemStack));
-
             overlay(
                 GuiTextures.GEAR.asIcon()
                     .size(9)
                     .alignment(Alignment.TopRight));
-
-            addTooltipLine("Right-Click to Configure");
-        } else grid = null;
+        }
     }
 
-    private ButtonWidget<?> createConfigButton(@Nullable ItemStack itemStack) {
-        ButtonWidget<?> button = new ButtonWidget<>().name("port.config.button")
-            .padding(1)
-            .coverChildren()
-            .background(
-                new Rectangle().color(Color.GREY.darker(2)),
-                new Rectangle().hollow()
-                    .color(PlannhColors.CONTEXT_BORDER.getColor())) // todo this with themes
-            .onMousePressed(_ -> {
-                PlanAPI.recordEdit(canvas.getGraph(), () -> {
-                    // remove all arrows pointing to this port and its siblings, since config changed
-                    List<ArrowWidget> arrowWidgets = parent.getArrowWidgets();
-                    List<ArrowWidget> removed = arrowWidgets.stream()
-                        .filter(
-                            arrowWidget -> arrowWidget.getEdge()
-                                .getTargetInputIndex()
-                                .leftInt() == index.leftInt())
-                        .toList();
-                    removed.forEach(ArrowWidget::removeFromGraph);
-                    arrowWidgets.removeAll(removed);
-
-                    if (itemStack != null) setPermutationToStack(itemStack);
-                    else enablePermutations();
-                });
-                isConfiguring = false;
-                canvas.remove(grid);
-                return true;
-            })
-            .onKeyPressed((_, _) -> true);
-
-        if (itemStack == null) button.child(
-            GuiTextures.REFRESH.asWidget()
-                .size(PORT_SIZE - 2)
-                .addTooltipLine("Reset"));
-        else button.child(
-            new ItemDrawable(itemStack).asWidget()
-                .size(PORT_SIZE - 2)
-                .tooltipBuilder(t -> t.addFromItem(itemStack)));
-
-        return button;
+    private void selectConfiguration(@Nullable final ItemStack itemStack) {
+        parent.commitEdit(() -> {
+            final List<ArrowWidget> arrows = parent.getArrowWidgets();
+            final List<ArrowWidget> removed = arrows.stream()
+                .filter(
+                    arrow -> arrow.getEdge()
+                        .getTargetInputIndex()
+                        .leftInt() == index.leftInt())
+                .toList();
+            removed.forEach(ArrowWidget::removeFromGraph);
+            arrows.removeAll(removed);
+            if (itemStack == null) enablePermutations();
+            else setPermutationToStack(itemStack);
+        });
+        if (picker != null) picker.close();
     }
 
     @Override
@@ -205,25 +162,13 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     @Override
     public @NotNull Result onMousePressed(int mouseButton) {
         if (mouseButton == 1 && configurable()) {
-            if (!isConfiguring) {
-                // child of the canvas for proper z-layer positioning
-                canvas.child(getGridWithPosition());
-                isConfiguring = true;
-            } else {
-                canvas.remove(grid);
-                isConfiguring = false;
-            }
+            if (picker == null) picker = new SelectionPicker(
+                this,
+                () -> new ItemSelectionGrid(List.of(stack.items), this::selectConfiguration));
+            picker.toggle();
             return Result.SUCCESS;
         }
         return Result.ACCEPT;
-    }
-
-    private Grid getGridWithPosition() {
-        Area area = getArea();
-
-        return grid.pos(
-            canvas.getCanvasPosX(area.x) - PORT_SIZE * Math.min(PORT_CONFIG_GRID_WIDTH, stack.items.length + 1),
-            canvas.getCanvasPosY(area.y));
     }
 
     @SuppressWarnings("unchecked")
@@ -294,9 +239,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
 
     public static void writeThroughput(final TooltipBuilder out, final Node node, final Port<?> port,
         final boolean input, final int portIndex, final double perCycle, final int duration) {
-        final MachineConfig config = node.getMachineConfig();
-
-        final float bonus = input ? config.inputMultiplier(portIndex) : config.outputMultiplier(portIndex);
+        final double bonus = input ? node.inputMultiplier(portIndex) : node.outputMultiplier(portIndex);
 
         // A rule between this and what came before it - unless it is the first thing in the tooltip,
         // where a rule would be a heading over nothing.
@@ -342,7 +285,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
 
     @Override
     public boolean onDragStart(int button) {
-        if (button == 0 && portType.supportsEdge && !isConfiguring) {
+        if (button == 0 && portType.supportsEdge && (picker == null || !picker.isOpen())) {
             arrowWidgetInCreation = new ArrowWidget(canvas);
             canvas.child(arrowWidgetInCreation);
 

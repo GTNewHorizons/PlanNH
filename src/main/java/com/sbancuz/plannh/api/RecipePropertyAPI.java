@@ -1,6 +1,6 @@
 package com.sbancuz.plannh.api;
 
-import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 import javax.annotation.Nonnull;
@@ -18,7 +18,6 @@ import com.sbancuz.plannh.data.flowchart.resource.LongItemStack;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.properties.ResourceProperty;
-import com.sbancuz.plannh.data.provider.DefaultProvider;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.IngredientColors;
 import com.sbancuz.plannh.gui.PlannhColors;
@@ -124,19 +123,13 @@ public final class RecipePropertyAPI {
 
     @Nonnull
     public static List<PropertyProvider> getExtractors(final Class<?> handlerClass) {
-        final List<PropertyProvider> result = new ArrayList<>();
+        final LinkedHashSet<PropertyProvider> result = new LinkedHashSet<>();
         Class<?> clazz = handlerClass;
         while (clazz != null) {
             result.addAll(extractors.get(clazz));
             clazz = clazz.getSuperclass();
         }
-        return result;
-    }
-
-    @Nonnull
-    public static PropertyProvider getExtractor(final Class<?> handlerClass) {
-        final List<PropertyProvider> list = getExtractors(handlerClass);
-        return list.isEmpty() ? DefaultProvider.INSTANCE : list.getFirst();
+        return List.copyOf(result);
     }
 
     public static void reset() {

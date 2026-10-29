@@ -1,30 +1,45 @@
 package com.sbancuz.plannh.data.provider;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
+import com.cleanroommc.modularui.api.drawable.IDrawable;
+import com.cleanroommc.modularui.drawable.GuiTextures;
+import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
-import com.sbancuz.plannh.data.MachineProfileRegistry;
+import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.effect.Effects;
-import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
-import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.recipe.FurnaceRecipeHandler;
 import codechicken.nei.recipe.IRecipeHandler;
+import ganymedes01.etfuturum.ModBlocks;
 
 // TODO: Make a PR to expose these constants
 // Smoker and Blast Furnace cook at half the speed of a vanilla furnace (200/2 = 100 ticks)
 // Matches vanilla Minecraft 1.13+ behavior (smoker/blast furnace cook in 100 ticks)
 public class EFRProvider implements PropertyProvider {
 
+    @Nonnull
+    private IDrawable icon(final IRecipeHandler handler, final int recipeIndex) {
+        if (!(handler instanceof FurnaceRecipeHandler furnace)) return GuiTextures.BLOCK;
+        return switch (furnace.getOverlayIdentifier()) {
+            case SMOKER_OVERLAY -> ModBlocks.SMOKER.isEnabled() ? new ItemDrawable(ModBlocks.SMOKER.get())
+                : GuiTextures.BLOCK;
+            case BLAST_FURNACE_OVERLAY -> ModBlocks.BLAST_FURNACE.isEnabled()
+                ? new ItemDrawable(ModBlocks.BLAST_FURNACE.get())
+                : GuiTextures.BLOCK;
+            default -> GuiTextures.BLOCK;
+        };
+    }
+
     public static final String SMOKER_OVERLAY = "etfuturum.smoker";
     public static final String BLAST_FURNACE_OVERLAY = "etfuturum.blastfurnace";
+    public static final String SMOKER_MACHINE_ID = "etfuturum:smoker";
+    public static final String BLAST_FURNACE_MACHINE_ID = "etfuturum:blast_furnace";
 
     private static final int COOK_TICKS = 100;
 
@@ -35,14 +50,6 @@ public class EFRProvider implements PropertyProvider {
     @Override
     public void register() {
         registerHandlers(this);
-        MachineProfileRegistry.register(
-            MachineProfile.builder("etfuturum", "Et Futurum Requiem")
-                .setting(Settings.MACHINES)
-                .setting(Settings.TICK_MODIFIER)
-                .effect(
-                    Effects.durationFromHandler()
-                        .applyParallelism())
-                .build());
     }
 
     @Override
@@ -53,25 +60,37 @@ public class EFRProvider implements PropertyProvider {
     }
 
     @Override
-    @Nullable
-    public String getProfileId(final IRecipeHandler handler, final int recipeIndex) {
-        if (!(handler instanceof FurnaceRecipeHandler fh)) return null;
+    public List<MachineProfile> getProfiles(final IRecipeHandler handler, final int recipeIndex) {
+        return canCraft(handler, recipeIndex) ? List.of(profile) : List.of();
+    }
+
+    @Override
+    public String getMachineId(final IRecipeHandler handler, final int recipeIndex) {
+        if (!(handler instanceof FurnaceRecipeHandler fh))
+            return PropertyProvider.super.getMachineId(handler, recipeIndex);
         return switch (fh.getOverlayIdentifier()) {
-            case SMOKER_OVERLAY, BLAST_FURNACE_OVERLAY -> "etfuturum";
-            default -> null;
+            case SMOKER_OVERLAY -> SMOKER_MACHINE_ID;
+            case BLAST_FURNACE_OVERLAY -> BLAST_FURNACE_MACHINE_ID;
+            default -> PropertyProvider.super.getMachineId(handler, recipeIndex);
         };
     }
 
     @Override
-    @Nonnull
-    public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler,
-        final int recipeIndex) {
-        final Map<RecipeProperty<?>, Object> props = new HashMap<>(
-            PropertyProvider.super.extract(node, handler, recipeIndex));
-        if (!(handler instanceof FurnaceRecipeHandler fh)) return props;
+    public void populate(final RecipeContext.Builder recipe, final IRecipeHandler handler, final int recipeIndex) {
+        PropertyProvider.super.populate(recipe, handler, recipeIndex);
+        if (!(handler instanceof FurnaceRecipeHandler fh)) return;
         final String overlay = fh.getOverlayIdentifier();
-        if (!SMOKER_OVERLAY.equals(overlay) && !BLAST_FURNACE_OVERLAY.equals(overlay)) return props;
-        props.put(RecipePropertyAPI.DURATION_TICKS, COOK_TICKS);
-        return props;
+        if (!SMOKER_OVERLAY.equals(overlay) && !BLAST_FURNACE_OVERLAY.equals(overlay)) return;
+        recipe.property(RecipePropertyAPI.DURATION_TICKS, COOK_TICKS);
     }
+
+    private final MachineProfile profile = MachineProfile.builder("etfuturum")
+        .setting(Settings.MACHINES)
+        .setting(Settings.TICK_MODIFIER)
+        .effect(
+            Effects.durationFromHandler()
+                .applyParallelism())
+        .icon(this::icon)
+        .provider(this)
+        .build();
 }

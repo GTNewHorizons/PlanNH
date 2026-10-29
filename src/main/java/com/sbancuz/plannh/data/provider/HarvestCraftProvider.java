@@ -1,18 +1,16 @@
 package com.sbancuz.plannh.data.provider;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
+import com.cleanroommc.modularui.api.drawable.IDrawable;
+import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
-import com.sbancuz.plannh.data.MachineProfileRegistry;
+import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.effect.Effects;
-import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
-import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.PositionedStack;
@@ -33,6 +31,21 @@ import tonius.neiintegration.mods.harvestcraft.RecipeHandlerQuern;
 public class HarvestCraftProvider implements PropertyProvider {
 
     private static final String PROFILE_ID = "harvestcraft:basic";
+
+    private final MachineProfile PROFILE = MachineProfile.builder(PROFILE_ID)
+        .setting(Settings.MACHINES)
+        .setting(Settings.TICK_MODIFIER)
+        .effect(
+            Effects.clearCost()
+                .applyParallelism())
+        .provider(this)
+        .icon(this::icon)
+        .build();
+
+    @Nonnull
+    private IDrawable icon(final IRecipeHandler handler, final int recipeIndex) {
+        return GuiTextures.FILE;
+    }
 
     private static final int PRESSER_TICKS = 125;
     private static final int OVEN_TICKS = 200;
@@ -58,47 +71,29 @@ public class HarvestCraftProvider implements PropertyProvider {
         RecipePropertyAPI.registerExtractor(RecipeHandlerQuern.class, this);
         RecipePropertyAPI.registerExtractor(RecipeHandlerApiary.class, this);
 
-        MachineProfileRegistry.register(
-            MachineProfile.builder(PROFILE_ID, "HarvestCraft")
-                .setting(Settings.MACHINES)
-                .setting(Settings.TICK_MODIFIER)
-                .effect(
-                    Effects.clearCost()
-                        .applyParallelism())
-                .build());
     }
 
     @Override
-    public boolean canCraft(final IRecipeHandler handler, final int recipeIndex) {
-        return getProfileId(handler, recipeIndex) != null;
-    }
-
-    @Override
-    @Nullable
-    public String getProfileId(final IRecipeHandler handler, final int recipeIndex) {
+    public List<MachineProfile> getProfiles(final IRecipeHandler handler, final int recipeIndex) {
         return switch (handler) {
             case RecipeHandlerPresser _, RecipeHandlerPresserOld _, RecipeHandlerOven _,
-                 RecipeHandlerChurn _, RecipeHandlerQuern _, RecipeHandlerApiary _ -> PROFILE_ID;
-            default -> null;
+                 RecipeHandlerChurn _, RecipeHandlerQuern _, RecipeHandlerApiary _ -> List.of(PROFILE);
+            default -> List.of();
         };
     }
 
     @Override
-    @Nonnull
-    public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler,
+    public void populate(final RecipeContext.Builder recipe, final IRecipeHandler handler,
         final int recipeIndex) {
-        final Map<RecipeProperty<?>, Object> props = new HashMap<>(
-            PropertyProvider.super.extract(node, handler, recipeIndex));
+        PropertyProvider.super.populate(recipe, handler, recipeIndex);
 
         switch (handler) {
-            case RecipeHandlerPresser _, RecipeHandlerPresserOld _ -> props.put(RecipePropertyAPI.DURATION_TICKS, PRESSER_TICKS);
-            case RecipeHandlerOven _ -> props.put(RecipePropertyAPI.DURATION_TICKS, OVEN_TICKS);
-            case RecipeHandlerChurn _ -> props.put(RecipePropertyAPI.DURATION_TICKS, CHURN_TICKS);
-            case RecipeHandlerQuern _ -> props.put(RecipePropertyAPI.DURATION_TICKS, QUERN_TICKS);
-            case RecipeHandlerApiary _ -> props.put(RecipePropertyAPI.DURATION_TICKS, APIARY_TICKS);
+            case RecipeHandlerPresser _, RecipeHandlerPresserOld _ -> recipe.property(RecipePropertyAPI.DURATION_TICKS, PRESSER_TICKS);
+            case RecipeHandlerOven _ -> recipe.property(RecipePropertyAPI.DURATION_TICKS, OVEN_TICKS);
+            case RecipeHandlerChurn _ -> recipe.property(RecipePropertyAPI.DURATION_TICKS, CHURN_TICKS);
+            case RecipeHandlerQuern _ -> recipe.property(RecipePropertyAPI.DURATION_TICKS, QUERN_TICKS);
+            case RecipeHandlerApiary _ -> recipe.property(RecipePropertyAPI.DURATION_TICKS, APIARY_TICKS);
             default -> {}
         }
-
-        return props;
     }
 }

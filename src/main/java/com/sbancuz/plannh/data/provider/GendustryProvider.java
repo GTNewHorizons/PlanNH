@@ -1,10 +1,8 @@
 package com.sbancuz.plannh.data.provider;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 import net.bdew.gendustry.config.Fluids;
 import net.bdew.gendustry.machines.extractor.MachineExtractor;
@@ -25,15 +23,15 @@ import net.bdew.gendustry.nei.SamplerHandler;
 import net.bdew.gendustry.nei.TransposerHandler;
 import net.minecraftforge.fluids.FluidStack;
 
+import com.cleanroommc.modularui.api.drawable.IDrawable;
+import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
-import com.sbancuz.plannh.data.MachineProfileRegistry;
+import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.effect.steps.CoFHCompat;
-import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
-import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.recipe.IRecipeHandler;
@@ -42,6 +40,22 @@ public final class GendustryProvider implements PropertyProvider {
 
     private static final String PROFILE_ID = "gendustry:basic";
     private static final float RF_MJ_RATIO = 10f;
+
+    private final MachineProfile PROFILE = MachineProfile.builder(PROFILE_ID)
+        .setting(Settings.MACHINES)
+        .setting(Settings.TICK_MODIFIER)
+        .effect(
+            Effects.durationFromHandler()
+                .amortizeCost(CoFHCompat.RF_COST)
+                .applyParallelism())
+        .provider(this)
+        .icon(this::icon)
+        .build();
+
+    @Nonnull
+    private IDrawable icon(final IRecipeHandler handler, final int recipeIndex) {
+        return GuiTextures.COLOR_WHEEL;
+    }
 
     @Override
     public void register() {
@@ -54,39 +68,22 @@ public final class GendustryProvider implements PropertyProvider {
         RecipePropertyAPI.registerExtractor(ReplicatorHandler.class, this);
         RecipePropertyAPI.registerExtractor(TransposerHandler.class, this);
 
-        MachineProfileRegistry.register(
-            MachineProfile.builder(PROFILE_ID, "Gendustry")
-                .setting(Settings.MACHINES)
-                .setting(Settings.TICK_MODIFIER)
-                .effect(
-                    Effects.durationFromHandler()
-                        .amortizeCost(CoFHCompat.RF_COST)
-                        .applyParallelism())
-                .build());
     }
 
     @Override
-    public boolean canCraft(final IRecipeHandler handler, final int recipeIndex) {
-        return getProfileId(handler, recipeIndex) != null;
-    }
-
-    @Override
-    @Nullable
-    public String getProfileId(final IRecipeHandler handler, final int recipeIndex) {
+    public List<MachineProfile> getProfiles(final IRecipeHandler handler, final int recipeIndex) {
         return switch (handler) {
             case MutatronHandler _, MutagenProducerHandler _, SamplerHandler _,
                  ImprinterHandler _, ExtractorHandler _, LiquifierHandler _,
-                 ReplicatorHandler _, TransposerHandler _ -> PROFILE_ID;
-            default -> null;
+                 ReplicatorHandler _, TransposerHandler _ -> List.of(PROFILE);
+            default -> List.of();
         };
     }
 
     @Override
-    @Nonnull
-    public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler,
+    public void populate(final RecipeContext.Builder recipe, final IRecipeHandler handler,
         final int recipeIndex) {
-        final Map<RecipeProperty<?>, Object> props = new HashMap<>(
-            PropertyProvider.super.extract(node, handler, recipeIndex));
+        PropertyProvider.super.populate(recipe, handler, recipeIndex);
 
         final float mj;
         final float rate;
@@ -95,7 +92,7 @@ public final class GendustryProvider implements PropertyProvider {
             case MutatronHandler _ -> {
                 mj = MachineMutatron.mjPerItem();
                 rate = MachineMutatron.powerUseRate() * MachineMutatron.maxStoredEnergy();
-                node.getInputs().add(Port.fluid(new FluidStack(Fluids.mutagen(), MachineMutatron.mutagenPerItem()), 1f, 32, 19));
+                recipe.input(Port.fluid(new FluidStack(Fluids.mutagen(), MachineMutatron.mutagenPerItem()), 1f, 32, 19));
             }
             case MutagenProducerHandler _ -> {
                 mj = MachineMutagenProducer.mjPerItem();
@@ -126,14 +123,12 @@ public final class GendustryProvider implements PropertyProvider {
                 rate = MachineTransposer.powerUseRate() * MachineTransposer.maxStoredEnergy();
             }
             default -> {
-                return props;
+                return;
             }
         }
 
         final int ticks = (int) (mj / rate);
-        props.put(RecipePropertyAPI.DURATION_TICKS, Math.max(1, ticks));
-        props.put(CoFHCompat.RF_COST, (long) (mj * RF_MJ_RATIO));
-
-        return props;
+        recipe.property(RecipePropertyAPI.DURATION_TICKS, Math.max(1, ticks));
+        recipe.property(CoFHCompat.RF_COST, (long) (mj * RF_MJ_RATIO));
     }
 }

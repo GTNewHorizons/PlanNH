@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Node;
@@ -106,10 +105,9 @@ public final class BalanceView {
     private static void collectConfigured(final Node node, final Set<PortRef> wired, final boolean input,
         final List<Boundary> out) {
         if (!node.isAvailable()) return;
-        final MachineConfig cfg = node.getMachineConfig();
-        final double count = cfg.configuredCopies();
+        final double count = node.configuredCopies();
         if (count <= 0) return;
-        final var eff = cfg.computeEffect(node.getProperties());
+        final var eff = node.computeEffect();
         final int durTicks = Math.max(1, eff.durationTicks());
         final int tf = eff.throughputFactor();
         final List<Port<?>> ports = input ? node.getInputs() : node.getOutputs();
@@ -117,7 +115,7 @@ public final class BalanceView {
             final Port<?> port = ports.get(i);
             if (wired.contains(new PortRef(node.getId(), i, input))) continue;
             final double qty = Math.max(0, port.getAmount()) * port.getChance()
-                * (input ? cfg.inputMultiplier(i) : cfg.outputMultiplier(i))
+                * (input ? node.inputMultiplier(i) : node.outputMultiplier(i))
                 * tf;
             if (qty <= 0) continue;
             final double rate = count * qty * GuiHelper.TICKS_PER_SECOND / (double) durTicks;

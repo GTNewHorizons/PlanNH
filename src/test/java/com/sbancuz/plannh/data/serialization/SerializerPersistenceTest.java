@@ -24,6 +24,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Group;
@@ -52,11 +53,9 @@ class SerializerPersistenceTest {
         assertNotNull(restored.getOutputs());
         assertEquals(7, restored.getX());
         assertEquals(11, restored.getY());
-        assertEquals(
-            node.getRecipeId()
-                .toJsonObject(),
-            restored.getRecipeId()
-                .toJsonObject());
+        assertNull(
+            restored.getMachineConfig()
+                .getProfile());
 
         restored.setX(31);
         restored.setY(37);
@@ -71,13 +70,11 @@ class SerializerPersistenceTest {
             moved.getNodes()
                 .get(node.getId())
                 .getY());
-        assertEquals(
-            node.getRecipeId()
-                .toJsonObject(),
+        assertNull(
             moved.getNodes()
                 .get(node.getId())
-                .getRecipeId()
-                .toJsonObject());
+                .getMachineConfig()
+                .getProfile());
 
         moved.getNodes()
             .remove(node.getId());
@@ -106,11 +103,9 @@ class SerializerPersistenceTest {
         assertTrue(restored.isInitialized());
         assertNotNull(restored.getInputs());
         assertNotNull(restored.getOutputs());
-        assertEquals(
-            node.getRecipeId()
-                .toJsonObject(),
-            restored.getRecipeId()
-                .toJsonObject());
+        assertNull(
+            restored.getMachineConfig()
+                .getProfile());
     }
 
     @Test
@@ -125,7 +120,6 @@ class SerializerPersistenceTest {
             .getRates()
             .rates()
             .put(0, 12.5);
-        node.setExtractorIndex(9);
         final Graph graph = new Graph("config");
         graph.addNode(node);
 
@@ -138,7 +132,9 @@ class SerializerPersistenceTest {
             .get(node.getId());
 
         assertEquals(101, restored.getX());
-        assertEquals(9, restored.getExtractorIndex());
+        assertNull(
+            restored.getMachineConfig()
+                .getProfile());
         assertEquals(
             4,
             restored.getMachineConfig()
@@ -158,16 +154,22 @@ class SerializerPersistenceTest {
     @Test
     void gsonParsesNodeFieldsReflectively() throws Exception {
         final Node original = unavailableNode();
-        final Node restored = Serializer.GSON.fromJson(Serializer.GSON.toJson(original), Node.class);
+        final JsonObject encoded = Serializer.GSON.toJsonTree(original)
+            .getAsJsonObject();
+        final Node restored = Serializer.GSON.fromJson(encoded, Node.class);
 
+        assertFalse(
+            encoded.getAsJsonObject("machineConfig")
+                .has("profileId"));
         assertEquals(original.getId(), restored.getId());
         assertEquals(original.getMachineName(), restored.getMachineName());
         assertEquals(original.getX(), restored.getX());
-        assertEquals(
-            original.getRecipeId()
-                .toJsonObject(),
-            restored.getRecipeId()
-                .toJsonObject());
+        assertNotNull(original.getRecipeId());
+        assertNotNull(restored.getRecipeId());
+        assertNull(
+            restored.getMachineConfig()
+                .getProfile());
+        assertFalse(restored.isAvailable());
     }
 
     @Test
@@ -392,7 +394,16 @@ class SerializerPersistenceTest {
         final Node valid = unavailableNode();
         final Graph graph = new Graph("valid only");
         graph.addNode(valid);
-        graph.addNode(new Node(UUID.randomUUID(), "invalid", 0, 0));
+        final Node invalid = new Node(
+            UUID.randomUUID(),
+            "invalid",
+            0,
+            0,
+            GtnhFlowLoader.defaultProfile(),
+            RecipeContext.builder()
+                .build());
+        set(invalid, "machineConfig", null);
+        graph.addNode(invalid);
         graph.addEdge(
             new Edge(
                 UUID.randomUUID(),
@@ -453,11 +464,16 @@ class SerializerPersistenceTest {
     }
 
     private static Node unavailableNode() throws Exception {
-        GtnhFlowLoader.ensureDefaultMachineProfile();
-        final Node node = new Node(UUID.randomUUID(), "missing", 7, 11);
-        final Recipe.RecipeId recipeId = Recipe.RecipeId.of(null, "test", List.of());
-        set(node, "recipeId", recipeId);
-        set(node, "extractor", null);
+        final Node node = new Node(
+            UUID.randomUUID(),
+            "missing",
+            7,
+            11,
+            GtnhFlowLoader.defaultProfile(),
+            RecipeContext.builder()
+                .build());
+        set(node, "recipeId", Recipe.RecipeId.of(null, "test", List.of()));
+        set(node, "selectedProfile", null);
         set(node, "initialized", true);
         return node;
     }

@@ -1,23 +1,20 @@
 package com.sbancuz.plannh.data.provider;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 import net.minecraft.item.ItemStack;
 
+import com.cleanroommc.modularui.api.drawable.IDrawable;
+import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
-import com.sbancuz.plannh.data.MachineProfileRegistry;
+import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.effect.Effects;
-import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
-import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.PositionedStack;
@@ -36,6 +33,21 @@ import tconstruct.plugins.nei.RecipeHandlerToolMaterials;
 
 public final class TinkersConstructProvider implements PropertyProvider {
 
+    private final MachineProfile PROFILE = MachineProfile.builder("tconstruct:basic")
+        .setting(Settings.MACHINES)
+        .setting(Settings.TICK_MODIFIER)
+        .effect(
+            Effects.clearCost()
+                .applyParallelism())
+        .provider(this)
+        .icon(this::icon)
+        .build();
+
+    @Nonnull
+    private IDrawable icon(final IRecipeHandler handler, final int recipeIndex) {
+        return GuiTextures.WRENCH;
+    }
+
     @Override
     public void register() {
         RecipePropertyAPI.registerExtractor(RecipeHandlerAlloying.class, this);
@@ -45,78 +57,58 @@ public final class TinkersConstructProvider implements PropertyProvider {
         RecipePropertyAPI.registerExtractor(RecipeHandlerMelting.class, this);
         RecipePropertyAPI.registerExtractor(RecipeHandlerToolMaterials.class, this);
 
-        MachineProfileRegistry.register(
-            MachineProfile.builder("tconstruct:basic", "Tinkers' Construct")
-                .setting(Settings.MACHINES)
-                .setting(Settings.TICK_MODIFIER)
-                .effect(
-                    Effects.clearCost()
-                        .applyParallelism())
-                .build());
     }
 
     @Override
-    public boolean canCraft(final IRecipeHandler handler, final int recipeIndex) {
-        return getProfileId(handler, recipeIndex) != null;
-    }
-
-    @Override
-    @Nullable
-    public String getProfileId(final IRecipeHandler handler, final int recipeIndex) {
+    public List<MachineProfile> getProfiles(final IRecipeHandler handler, final int recipeIndex) {
         return switch (handler) {
             case RecipeHandlerAlloying _, RecipeHandlerCastingBasin _, RecipeHandlerCastingTable _,
-                 RecipeHandlerDryingRack _, RecipeHandlerMelting _, RecipeHandlerToolMaterials _ -> "tconstruct:basic";
-            default -> null;
+                 RecipeHandlerDryingRack _, RecipeHandlerMelting _, RecipeHandlerToolMaterials _ -> List.of(PROFILE);
+            default -> List.of();
         };
     }
 
     @Override
-    @Nonnull
-    public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler,
+    public void populate(final RecipeContext.Builder recipe, final IRecipeHandler handler,
         final int recipeIndex) {
-        final Map<RecipeProperty<?>, Object> props = new HashMap<>(
-            PropertyProvider.super.extract(node, handler, recipeIndex));
-        if (!(handler instanceof final TemplateRecipeHandler trh)) return props;
+        PropertyProvider.super.populate(recipe, handler, recipeIndex);
+        if (!(handler instanceof final TemplateRecipeHandler trh)) return;
 
         final List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(trh);
-        if (recipeIndex < 0 || recipeIndex >= recipes.size()) return props;
+        if (recipeIndex < 0 || recipeIndex >= recipes.size()) return;
 
         final TemplateRecipeHandler.CachedRecipe cached = recipes.get(recipeIndex);
 
         if (cached instanceof final CachedDryingRackRecipe r && r.time > 0) {
-            props.put(RecipePropertyAPI.DURATION_TICKS, r.time);
+            recipe.property(RecipePropertyAPI.DURATION_TICKS, r.time);
         }
 
         if (handler instanceof final RecipeHandlerCastingBase cb) {
-            return extractCasting(node, cb, cached, props);
+            extractCasting(recipe, cb, cached);
         }
-
-        return props;
     }
 
-    private static Map<RecipeProperty<?>, Object> extractCasting(final Node node,
-        final RecipeHandlerCastingBase handler, final TemplateRecipeHandler.CachedRecipe cached,
-        final Map<RecipeProperty<?>, Object> props) {
-        node.getInputs().clear();
-        node.getOutputs().clear();
-        if (!(cached instanceof final CachedCastingRecipe casting)) return props;
+    private static void extractCasting(final RecipeContext.Builder recipe, final RecipeHandlerCastingBase handler,
+        final TemplateRecipeHandler.CachedRecipe cached) {
+        recipe.inputs().clear();
+        recipe.outputs().clear();
+        if (!(cached instanceof final CachedCastingRecipe casting)) return;
 
         final PositionedStack result = casting.getResult();
         final CastingRecipe match = findCastingRecipe(handler, casting, result);
-        if (match == null) return props;
+        if (match == null) return;
 
         if (match.castingMetal.amount > 0) {
             final var position = casting.getFluidTanks().getFirst().position;
-            node.getInputs().add(Port.fluid(match.castingMetal, 1f, position.x, position.y));
+            recipe.input(Port.fluid(match.castingMetal, 1f, position.x, position.y));
         }
         if (match.cast != null) {
             final var cast = Port.itemPort(casting.getIngredients().getFirst());
             if (!match.consumeCast) cast.getValue().amount = 0;
-            node.getInputs().add(cast);
+            recipe.input(cast);
         }
-        node.getOutputs().add(Port.itemPort(result));
-        if (match.coolTime > 0) props.put(RecipePropertyAPI.DURATION_TICKS, match.coolTime);
-        return props;
+        recipe.output(Port.itemPort(result));
+        if (match.coolTime > 0) recipe.property(RecipePropertyAPI.DURATION_TICKS, match.coolTime);
     }
 
     /** Match the cached recipe's complete backing recipe, not merely its output item. */

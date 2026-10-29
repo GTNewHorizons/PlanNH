@@ -77,6 +77,10 @@ class ThroughputFold extends NodeFold {
 
         final Balancer.NodeBalance balance = node.balance();
         final int duration = balance == null ? 0 : balance.durationPerOp();
+        if (balance != null && !hasPlannedThroughput(balance)) {
+            scheduleResize();
+            return;
+        }
         if (duration <= 0) {
             child(hint(LANG + "unbalanced"));
             scheduleResize();
@@ -87,10 +91,11 @@ class ThroughputFold extends NodeFold {
         rates(true, data.getInputs(), balance.effectiveInputs(), duration, unit);
         rates(false, data.getOutputs(), balance.effectiveOutputs(), duration, unit);
 
-        // Solved, and still nothing to say: a machine with no port the solve moved has no rate to
-        // print, which is a different thing from not having been solved.
-        if (getChildren().isEmpty()) child(hint(LANG + "unplanned"));
         scheduleResize();
+    }
+
+    static boolean hasPlannedThroughput(final Balancer.NodeBalance balance) {
+        return balance != null && balance.operations() > 0;
     }
 
     /** One row per port moving this way, and nothing at all when none is. */

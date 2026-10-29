@@ -17,6 +17,7 @@ import com.sbancuz.plannh.gui.common.FlowchartTextWidget;
 class PropertiesFold extends NodeFold {
 
     private static final String LANG = "plannh.gui.node.properties.";
+    private long lastVersion = Long.MIN_VALUE;
 
     public PropertiesFold(final NodeWidget node) {
         super(
@@ -24,6 +25,15 @@ class PropertiesFold extends NodeFold {
             () -> node.getData()
                 .isPropertiesOpen());
         name("fold.properties");
+        onUpdateListener(w -> {
+            final long version = node.getCanvas()
+                .getGraph()
+                .getVersion();
+            if (version != lastVersion) {
+                lastVersion = version;
+                markStale();
+            }
+        }, true);
     }
 
     @Override
@@ -31,7 +41,8 @@ class PropertiesFold extends NodeFold {
         removeAll();
 
         final Node data = node.getData();
-        final Map<RecipeProperty<?>, Object> properties = data.getProperties();
+        node.balance();
+        final Map<RecipeProperty<?>, Object> properties = data.displayProperties();
 
         for (final SummaryProperty<?> prop : properties(data)) {
             final String name = name(prop);
@@ -74,7 +85,7 @@ class PropertiesFold extends NodeFold {
      */
     private static List<SummaryProperty<?>> properties(final Node node) {
         final List<SummaryProperty<?>> found = new ArrayList<>();
-        for (final Map.Entry<RecipeProperty<?>, Object> entry : node.getProperties()
+        for (final Map.Entry<RecipeProperty<?>, Object> entry : node.displayProperties()
             .entrySet()) {
             if (!(entry.getKey() instanceof final SummaryProperty<?> prop)) continue;
             if (!(entry.getValue() instanceof final Number number) || number.doubleValue() == 0) continue;

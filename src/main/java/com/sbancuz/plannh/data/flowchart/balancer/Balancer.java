@@ -9,7 +9,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.sbancuz.plannh.PlanNH;
-import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.balancer.alternatives.Alternatives;
@@ -239,10 +238,7 @@ public final class Balancer {
         for (final Node node : graph.getNodes()
             .values()) {
             if (!node.isAvailable()) continue;
-            counts.put(
-                node.getId(),
-                (double) node.getMachineConfig()
-                    .configuredCopies());
+            counts.put(node.getId(), (double) node.configuredCopies());
         }
         return counts;
     }
@@ -257,7 +253,7 @@ public final class Balancer {
     private static BalanceResult buildResultFractional(final Graph graph, final Map<UUID, Double> copyCounts,
         final List<Note> notes, @Nullable final SolutionView auto, @Nullable final Alternatives alternatives) {
         final Map<UUID, NodeBalance> nodeBalances = new HashMap<>();
-        final Map<RecipeProperty<?>, Long> propertyTotals = new HashMap<>();
+        final Map<RecipeProperty<?>, Double> propertyTotals = new HashMap<>();
         double totalOps = 0;
         int totalDuration = 0;
 
@@ -266,22 +262,19 @@ public final class Balancer {
             final double count = copyCounts.getOrDefault(node.getId(), 0.0);
             totalOps += count;
 
-            final MachineConfig cfg = node.getMachineConfig();
-            final var eff = cfg.computeEffect(node.getProperties());
-            final long eutPerOp = eff.energyPerT();
+            final var eff = node.computeEffect();
+            final double energyPerOp = eff.energyPerT();
             final int durPerOp = eff.durationTicks();
             final int throughputFactor = eff.throughputFactor();
 
-            final long totalEnergy = Math.round(eutPerOp * durPerOp * count);
+            final long totalEnergy = Math.round(energyPerOp * durPerOp * count);
             if (durPerOp > totalDuration) totalDuration = durPerOp;
 
             final Map<Integer, Double> effOuts = new HashMap<>(node.getOutputs().size());
             for (int i = 0; i < node.getOutputs().size(); i++) {
                 final var outStack = node.getOutputs().get(i);
-                final long stackSize = outStack.getAmount();
-                if (stackSize <= 0) continue;
-                final double total = count * stackSize * outStack.getChance()
-                    * cfg.outputMultiplier(i)
+                final double total = count * Math.max(0d, outStack.getAmount()) * outStack.getChance()
+                    * node.outputMultiplier(i)
                     * throughputFactor;
                 if (total <= 0) continue;
                 effOuts.put(i, total);
@@ -290,10 +283,8 @@ public final class Balancer {
             final Map<Integer, Double> effIns = new HashMap<>(node.getInputs().size());
             for (int i = 0; i < node.getInputs().size(); i++) {
                 final var inStack = node.getInputs().get(i);
-                final long stackSize = inStack.getAmount();
-                if (stackSize <= 0) continue;
-                final double total = count * stackSize * inStack.getChance()
-                    * cfg.inputMultiplier(i)
+                final double total = count * Math.max(0d, inStack.getAmount()) * inStack.getChance()
+                    * node.inputMultiplier(i)
                     * throughputFactor;
                 if (total <= 0) continue;
                 effIns.put(i, total);
@@ -301,9 +292,9 @@ public final class Balancer {
 
             nodeBalances.put(node.getId(), new NodeBalance(count, totalEnergy, durPerOp, effOuts, effIns));
 
-            for (final Map.Entry<RecipeProperty<?>, Object> entry : node.getProperties().entrySet()) {
+            for (final Map.Entry<RecipeProperty<?>, Object> entry : node.displayProperties(eff).entrySet()) {
                 if (entry.getValue() instanceof final Number num) {
-                    propertyTotals.merge(entry.getKey(), Math.round(num.longValue() * count), Long::sum);
+                    propertyTotals.merge(entry.getKey(), num.doubleValue() * count, Double::sum);
                 }
             }
         }

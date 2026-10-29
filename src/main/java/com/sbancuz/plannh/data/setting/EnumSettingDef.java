@@ -9,6 +9,7 @@ import com.cleanroommc.modularui.drawable.text.TextRenderer;
 import com.cleanroommc.modularui.value.EnumValue;
 import com.cleanroommc.modularui.widgets.CycleButtonWidget;
 import com.sbancuz.plannh.data.MachineConfig;
+import com.sbancuz.plannh.data.RecipeContext;
 
 import lombok.Getter;
 
@@ -33,12 +34,13 @@ public class EnumSettingDef<E extends Enum<E>> extends SettingDef<E> {
     }
 
     @Override
-    public IWidget settingsWidget(final MachineConfig config, final Consumer<Runnable> edit) {
+    public IWidget settingsWidget(final MachineConfig cfg, final RecipeContext ctx, final Consumer<Runnable> edit) {
         final CycleButtonWidget button = new CycleButtonWidget().name("settings.cycle")
             .value(new EnumValue.Dynamic<>(type, () -> {
-                E val = config.get(this);
+                E val = cfg.getProfile()
+                    .value(this, cfg, ctx);
                 return val != null ? val : type.getEnumConstants()[0];
-            }, val -> edit.accept(() -> config.set(this, val))))
+            }, val -> edit.accept(() -> cfg.set(this, val))))
             .width(getMaxWidth());
         for (final E constant : type.getEnumConstants()) {
             button.stateOverlay(constant, IKey.str(constant.name()));

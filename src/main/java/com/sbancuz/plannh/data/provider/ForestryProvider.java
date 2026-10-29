@@ -1,23 +1,22 @@
 package com.sbancuz.plannh.data.provider;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import net.minecraft.item.ItemStack;
 
+import com.cleanroommc.modularui.api.drawable.IDrawable;
+import com.cleanroommc.modularui.drawable.GuiTextures;
+import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
-import com.sbancuz.plannh.data.MachineProfileRegistry;
+import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.effect.steps.CoFHCompat;
-import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
-import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.PositionedStack;
@@ -25,6 +24,8 @@ import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
 import forestry.api.recipes.ICentrifugeRecipe;
 import forestry.api.recipes.RecipeManagers;
+import forestry.factory.blocks.BlockFactoryPlainType;
+import forestry.factory.blocks.BlockFactoryTesrType;
 import forestry.factory.recipes.nei.NEIHandlerBottler;
 import forestry.factory.recipes.nei.NEIHandlerCarpenter;
 import forestry.factory.recipes.nei.NEIHandlerCentrifuge;
@@ -35,8 +36,33 @@ import forestry.factory.recipes.nei.NEIHandlerMoistener;
 import forestry.factory.recipes.nei.NEIHandlerSqueezer;
 import forestry.factory.recipes.nei.NEIHandlerSqueezer.CachedSqueezerRecipe;
 import forestry.factory.recipes.nei.NEIHandlerStill;
+import forestry.plugins.PluginFactory;
 
 public class ForestryProvider implements PropertyProvider {
+
+    public ForestryProvider() {}
+
+    @Nonnull
+    private IDrawable icon(final IRecipeHandler handler,
+        final int recipeIndex) {
+        if (PluginFactory.blocks == null) return GuiTextures.MATERIAL;
+        if (handler instanceof NEIHandlerFabricator) {
+            return new ItemDrawable(
+                PluginFactory.blocks.factoryPlain,
+                BlockFactoryPlainType.FABRICATOR.getMeta());
+        }
+        final BlockFactoryTesrType type = switch (handler) {
+            case NEIHandlerBottler _ -> BlockFactoryTesrType.BOTTLER;
+            case NEIHandlerCarpenter _ -> BlockFactoryTesrType.CARPENTER;
+            case NEIHandlerCentrifuge _ -> BlockFactoryTesrType.CENTRIFUGE;
+            case NEIHandlerFermenter _ -> BlockFactoryTesrType.FERMENTER;
+            case NEIHandlerMoistener _ -> BlockFactoryTesrType.MOISTENER;
+            case NEIHandlerSqueezer _ -> BlockFactoryTesrType.SQUEEZER;
+            case NEIHandlerStill _ -> BlockFactoryTesrType.STILL;
+            default -> null;
+        };
+        return type == null ? GuiTextures.MATERIAL : new ItemDrawable(PluginFactory.blocks.factoryTESR, type.getMeta());
+    }
 
     private static final String PROFILE_ID = "forestry:basic";
 
@@ -70,73 +96,59 @@ public class ForestryProvider implements PropertyProvider {
         RecipePropertyAPI.registerExtractor(NEIHandlerMoistener.class, this);
         RecipePropertyAPI.registerExtractor(NEIHandlerSqueezer.class, this);
         RecipePropertyAPI.registerExtractor(NEIHandlerStill.class, this);
-
-        MachineProfileRegistry.register(
-            MachineProfile.builder(PROFILE_ID, "Forestry")
-                .setting(Settings.MACHINES)
-                .setting(Settings.TICK_MODIFIER)
-                .effect(
-                    Effects.durationFromHandler()
-                        .amortizeCost(CoFHCompat.RF_COST)
-                        .applyParallelism())
-                .build());
     }
 
     @Override
     public boolean canCraft(final IRecipeHandler handler, final int recipeIndex) {
-        return getProfileId(handler, recipeIndex) != null;
-    }
-
-    @Override
-    @Nullable
-    public String getProfileId(final IRecipeHandler handler, final int recipeIndex) {
+        if (handler == null) return false;
         return switch (handler) {
             case NEIHandlerBottler _, NEIHandlerCarpenter _, NEIHandlerCentrifuge _,
                  NEIHandlerFabricator _, NEIHandlerFermenter _, NEIHandlerMoistener _,
-                 NEIHandlerSqueezer _, NEIHandlerStill _ -> PROFILE_ID;
-            default -> null;
+                 NEIHandlerSqueezer _, NEIHandlerStill _ -> true;
+            default -> false;
         };
     }
 
     @Override
-    @Nonnull
-    public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler,
+    public List<MachineProfile> getProfiles(final IRecipeHandler handler, final int recipeIndex) {
+        return canCraft(handler, recipeIndex) ? List.of(profile) : List.of();
+    }
+
+    @Override
+    public void populate(final RecipeContext.Builder recipe, final IRecipeHandler handler,
         final int recipeIndex) {
-        final Map<RecipeProperty<?>, Object> props = new HashMap<>(
-            PropertyProvider.super.extract(node, handler, recipeIndex));
-        if (!(handler instanceof final TemplateRecipeHandler trh)) return props;
+        PropertyProvider.super.populate(recipe, handler, recipeIndex);
+        if (!(handler instanceof final TemplateRecipeHandler trh)) return;
 
         final List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(trh);
-        if (recipeIndex < 0 || recipeIndex >= recipes.size()) return props;
+        if (recipeIndex < 0 || recipeIndex >= recipes.size()) return;
 
         final TemplateRecipeHandler.CachedRecipe cached = recipes.get(recipeIndex);
 
         switch (handler) {
             case NEIHandlerBottler _ -> {
-                props.put(RecipePropertyAPI.DURATION_TICKS, BOTTLER_TICKS);
-                props.put(CoFHCompat.RF_COST, (long) BOTTLER_RF);
+                recipe.property(RecipePropertyAPI.DURATION_TICKS, BOTTLER_TICKS);
+                recipe.property(CoFHCompat.RF_COST, (long) BOTTLER_RF);
             }
             case NEIHandlerCentrifuge _ when cached instanceof final CachedCentrifugeRecipe c ->
-                extractCentrifuge(props, c);
+                extractCentrifuge(recipe, c);
             case NEIHandlerSqueezer _ when cached instanceof final CachedSqueezerRecipe s ->
-                extractSqueezer(props, s);
+                extractSqueezer(recipe, s);
             default -> {}
         }
-
-        return props;
     }
 
-    private static void extractSqueezer(final Map<RecipeProperty<?>, Object> props, final CachedSqueezerRecipe s) {
+    private static void extractSqueezer(final RecipeContext.Builder recipe, final CachedSqueezerRecipe s) {
         if (s.processingTime <= 0) return;
-        props.put(RecipePropertyAPI.DURATION_TICKS, s.processingTime * GAME_TICKS_PER_WORK_TICK);
-        props.put(CoFHCompat.RF_COST, (long) s.processingTime * SQUEEZER_RF_PER_WORK_TICK);
+        recipe.property(RecipePropertyAPI.DURATION_TICKS, s.processingTime * GAME_TICKS_PER_WORK_TICK);
+        recipe.property(CoFHCompat.RF_COST, (long) s.processingTime * SQUEEZER_RF_PER_WORK_TICK);
     }
 
-    private static void extractCentrifuge(final Map<RecipeProperty<?>, Object> props, final CachedCentrifugeRecipe c) {
+    private static void extractCentrifuge(final RecipeContext.Builder recipe, final CachedCentrifugeRecipe c) {
         final int workTicks = lookupCentrifugeTime(c.inputs.item);
         if (workTicks <= 0) return;
-        props.put(RecipePropertyAPI.DURATION_TICKS, workTicks * GAME_TICKS_PER_WORK_TICK);
-        props.put(CoFHCompat.RF_COST, (long) workTicks * CENTRIFUGE_RF_PER_WORK_TICK);
+        recipe.property(RecipePropertyAPI.DURATION_TICKS, workTicks * GAME_TICKS_PER_WORK_TICK);
+        recipe.property(CoFHCompat.RF_COST, (long) workTicks * CENTRIFUGE_RF_PER_WORK_TICK);
     }
 
     private static int lookupCentrifugeTime(final @Nullable ItemStack input) {
@@ -149,4 +161,15 @@ public class ForestryProvider implements PropertyProvider {
         }
         return 0;
     }
+
+    private final MachineProfile profile = MachineProfile.builder(PROFILE_ID)
+        .setting(Settings.MACHINES)
+        .setting(Settings.TICK_MODIFIER)
+        .effect(
+            Effects.durationFromHandler()
+                .amortizeCost(CoFHCompat.RF_COST)
+                .applyParallelism())
+        .icon(this::icon)
+        .provider(this)
+        .build();
 }

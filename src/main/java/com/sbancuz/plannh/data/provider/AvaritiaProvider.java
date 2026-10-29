@@ -1,16 +1,15 @@
 package com.sbancuz.plannh.data.provider;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
+import com.cleanroommc.modularui.api.drawable.IDrawable;
+import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
-import com.sbancuz.plannh.data.MachineProfileRegistry;
+import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.effect.Effects;
-import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.resource.LongItemStack;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
@@ -22,57 +21,53 @@ import fox.spiteful.avaritia.compat.nei.CompressionHandler;
 
 public final class AvaritiaProvider implements PropertyProvider {
 
+    @Nonnull
+    private IDrawable icon(final IRecipeHandler handler, final int recipeIndex) {
+        return GuiTextures.MAXIMIZE;
+    }
+
     public static final RecipeProperty<Integer> COMPRESSION_COST = SummaryProperty
         .<Integer>builder("avaritia.compression_cost", 0)
+        .build();
+
+    private final MachineProfile PROFILE = MachineProfile.builder("avaritia:neutronium_compressor")
+        .setting(Settings.MACHINES)
+        .setting(Settings.INPUTS_PER_TICK)
+        .setting(Settings.TICK_MODIFIER)
+        .effect(
+            Effects.durationFromTotal(COMPRESSION_COST, Settings.INPUTS_PER_TICK)
+                .amortizeCost(COMPRESSION_COST)
+                .applyParallelism())
+        .provider(this)
+        .icon(this::icon)
         .build();
 
     @Override
     public void register() {
         RecipePropertyAPI.registerExtractor(CompressionHandler.class, this);
 
-        MachineProfileRegistry.register(
-            MachineProfile.builder("avaritia:neutronium_compressor", "Neutronium Compressor")
-                .setting(Settings.MACHINES)
-                .setting(Settings.INPUTS_PER_TICK)
-                .setting(Settings.TICK_MODIFIER)
-                .effect(
-                    Effects.durationFromTotal(COMPRESSION_COST, Settings.INPUTS_PER_TICK)
-                        .amortizeCost(COMPRESSION_COST)
-                        .applyParallelism())
-                .build());
     }
 
     @Override
-    public boolean canCraft(final IRecipeHandler handler, final int recipeIndex) {
-        return getProfileId(handler, recipeIndex) != null;
-    }
-
-    @Override
-    @Nullable
-    public String getProfileId(final IRecipeHandler handler, final int recipeIndex) {
+    public List<MachineProfile> getProfiles(final IRecipeHandler handler, final int recipeIndex) {
         return switch (handler) {
-            case CompressionHandler _ -> "avaritia:neutronium_compressor";
-            default -> null;
+            case CompressionHandler _ -> List.of(PROFILE);
+            default -> List.of();
         };
     }
 
     @Override
-    @Nonnull
-    public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler,
-        final int recipeIndex) {
-        final Map<RecipeProperty<?>, Object> props = new HashMap<>(
-            PropertyProvider.super.extract(node, handler, recipeIndex));
+    public void populate(final RecipeContext.Builder recipe, final IRecipeHandler handler, final int recipeIndex) {
+        PropertyProvider.super.populate(recipe, handler, recipeIndex);
 
-        if (handler instanceof CompressionHandler && !node.getInputs()
+        if (handler instanceof CompressionHandler && !recipe.inputs()
             .isEmpty()) {
-            final LongItemStack stack = (LongItemStack) node.getInputs()
+            final LongItemStack stack = (LongItemStack) recipe.inputs()
                 .getFirst()
                 .getValue();
             if (stack != null && stack.amount > 0) {
-                props.put(COMPRESSION_COST, (int) Math.min(stack.amount, Integer.MAX_VALUE));
+                recipe.property(COMPRESSION_COST, (int) Math.min(stack.amount, Integer.MAX_VALUE));
             }
         }
-
-        return props;
     }
 }

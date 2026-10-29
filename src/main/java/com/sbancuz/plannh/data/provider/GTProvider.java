@@ -1,25 +1,22 @@
 package com.sbancuz.plannh.data.provider;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.function.BiPredicate;
+import java.util.Set;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
+import com.cleanroommc.modularui.api.drawable.IDrawable;
+import com.cleanroommc.modularui.drawable.GuiTextures;
+import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
-import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.effect.steps.GTOverclockStep;
-import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.flowchart.resource.LongItemStack;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
@@ -32,6 +29,7 @@ import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.FurnaceRecipeHandler;
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
+import gregtech.api.enums.ItemList;
 import gregtech.api.recipe.RecipeMap;
 import gregtech.api.recipe.RecipeMaps;
 import gregtech.api.recipe.RecipeMetadataKey;
@@ -45,6 +43,16 @@ import gregtech.nei.GTNEIDefaultHandler.CachedDefaultRecipe;
 import gregtech.nei.formatter.HeatingCoilSpecialValueFormatter;
 
 public class GTProvider implements PropertyProvider {
+
+    @Nonnull
+    private IDrawable icon(final IRecipeHandler handler, final int recipeIndex) {
+        return itemIcon(ItemList.Machine_LV_Macerator, GuiTextures.PROCESSOR);
+    }
+
+    static IDrawable itemIcon(final ItemList machine, final IDrawable fallback) {
+        final var stack = machine.get(1L);
+        return stack == null ? fallback : new ItemDrawable(stack);
+    }
 
     // Vanilla furnace: base cook time of 200 ticks (10 seconds)
     private static final int FURNACE_COOK_TICKS = 200;
@@ -85,31 +93,28 @@ public class GTProvider implements PropertyProvider {
 
         RecipePropertyAPI.registerExtractor(GTNEIDefaultHandler.class, this);
 
-        MachineProfileRegistry.register(PROFILE);
         new GTSteamProvider().register();
     }
 
-    static BiPredicate<RecipeContext, MachineConfig> multiblockOnly() {
-        return (ctx, config) -> config.get(Settings.GT_MULTIBLOCK);
+    static java.util.function.BiPredicate<MachineConfig, RecipeContext> multiblockOnly() {
+        return (cfg, ctx) -> Boolean.TRUE
+            .equals(cfg.getOrDefault(Settings.GT_MULTIBLOCK, Settings.GT_MULTIBLOCK::getDefaultValue));
     }
 
-    private static boolean hasHeat(final RecipeContext ctx) {
-        return ctx.properties()
-            .containsKey(GLASS_TIER)
-            || ctx.properties()
-                .containsKey(COIL_HEAT);
+    private static boolean hasHeat(final MachineConfig cfg, final RecipeContext ctx) {
+        return ctx.contains(GLASS_TIER) || ctx.contains(COIL_HEAT);
     }
 
-    private static boolean isEoH(final RecipeContext ctx) {
+    private static boolean isEoH(final MachineConfig cfg, final RecipeContext ctx) {
         final RecipeMap<?> map = ctx.getOrDefault(RECIPE_MAP, null);
         return map != null && "gt.recipe.eyeofharmony".equals(map.unlocalizedName);
     }
 
-    private static final MachineProfile PROFILE = MachineProfile.builder("gregtech:unified", "GT Unified")
+    private final MachineProfile profile = MachineProfile.builder("gregtech:unified")
         .setting(Settings.VOLTAGE)
         .setting(Settings.AMP)
         .setting(Settings.SPEED)
-        .setting(Settings.PARALLELS, (ctx, s) -> !isEoH(ctx))
+        .setting(Settings.PARALLELS, (cfg, ctx) -> !isEoH(cfg, ctx))
         .setting(Settings.MACHINES)
         .setting(Settings.PERFECT_OC)
         .setting(Settings.GT_MULTIBLOCK)
@@ -122,48 +127,69 @@ public class GTProvider implements PropertyProvider {
         .setting(Settings.MAX_TIER_SKIPS, multiblockOnly())
         .setting(Settings.UNLIMITED_SKIPS, multiblockOnly())
         .setting(Settings.NO_OVERCLOCK, multiblockOnly())
-        .setting(Settings.HEAT_OC, (ctx, s) -> hasHeat(ctx))
-        .setting(Settings.MACHINE_HEAT, multiblockOnly().and((ctx, s) -> hasHeat(ctx)))
-        .setting(Settings.RECIPE_HEAT, multiblockOnly().and((ctx, s) -> hasHeat(ctx)))
-        .setting(Settings.HEAT_DISCOUNT, multiblockOnly().and((ctx, s) -> hasHeat(ctx)))
-        .setting(Settings.HEAT_DISCOUNT_MULT, multiblockOnly().and((ctx, s) -> hasHeat(ctx)))
-        .setting(Settings.CATALYST_ASTRAL_ARRAYS, (ctx, s) -> isEoH(ctx))
+        .setting(Settings.HEAT_OC, GTProvider::hasHeat)
+        .setting(Settings.MACHINE_HEAT, multiblockOnly().and(GTProvider::hasHeat))
+        .setting(Settings.RECIPE_HEAT, multiblockOnly().and(GTProvider::hasHeat))
+        .setting(Settings.HEAT_DISCOUNT, multiblockOnly().and(GTProvider::hasHeat))
+        .setting(Settings.HEAT_DISCOUNT_MULT, multiblockOnly().and(GTProvider::hasHeat))
+        .setting(Settings.CATALYST_ASTRAL_ARRAYS, GTProvider::isEoH)
+        .derive(
+            Settings.PERFECT_OC,
+            (cfg, ctx) -> routeDefault(
+                ctx,
+                Set.of(
+                    "gt.recipe.largechemicalreactor",
+                    "gtpp.recipe.flotationcell",
+                    "gg.recipe.naquadah_fuel_refine_factory",
+                    "gtpp.recipe.matterfab2",
+                    "gtpp.recipe.oremill",
+                    "bw.recipe.cal",
+                    "gtnhlanth.recipe.digester",
+                    "gt.recipe.nanoforge",
+                    "gt.recipe.plasmaforge"),
+                true,
+                Settings.PERFECT_OC))
+        .derive(
+            Settings.UNLIMITED_SKIPS,
+            (cfg, ctx) -> routeDefault(
+                ctx,
+                Set.of(
+                    "gg.recipe.naquadah_fuel_refine_factory",
+                    "gt.recipe.nanoforge",
+                    "gt.recipe.plasmaforge",
+                    "gtpp.recipe.alloyblastsmelter",
+                    "gt.recipe.transcendentplasmamixerrecipes"),
+                true,
+                Settings.UNLIMITED_SKIPS))
+        .derive(
+            Settings.NO_OVERCLOCK,
+            (cfg, ctx) -> routeDefault(
+                ctx,
+                Set.of("gt.recipe.transcendentplasmamixerrecipes", "gtpp.recipe.algae_pond"),
+                true,
+                Settings.NO_OVERCLOCK))
 
         .effect(
             Effects.durationFromHandler()
                 .andThen(
                     GTOverclockStep.create()
                         .applyIf(GTProvider::hasHeat, GTOverclockStep::withHeat)
-                        .applyIf(
-                            ctx -> ctx.properties()
-                                .containsKey(FUSION_THRESHOLD),
-                            GTOverclockStep::withPerfectOC)
+                        .applyIf((cfg, ctx) -> ctx.contains(FUSION_THRESHOLD), GTOverclockStep::withPerfectOC)
                         .route(
                             "gt.recipe.eyeofharmony",
                             step -> step.withCatalyst(
                                 Settings.CATALYST_ASTRAL_ARRAYS,
                                 v -> (int) Math
-                                    .pow(2, (int) Math.floor(Math.log(8.0 * Math.min(v, 8637)) / Math.log(1.7)))))
-                        // Perfect OC defaults
-                        .withDefault("gt.recipe.largechemicalreactor", Settings.PERFECT_OC, true)
-                        .withDefault("gtpp.recipe.flotationcell", Settings.PERFECT_OC, true)
-                        .withDefault("gg.recipe.naquadah_fuel_refine_factory", Settings.PERFECT_OC, true)
-                        .withDefault("gtpp.recipe.matterfab2", Settings.PERFECT_OC, true)
-                        .withDefault("gtpp.recipe.oremill", Settings.PERFECT_OC, true)
-                        .withDefault("bw.recipe.cal", Settings.PERFECT_OC, true)
-                        .withDefault("gtnhlanth.recipe.digester", Settings.PERFECT_OC, true)
-                        .withDefault("gt.recipe.nanoforge", Settings.PERFECT_OC, true)
-                        .withDefault("gt.recipe.plasmaforge", Settings.PERFECT_OC, true)
-                        // Unlimited tier skip defaults
-                        .withDefault("gg.recipe.naquadah_fuel_refine_factory", Settings.UNLIMITED_SKIPS, true)
-                        .withDefault("gt.recipe.nanoforge", Settings.UNLIMITED_SKIPS, true)
-                        .withDefault("gt.recipe.plasmaforge", Settings.UNLIMITED_SKIPS, true)
-                        .withDefault("gtpp.recipe.alloyblastsmelter", Settings.UNLIMITED_SKIPS, true)
-                        .withDefault("gt.recipe.transcendentplasmamixerrecipes", Settings.UNLIMITED_SKIPS, true)
-                        // No-overclock defaults
-                        .withDefault("gt.recipe.transcendentplasmamixerrecipes", Settings.NO_OVERCLOCK, true)
-                        .withDefault("gtpp.recipe.algae_pond", Settings.NO_OVERCLOCK, true)))
+                                    .pow(2, (int) Math.floor(Math.log(8.0 * Math.min(v, 8637)) / Math.log(1.7)))))))
+        .icon(this::icon)
+        .provider(this)
         .build();
+
+    private static <T> T routeDefault(final RecipeContext ctx, final Set<String> routes, final T value,
+        final com.sbancuz.plannh.data.setting.SettingDef<T> def) {
+        final RecipeMap<?> map = ctx.getOrDefault(RECIPE_MAP, null);
+        return map != null && routes.contains(map.unlocalizedName) ? value : def.getDefaultValue();
+    }
 
     @Override
     public boolean canCraft(final IRecipeHandler handler, final int recipeIndex) {
@@ -172,50 +198,44 @@ public class GTProvider implements PropertyProvider {
     }
 
     @Override
-    @Nullable
-    public String getProfileId(final IRecipeHandler handler, final int recipeIndex) {
-        if (handler instanceof FurnaceRecipeHandler) return PROFILE.id();
-        if (handler instanceof GTNEIDefaultHandler) return PROFILE.id();
-        return null;
+    public List<MachineProfile> getProfiles(final IRecipeHandler handler, final int recipeIndex) {
+        return canCraft(handler, recipeIndex) ? List.of(profile) : List.of();
     }
 
-    private static <T> void extractMD(final Map<RecipeProperty<?>, Object> props, final GTRecipe r,
+    private static <T> void extractMD(final RecipeContext.Builder recipe, final GTRecipe r,
         final RecipeProperty<T> prop, final RecipeMetadataKey<T> key, final T defaultVal) {
         final T val = r.getMetadataOrDefault(key, defaultVal);
         if (!Objects.equals(val, defaultVal)) {
-            props.put(prop, val);
+            recipe.property(prop, val);
         }
     }
 
     @Override
-    @Nonnull
-    public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler,
-        final int recipeIndex) {
-        return extractGTRecipe(node, handler, recipeIndex);
+    public void populate(final RecipeContext.Builder recipe, final IRecipeHandler handler, final int recipeIndex) {
+        populateGTRecipe(recipe, handler, recipeIndex);
     }
 
-    public static Map<RecipeProperty<?>, Object> extractGTRecipe(final Node node, final IRecipeHandler handler,
-                                                                 final int recipeIndex) {
-        final Map<RecipeProperty<?>, Object> props = new HashMap<>();
+    public static void populateGTRecipe(final RecipeContext.Builder recipe, final IRecipeHandler handler,
+        final int recipeIndex) {
         GTRecipe r;
         RecipeMap<?> gthMap = null;
-        List<PositionedStack> inputStacks = new ArrayList<>();
-        List<PositionedStack> outputStacks = new ArrayList<>();
+        List<PositionedStack> inputStacks = List.of();
+        List<PositionedStack> outputStacks = List.of();
 
         if (handler instanceof final FurnaceRecipeHandler fh) {
             final List<TemplateRecipeHandler.CachedRecipe> fRecipes = RecipeHandlerAccess.getArecipes(fh);
-            props.put(RecipePropertyAPI.DURATION_TICKS, FURNACE_COOK_TICKS);
+            recipe.property(RecipePropertyAPI.DURATION_TICKS, FURNACE_COOK_TICKS);
 
             if (recipeIndex < 0 || recipeIndex >= fRecipes.size()) {
-                return props;
+                return;
             }
             final TemplateRecipeHandler.CachedRecipe cr = fRecipes.get(recipeIndex);
             if (cr == null) {
-                return props;
+                return;
             }
             final List<PositionedStack> ingredients = cr.getIngredients();
             if (ingredients == null || ingredients.isEmpty() || ingredients.getFirst().item == null) {
-                return props;
+                return;
             }
             inputStacks = ingredients;
             final PositionedStack result = cr.getResult();
@@ -235,12 +255,12 @@ public class GTProvider implements PropertyProvider {
                 .items(ingredients.getFirst().item)
                 .find();
             if (r == null) {
-                return props;
+                return;
             }
 
         } else if (handler instanceof final GTNEIDefaultHandler gth) {
             final List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(gth);
-            if (recipeIndex < 0 || recipeIndex >= recipes.size()) return props;
+            if (recipeIndex < 0 || recipeIndex >= recipes.size()) return;
 
             final CachedDefaultRecipe cached = (CachedDefaultRecipe) recipes.get(recipeIndex);
             r = cached.mRecipe;
@@ -248,72 +268,65 @@ public class GTProvider implements PropertyProvider {
             inputStacks = cached.mInputs;
             outputStacks = cached.mOutputs;
 
-            if (r == null) return props;
+            if (r == null) return;
 
             gthMap = gth.getRecipeMap();
 
         } else {
-            return props;
+            return;
         }
 
-        props.put(RecipePropertyAPI.DURATION_TICKS, r.mDuration);
-        props.put(EU_PER_TICK, (long) r.mEUt);
-        props.put(TOTAL_EU, (long) r.mEUt * r.mDuration);
+        recipe.property(RecipePropertyAPI.DURATION_TICKS, r.mDuration);
+        recipe.property(EU_PER_TICK, (long) r.mEUt);
+        recipe.property(TOTAL_EU, (long) r.mEUt * r.mDuration);
 
         if (gthMap != null && (gthMap.getBackend() instanceof FuelBackend
             || gthMap.getBackend() instanceof LargeBoilerFuelBackend)) {
-            props.put(EU_PER_TICK, 0L);
-            props.put(TOTAL_EU, 0L);
+            recipe.property(EU_PER_TICK, 0L);
+            recipe.property(TOTAL_EU, 0L);
         }
 
-        extractMD(props, r, GLASS_TIER, GTRecipeConstants.GLASS, 3);
-        extractMD(props, r, COIL_HEAT, GTRecipeConstants.COIL_HEAT, 0);
+        extractMD(recipe, r, GLASS_TIER, GTRecipeConstants.GLASS, 3);
+        extractMD(recipe, r, COIL_HEAT, GTRecipeConstants.COIL_HEAT, 0);
 
-        if (gthMap != null && !props.containsKey(COIL_HEAT)
+        if (gthMap != null && !recipe.contains(COIL_HEAT)
             && gthMap.getFrontend().getNEIProperties().neiSpecialInfoFormatter instanceof HeatingCoilSpecialValueFormatter
             && r.mSpecialValue > 0) {
-            props.put(COIL_HEAT, r.mSpecialValue);
+            recipe.property(COIL_HEAT, r.mSpecialValue);
         }
 
         if (gthMap != null) {
-            props.put(RECIPE_MAP, gthMap);
+            recipe.property(RECIPE_MAP, gthMap);
         }
 
-        extractMD(props, r, FUSION_THRESHOLD, GTRecipeConstants.FUSION_THRESHOLD, 0L);
+        extractMD(recipe, r, FUSION_THRESHOLD, GTRecipeConstants.FUSION_THRESHOLD, 0L);
 
         final Sievert sievert = r.getMetadataOrDefault(GTRecipeConstants.SIEVERT, new Sievert(0, false));
         if (sievert.sievert > 0 || sievert.isExact) {
-            props.put(SIEVERT, sievert.sievert);
-            if (sievert.isExact) props.put(SIEVERT_EXACT, true);
+            recipe.property(SIEVERT, sievert.sievert);
+            if (sievert.isExact) recipe.property(SIEVERT_EXACT, true);
         }
 
-        extractMD(props, r, MASS, GTRecipeConstants.MASS, 0);
+        extractMD(recipe, r, MASS, GTRecipeConstants.MASS, 0);
 
         if (r.mSpecialValue != 0) {
-            props.put(SPECIAL_VALUE, r.mSpecialValue);
+            recipe.property(SPECIAL_VALUE, r.mSpecialValue);
         }
 
-        node.getInputs().clear();
-        node.getOutputs().clear();
-
         final GTSpecialHandlers.GTSpecialHandler special = GTSpecialHandlers.get(gthMap);
-        if (special != null) props.putAll(special.extract(r, node, inputStacks, outputStacks));
-        else buildGenericPorts(inputStacks, outputStacks, node);
-
-        return props;
+        if (special != null) special.populate(r, recipe, inputStacks, outputStacks);
+        else buildGenericPorts(inputStacks, outputStacks, recipe);
     }
 
     private static void buildGenericPorts(final List<PositionedStack> inputStacks,
-        final List<PositionedStack> outputStacks, final Node node) {
+        final List<PositionedStack> outputStacks, final RecipeContext.Builder recipe) {
         for (final PositionedStack ps : inputStacks) {
             if (ps.item != null) {
-                node.getInputs()
-                    .add(port(ps));
+                recipe.input(port(ps));
             }
         }
         for (final PositionedStack ps : outputStacks) {
-            node.getOutputs()
-                .add(port(ps));
+            recipe.output(port(ps));
         }
     }
 

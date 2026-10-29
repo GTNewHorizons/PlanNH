@@ -56,6 +56,7 @@ public final class Settings {
     public static final IntegerSettingDef INPUTS_PER_TICK = new IntegerSettingDef("inputs_per_tick", 1, 1, 10000);
     public static final IntegerSettingDef LP_PER_TICK = new IntegerSettingDef("lp_per_tick", 20, 1, 100000);
     public static final IntegerSettingDef EIO_CAPACITOR = new IntegerSettingDef("eio_capacitor", 0, 0, 6);
+    public static final IntegerSettingDef RF_PER_TICK = new IntegerSettingDef("rf_per_tick", 0, 0, 1000000);
 
     public static final IntegerSettingDef STEAM_EUT_DISCOUNT = new IntegerSettingDef(
         "steam_eut_discount",
