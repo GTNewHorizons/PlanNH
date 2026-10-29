@@ -27,6 +27,7 @@ import appeng.integration.modules.NEIHelpers.NEIInscriberRecipeHandler;
 import codechicken.nei.NEIServerUtils;
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.IRecipeHandler;
+import codechicken.nei.recipe.ShapedRecipeHandler;
 
 @Versioned.Mod(modId = Compat.IDs.AE2, sinceVersion = "rv3-beta-1017-GTNH")
 public final class AE2Provider implements PropertyProvider {
@@ -53,6 +54,8 @@ public final class AE2Provider implements PropertyProvider {
         RecipePropertyAPI.registerExtractor(NEIInscriberRecipeHandler.class, this);
         RecipePropertyAPI.registerExtractor(NEIAEShapedRecipeHandler.class, this);
         RecipePropertyAPI.registerExtractor(NEIAEShapelessRecipeHandler.class, this);
+        // ShapelessRecipeHandler extends this class, covering vanilla shaped and shapeless recipes.
+        RecipePropertyAPI.registerExtractor(ShapedRecipeHandler.class, this);
 
         MachineProfileRegistry.register(
             MachineProfile.builder("ae2:quartz_grinder", "Quartz Grinder")
@@ -110,7 +113,8 @@ public final class AE2Provider implements PropertyProvider {
         return switch (handler) {
             case NEIGrinderRecipeHandler _ -> "ae2:quartz_grinder";
             case NEIInscriberRecipeHandler _-> "ae2:inscriber";
-            case NEIAEShapedRecipeHandler _, NEIAEShapelessRecipeHandler _ -> "ae2:molecular_assembler";
+            case NEIAEShapedRecipeHandler _, NEIAEShapelessRecipeHandler _, ShapedRecipeHandler _ ->
+                "ae2:molecular_assembler";
             default -> null;
         };
     }
@@ -119,7 +123,8 @@ public final class AE2Provider implements PropertyProvider {
     public boolean canCraft(final IRecipeHandler handler, final int recipeIndex) {
         return handler instanceof NEIGrinderRecipeHandler || handler instanceof NEIInscriberRecipeHandler
             || handler instanceof NEIAEShapedRecipeHandler
-            || handler instanceof NEIAEShapelessRecipeHandler;
+            || handler instanceof NEIAEShapelessRecipeHandler
+            || handler instanceof ShapedRecipeHandler;
     }
 
     @Override
