@@ -5,7 +5,6 @@ import net.minecraftforge.common.MinecraftForge;
 import org.lwjgl.input.Keyboard;
 
 import com.cleanroommc.modularui.screen.GuiContainerWrapper;
-import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.Tags;
 import com.sbancuz.plannh.gui.FlowchartScreen;
@@ -32,13 +31,6 @@ public class NEIPlanConfig implements IConfigureNEI {
         public static int min = 6;
         public static int max = Integer.MAX_VALUE;
         public static int defVal = 9;
-    }
-
-    public static class ConfigBurnableOverride {
-
-        public static String KEY = "plannh.burnable_override";
-        public static int OFF = 0;
-        public static int ON = 1;
     }
 
     // Hash binds carry their modifiers in the stored int and compare exactly, so every accepted
@@ -88,17 +80,6 @@ public class NEIPlanConfig implements IConfigureNEI {
         API.registerNEIGuiHandler(new FlowchartGuiHandler());
         API.addLayoutStyle(0, new FlowchartLayoutStyle());
         MinecraftForge.EVENT_BUS.register(this);
-        API.addOption(new OptionCycled(ConfigBurnableOverride.KEY, 2) {
-
-            public boolean onClick(int button) {
-                if (!super.onClick(button)) {
-                    return false;
-                } else {
-                    Compat.init();
-                    return true;
-                }
-            }
-        });
         API.addHashBind(ConfigUndoKey.KEY, ConfigUndoKey.defVal);
         API.addHashBind(ConfigRedoKey.KEY, ConfigRedoKey.defVal);
         API.addHashBind(ConfigRedoAltKey.KEY, ConfigRedoAltKey.defVal);

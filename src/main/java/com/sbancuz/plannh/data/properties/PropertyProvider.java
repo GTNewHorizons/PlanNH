@@ -6,23 +6,30 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import net.minecraft.tileentity.TileEntityFurnace;
-
 import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
-import com.sbancuz.plannh.data.setting.Settings;
-import com.sbancuz.plannh.nei.NEIPlanConfig;
 
-import codechicken.nei.NEIClientConfig;
 import codechicken.nei.PositionedStack;
+import codechicken.nei.recipe.FurnaceRecipeHandler;
 import codechicken.nei.recipe.IRecipeHandler;
 import gregtech.nei.GTNEIDefaultHandler;
 
 public interface PropertyProvider {
 
+    enum StackRole {
+        INPUT,
+        OUTPUT,
+        IGNORE
+    }
+
     void register();
+
+    /** Other stacks can be products, ingredients, or display-only prerequisites, regardless of burn time. */
+    default StackRole otherStackRole(final IRecipeHandler handler, final int recipeIndex, final PositionedStack stack) {
+        return handler instanceof FurnaceRecipeHandler ? StackRole.IGNORE : StackRole.OUTPUT;
+    }
 
     default Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler,
         final int recipeIndex) {
@@ -42,22 +49,12 @@ public interface PropertyProvider {
         final List<PositionedStack> others = handler.getOtherStacks(recipeIndex);
         for (final PositionedStack ps : others) {
             if (ps != null && ps.item != null) {
-                if (NEIClientConfig.getSetting(NEIPlanConfig.ConfigBurnableOverride.KEY)
-                    .getIntValue(NEIPlanConfig.ConfigBurnableOverride.OFF) == NEIPlanConfig.ConfigBurnableOverride.ON) {
-                    if (node.getMachineConfig()
-                        .get(Settings.BURNABLE_OVERRIDE)
-                        .equals(Settings.Burnable.IN)) {
-                        node.getInputs()
-                            .add(Port.fromStack(ps));
-                    } else if (node.getMachineConfig()
-                        .get(Settings.BURNABLE_OVERRIDE)
-                        .equals(Settings.Burnable.OUT)) {
-                            node.getOutputs()
-                                .add(Port.fromStack(ps));
-                        }
-                } else if (TileEntityFurnace.getItemBurnTime(ps.item) <= 0) {
-                    node.getOutputs()
+                switch (otherStackRole(handler, recipeIndex, ps)) {
+                    case INPUT -> node.getInputs()
                         .add(Port.fromStack(ps));
+                    case OUTPUT -> node.getOutputs()
+                        .add(Port.fromStack(ps));
+                    case IGNORE -> {}
                 }
             }
         }

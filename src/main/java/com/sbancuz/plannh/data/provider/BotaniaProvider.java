@@ -18,6 +18,7 @@ import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.properties.SummaryProperty;
 import com.sbancuz.plannh.data.setting.Settings;
 
+import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
 import vazkii.botania.client.integration.nei.recipe.RecipeHandlerBrewery;
@@ -35,6 +36,13 @@ public class BotaniaProvider implements PropertyProvider {
 
     public static final RecipeProperty<Integer> MANA_COST = SummaryProperty.builder("botania.mana_cost", 0)
         .build();
+
+    @Override
+    public StackRole otherStackRole(final IRecipeHandler handler, final int recipeIndex, final PositionedStack stack) {
+        // The alchemy/conjuration catalyst is a persistent block beneath the pool.
+        return handler instanceof RecipeHandlerManaPool ? StackRole.IGNORE
+            : PropertyProvider.super.otherStackRole(handler, recipeIndex, stack);
+    }
 
     @Override
     public void register() {

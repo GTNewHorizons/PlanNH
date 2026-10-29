@@ -13,9 +13,6 @@ import com.sbancuz.plannh.data.effect.EffectComputer;
 import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.setting.SettingDef;
 import com.sbancuz.plannh.data.setting.Settings;
-import com.sbancuz.plannh.nei.NEIPlanConfig;
-
-import codechicken.nei.NEIClientConfig;
 
 public record MachineProfile(String id, String displayName, List<Entry> settings, EffectComputer effectComputer) {
 
@@ -51,10 +48,6 @@ public record MachineProfile(String id, String displayName, List<Entry> settings
         private Builder(final String id, final String displayName) {
             this.id = id;
             this.displayName = displayName;
-            if (NEIClientConfig.getSetting(NEIPlanConfig.ConfigBurnableOverride.KEY)
-                .getIntValue(NEIPlanConfig.ConfigBurnableOverride.OFF) == NEIPlanConfig.ConfigBurnableOverride.ON) {
-                addSetting(Settings.BURNABLE_OVERRIDE);
-            }
         }
 
         public Builder addSetting(final SettingDef<?> setting) {

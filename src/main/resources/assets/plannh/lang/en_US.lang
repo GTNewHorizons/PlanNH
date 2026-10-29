@@ -7,7 +7,6 @@ plannh.settings.tick_modifier=Accel
 plannh.settings.machines=Mach
 plannh.settings.energy_per_tick=Energy/t
 plannh.settings.inputs_per_tick=Inputs/t
-plannh.settings.burnable_override=Burnable
 
 ## Settings - GT
 plannh.settings.voltage=Tier
@@ -262,10 +261,6 @@ nei.options.plannh.item_columns=Item Columns
 nei.options.plannh.item_columns.tip=Number of columns in the NEI item panel (minimum: 6)
 nei.options.plannh.blur_strength=Blur Strength
 nei.options.plannh.blur_strength.tip=How much should the background be blurred (0 = off)
-nei.options.plannh.burnable_override=Show burnable setting
-nei.options.plannh.burnable_override.0=Off
-nei.options.plannh.burnable_override.1=On
-nei.options.plannh.burnable_override.tip=Hide/Show burnable setting override in recipe configs (may help if some items don't show when a recipes has multiple outputs)
 nei.options.keys.plannh=PlanNH
 nei.options.keys.plannh.undo=Undo
 nei.options.keys.plannh.redo=Redo

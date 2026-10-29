@@ -15,6 +15,7 @@ import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.setting.Settings;
 
+import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.IRecipeHandler;
 import tonius.neiintegration.mods.harvestcraft.RecipeHandlerApiary;
 import tonius.neiintegration.mods.harvestcraft.RecipeHandlerChurn;
@@ -38,6 +39,15 @@ public class HarvestCraftProvider implements PropertyProvider {
     private static final int CHURN_TICKS = 200;
     private static final int QUERN_TICKS = 200;
     private static final int APIARY_TICKS = 3500;
+
+    @Override
+    public StackRole otherStackRole(final IRecipeHandler handler, final int recipeIndex,
+        final PositionedStack stack) {
+        return switch (handler) {
+            case RecipeHandlerOven _, RecipeHandlerChurn _, RecipeHandlerQuern _ -> StackRole.INPUT;
+            default -> PropertyProvider.super.otherStackRole(handler, recipeIndex, stack);
+        };
+    }
 
     @Override
     public void register() {

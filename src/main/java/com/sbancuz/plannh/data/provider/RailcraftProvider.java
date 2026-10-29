@@ -18,6 +18,7 @@ import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.setting.Settings;
 
+import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
 import tonius.neiintegration.mods.railcraft.RecipeHandlerBlastFurnace;
@@ -30,6 +31,12 @@ import tonius.neiintegration.mods.railcraft.RecipeHandlerRollingMachine;
 // TODO: Make a PR to expose these values from NEI cached recipes
 // Rock Crusher and Rolling Machine have no time/energy in their cached recipe classes
 public class RailcraftProvider implements PropertyProvider {
+
+    @Override
+    public StackRole otherStackRole(final IRecipeHandler handler, final int recipeIndex, final PositionedStack stack) {
+        return handler instanceof RecipeHandlerBlastFurnace ? StackRole.IGNORE
+            : PropertyProvider.super.otherStackRole(handler, recipeIndex, stack);
+    }
 
     @Override
     public void register() {

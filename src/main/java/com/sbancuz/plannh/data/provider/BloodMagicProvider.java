@@ -28,6 +28,7 @@ import WayofTime.alchemicalWizardry.client.nei.NEIBloodOrbShapedHandler;
 import WayofTime.alchemicalWizardry.client.nei.NEIBloodOrbShapelessHandler;
 import WayofTime.alchemicalWizardry.client.nei.NEICalcinatorHandler;
 import WayofTime.alchemicalWizardry.client.nei.NEIMeteorRecipeHandler;
+import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
 
@@ -47,6 +48,13 @@ public final class BloodMagicProvider implements PropertyProvider {
 
     @Nullable
     private static Field ALCHEMY_LP;
+
+    @Override
+    public StackRole otherStackRole(final IRecipeHandler handler, final int recipeIndex, final PositionedStack stack) {
+        // The blood orb is retained by the alchemy table, not produced or consumed per operation.
+        return handler instanceof NEIAlchemyRecipeHandler ? StackRole.IGNORE
+            : PropertyProvider.super.otherStackRole(handler, recipeIndex, stack);
+    }
 
     @Override
     public void register() {

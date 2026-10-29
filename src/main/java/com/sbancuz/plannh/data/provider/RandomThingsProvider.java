@@ -15,6 +15,7 @@ import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.setting.Settings;
 
+import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.IRecipeHandler;
 import lumien.randomthings.Handler.ModCompability.NEI.ImbuingStationRecipeHandler;
 
@@ -23,6 +24,12 @@ public final class RandomThingsProvider implements PropertyProvider {
     // TODO: Make a PR to expose this constant
     // Imbuing Station: base process length (ticks) from TileEntityImbuingStation
     private static final int IMBUING_LENGTH = 200;
+
+    @Override
+    public StackRole otherStackRole(final IRecipeHandler handler, final int recipeIndex, final PositionedStack stack) {
+        return handler instanceof ImbuingStationRecipeHandler ? StackRole.INPUT
+            : PropertyProvider.super.otherStackRole(handler, recipeIndex, stack);
+    }
 
     @Override
     public void register() {

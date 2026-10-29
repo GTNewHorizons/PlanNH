@@ -20,6 +20,7 @@ import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.setting.Settings;
 
+import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
 import forestry.api.recipes.ICentrifugeRecipe;
@@ -51,6 +52,13 @@ public class ForestryProvider implements PropertyProvider {
 
     // TileSqueezer: ENERGY_PER_RECIPE_TIME=200
     private static final int SQUEEZER_RF_PER_WORK_TICK = 200;
+
+    @Override
+    public StackRole otherStackRole(final IRecipeHandler handler, final int recipeIndex, final PositionedStack stack) {
+        // These show a separate smelting/fuel cycle, not quantities consumed per displayed craft.
+        if (handler instanceof NEIHandlerFabricator || handler instanceof NEIHandlerMoistener) return StackRole.IGNORE;
+        return PropertyProvider.super.otherStackRole(handler, recipeIndex, stack);
+    }
 
     @Override
     public void register() {

@@ -85,10 +85,6 @@ public final class Settings {
 
     // ── enum-type settings ──
     public static final EnumSettingDef<Voltage> VOLTAGE = new EnumSettingDef<>("voltage", Voltage.OFF, Voltage.class);
-    public static final EnumSettingDef<Burnable> BURNABLE_OVERRIDE = new EnumSettingDef<>(
-        "burnable_override",
-        Burnable.OFF,
-        Burnable.class);
 
     public enum Voltage {
         OFF,
@@ -107,11 +103,5 @@ public final class Settings {
         UMV,
         UXV,
         MAX;
-    }
-
-    public enum Burnable {
-        OFF,
-        IN,
-        OUT;
     }
 }
