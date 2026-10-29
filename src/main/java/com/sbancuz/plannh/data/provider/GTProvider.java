@@ -1,7 +1,5 @@
 package com.sbancuz.plannh.data.provider;
 
-import static codechicken.nei.PositionedStack.CHANCE_FULL;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -11,8 +9,6 @@ import java.util.function.BiPredicate;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
-import net.minecraftforge.fluids.FluidStack;
 
 import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
@@ -25,7 +21,6 @@ import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.effect.steps.GTOverclockStep;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
-import com.sbancuz.plannh.data.flowchart.resource.LongFluidStack;
 import com.sbancuz.plannh.data.flowchart.resource.LongItemStack;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
@@ -36,7 +31,6 @@ import com.sbancuz.plannh.data.setting.Settings;
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.FurnaceRecipeHandler;
 import codechicken.nei.recipe.IRecipeHandler;
-import codechicken.nei.recipe.StackInfo;
 import codechicken.nei.recipe.TemplateRecipeHandler;
 import gregtech.api.recipe.RecipeMap;
 import gregtech.api.recipe.RecipeMaps;
@@ -303,10 +297,8 @@ public class GTProvider implements PropertyProvider {
         node.getOutputs().clear();
 
         final GTSpecialHandlers.GTSpecialHandler special = GTSpecialHandlers.get(gthMap);
-        if (special != null) special.buildPorts(r, node, inputStacks, outputStacks);
+        if (special != null) props.putAll(special.extract(r, node, inputStacks, outputStacks));
         else buildGenericPorts(inputStacks, outputStacks, node);
-
-        filterDisplayItems(node);
 
         return props;
     }
@@ -314,50 +306,24 @@ public class GTProvider implements PropertyProvider {
     private static void buildGenericPorts(final List<PositionedStack> inputStacks,
         final List<PositionedStack> outputStacks, final Node node) {
         for (final PositionedStack ps : inputStacks) {
-            if (ps instanceof GTNEIDefaultHandler.FixedPositionedStack fps && fps.isFluid()) {
+            if (ps.item != null) {
                 node.getInputs()
-                    .add(fluidPort(fps));
-            } else if (ps.item != null) {
-                node.getInputs()
-                    .add(itemPort(ps));
+                    .add(port(ps));
             }
         }
         for (final PositionedStack ps : outputStacks) {
-            if (ps instanceof GTNEIDefaultHandler.FixedPositionedStack fps && fps.isFluid()) {
-                node.getOutputs()
-                    .add(fluidPort(fps));
-            } else {
-                node.getOutputs()
-                    .add(itemPort(ps));
-            }
+            node.getOutputs()
+                .add(port(ps));
         }
     }
 
-    private static Port<LongItemStack> itemPort(final PositionedStack stack) {
-        final Port<LongItemStack> port = Port.itemPort(stack);
-        if (stack instanceof GTNEIDefaultHandler.FixedPositionedStack fixed) {
-            port.getValue().amount = fixed.realStackSize;
+    private static Port<?> port(final PositionedStack stack) {
+        final Port<?> port = Port.fromStack(stack);
+        // GT may render a single item while retaining the actual recipe count separately.
+        if (port.getValue() instanceof LongItemStack item
+            && stack instanceof GTNEIDefaultHandler.FixedPositionedStack fixed) {
+            item.amount = fixed.realStackSize;
         }
         return port;
-    }
-
-    private static Port<LongFluidStack> fluidPort(final GTNEIDefaultHandler.FixedPositionedStack fps) {
-        final FluidStack fluid = StackInfo.getFluid(fps.item);
-        return new Port<>(
-            RecipePropertyAPI.FLUID,
-            new LongFluidStack(fluid.copy(), fluid.amount),
-            (float) fps.getChance() / CHANCE_FULL,
-            fps.copy());
-    }
-
-    private static void filterDisplayItems(final Node node) {
-        node.getInputs()
-            .removeIf(
-                p -> p.getValue() instanceof LongItemStack lis
-                    && lis.stack.getItem() instanceof gregtech.common.items.ItemFluidDisplay);
-        node.getOutputs()
-            .removeIf(
-                p -> p.getValue() instanceof LongItemStack lis
-                    && lis.stack.getItem() instanceof gregtech.common.items.ItemFluidDisplay);
     }
 }

@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import net.minecraft.client.Minecraft;
 
@@ -69,12 +70,13 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
         neiWidget.showAsWidget(true);
         neiWidget.x = WIDGET_OFFSET_X;
 
+        final int recipeHeight;
         if (Compat.GREGTECH.isLoaded && handlerRef.handler instanceof GTNEIDefaultHandlerAccessor handler) {
             Size size = handler.getNeiProperties().recipeBackgroundSize;
-            size(size.width, size.height);
+            recipeHeight = size.height;
             recipeWidth = size.width;
         } else {
-            size(neiWidget.w, neiWidget.h);
+            recipeHeight = neiWidget.h;
             recipeWidth = neiWidget.w;
         }
 
@@ -89,6 +91,19 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
                 .map(Port::getAllStacks)
                 .flatMap(List::stream)
                 .toList());
+        accessor.plannh$setOutputs(
+            outputs.stream()
+                .map(Port::getAllStacks)
+                .flatMap(List::stream)
+                .toList());
+        final int portsHeight = Stream.concat(inputs.stream(), outputs.stream())
+            .flatMap(
+                port -> port.getAllStacks()
+                    .stream())
+            .mapToInt(stack -> stack.rely + stack.height + yShift + 1)
+            .max()
+            .orElse(0);
+        size(recipeWidth, Math.max(recipeHeight, portsHeight));
 
         // inputs
         for (int i = 0; i < inputs.size(); i++) {

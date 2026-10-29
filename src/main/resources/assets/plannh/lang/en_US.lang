@@ -74,6 +74,8 @@ plannh.properties.gt.fusion_threshold=Fusion Threshold
 plannh.properties.gt.recipe_map=Recipe Map
 plannh.properties.gt.steam_eu_pert=Steam/t
 plannh.properties.gt.total_steam_eu=Total Steam
+plannh.properties.gt.eoh.start_eu=Base Startup EU
+plannh.properties.gt.eoh.output_eu=Base Returned EU
 
 ## Properties - Avaritia
 plannh.properties.avaritia.compression_cost=Compression Cost
