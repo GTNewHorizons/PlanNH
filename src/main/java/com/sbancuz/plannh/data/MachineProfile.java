@@ -9,6 +9,7 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
+import java.util.function.DoubleSupplier;
 import java.util.function.Function;
 import java.util.function.ToDoubleBiFunction;
 import java.util.function.ToIntBiFunction;
@@ -21,6 +22,7 @@ import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.cleanroommc.modularui.screen.RichTooltip;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.effect.EffectComputer;
+import com.sbancuz.plannh.data.effect.EffectFunction;
 import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
@@ -98,16 +100,24 @@ public final class MachineProfile {
         });
     }
 
+    /** Evaluates a single-port query; consumers reading multiple values should reuse {@link #computeEffect}. */
     public double inputMultiplier(final MachineConfig cfg, final RecipeContext ctx, final int index) {
-        return cfg.inputMultiplier(index, () -> inputMultiplier.apply(cfg, ctx, index));
+        return cfg.inputMultiplier(
+            index,
+            () -> computeEffect(cfg, ctx).inputMultiplier(index, () -> inputMultiplier.apply(cfg, ctx, index)));
     }
 
+    /** Evaluates a single-port query; consumers reading multiple values should reuse {@link #computeEffect}. */
     public double outputMultiplier(final MachineConfig cfg, final RecipeContext ctx, final int index) {
-        return cfg.outputMultiplier(index, () -> outputMultiplier.apply(cfg, ctx, index));
+        return cfg.outputMultiplier(
+            index,
+            () -> computeEffect(cfg, ctx).outputMultiplier(index, () -> outputMultiplier.apply(cfg, ctx, index)));
     }
 
     public EffectResult computeEffect(final MachineConfig cfg, final RecipeContext ctx) {
         final EffectResult result = effectComputer.compute(cfg, ctx);
+
+        // Tick adjustments change duration and energy rate, not per-operation quantities.
         final int tickModifier = value(Settings.TICK_MODIFIER, cfg, ctx);
         if (tickModifier > 0 && tickModifier != 100) {
             final double factor = 100.0 / tickModifier;
@@ -118,9 +128,30 @@ public final class MachineProfile {
             result.durationTicks(Math.max(1, (int) Math.round(ticks)));
             result.energyPerT(result.energyPerT() / factor);
         }
+
         final var rateProperty = result.energyRateProperty();
         if (rateProperty != null) result.properties()
             .put(rateProperty, result.energyPerT());
+
+        // Freeze effective port rules into this evaluation; explicit user overrides always win.
+        final int inputCount = ctx.inputs()
+            .size();
+        for (int i = 0; i < inputCount; i++) {
+            final int index = i;
+            final DoubleSupplier rule = () -> inputMultiplier.apply(cfg, ctx, index);
+            final double multiplier = cfg.inputMultiplier(index, () -> result.inputMultiplier(index, rule));
+            result.inputMultiplier(index, multiplier);
+        }
+
+        final int outputCount = ctx.outputs()
+            .size();
+        for (int i = 0; i < outputCount; i++) {
+            final int index = i;
+            final DoubleSupplier rule = () -> outputMultiplier.apply(cfg, ctx, index);
+            final double multiplier = cfg.outputMultiplier(index, () -> result.outputMultiplier(index, rule));
+            result.outputMultiplier(index, multiplier);
+        }
+
         return result;
     }
 
@@ -296,8 +327,13 @@ public final class MachineProfile {
         public B totalCost(final RecipeProperty<? extends Number> costProperty,
             final RecipeProperty<? extends Number> rateProperty,
             final ToDoubleBiFunction<MachineConfig, RecipeContext> rule) {
-            effectComputer = effectComputer
-                .withTotalCost(costProperty, (result, cfg, ctx) -> rule.applyAsDouble(cfg, ctx))
+            return totalCost(costProperty, rateProperty, (result, cfg, ctx) -> rule.applyAsDouble(cfg, ctx));
+        }
+
+        /** A cost rule may reuse values already calculated by the effect computer. */
+        public B totalCost(final RecipeProperty<? extends Number> costProperty,
+            final RecipeProperty<? extends Number> rateProperty, final EffectFunction<? extends Number> rule) {
+            effectComputer = effectComputer.withTotalCost(costProperty, rule)
                 .withCostPerT(rateProperty, (result, cfg, ctx) -> result.energyPerT() * result.throughputFactor());
             return self();
         }

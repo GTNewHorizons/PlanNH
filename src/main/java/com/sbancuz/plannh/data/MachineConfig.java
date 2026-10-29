@@ -66,6 +66,12 @@ public class MachineConfig {
         return getOrDefault(setting, setting::getDefaultValue);
     }
 
+    /** Resolves explicit settings and the active profile's derived defaults. */
+    public <T> T value(final SettingDef<T> setting, final RecipeContext ctx) {
+        if (profile == null) throw new IllegalStateException("Machine profile is unavailable");
+        return profile.value(setting, this, ctx);
+    }
+
     @SuppressWarnings("unchecked")
     public <T> T getOrDefault(final SettingDef<T> setting, final Supplier<? extends T> fallback) {
         if (settings.containsKey(setting)) return (T) settings.get(setting);

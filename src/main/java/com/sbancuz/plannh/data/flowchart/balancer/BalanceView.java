@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Node;
@@ -95,27 +96,27 @@ public final class BalanceView {
         final List<Boundary> out = new ArrayList<>();
         for (final Node node : graph.getNodes()
             .values()) {
-            collectConfigured(node, wired, false, out);
-            collectConfigured(node, wired, true, out);
+            if (!node.isAvailable()) continue;
+            final double count = node.configuredCopies();
+            if (count <= 0) continue;
+            final EffectResult effect = node.computeEffect();
+            collectConfigured(node, wired, false, count, effect, out);
+            collectConfigured(node, wired, true, count, effect, out);
         }
         return List.copyOf(out);
     }
 
     /** One {@link Boundary} per unwired port of {@code node}, rated by its configured count. */
     private static void collectConfigured(final Node node, final Set<PortRef> wired, final boolean input,
-        final List<Boundary> out) {
-        if (!node.isAvailable()) return;
-        final double count = node.configuredCopies();
-        if (count <= 0) return;
-        final var eff = node.computeEffect();
-        final int durTicks = Math.max(1, eff.durationTicks());
-        final int tf = eff.throughputFactor();
+        final double count, final EffectResult effect, final List<Boundary> out) {
+        final int durTicks = Math.max(1, effect.durationTicks());
+        final int tf = effect.throughputFactor();
         final List<Port<?>> ports = input ? node.getInputs() : node.getOutputs();
         for (int i = 0; i < ports.size(); i++) {
             final Port<?> port = ports.get(i);
             if (wired.contains(new PortRef(node.getId(), i, input))) continue;
             final double qty = Math.max(0, port.getAmount()) * port.getChance()
-                * (input ? node.inputMultiplier(i) : node.outputMultiplier(i))
+                * (input ? effect.inputMultiplier(i) : effect.outputMultiplier(i))
                 * tf;
             if (qty <= 0) continue;
             final double rate = count * qty * GuiHelper.TICKS_PER_SECOND / (double) durTicks;

@@ -239,7 +239,8 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
 
     public static void writeThroughput(final TooltipBuilder out, final Node node, final Port<?> port,
         final boolean input, final int portIndex, final double perCycle, final int duration) {
-        final double bonus = input ? node.inputMultiplier(portIndex) : node.outputMultiplier(portIndex);
+        final var effect = node.computeEffect();
+        final double bonus = input ? effect.inputMultiplier(portIndex) : effect.outputMultiplier(portIndex);
 
         // A rule between this and what came before it - unless it is the first thing in the tooltip,
         // where a rule would be a heading over nothing.

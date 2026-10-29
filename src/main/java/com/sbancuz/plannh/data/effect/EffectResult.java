@@ -2,9 +2,11 @@ package com.sbancuz.plannh.data.effect;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.DoubleSupplier;
 
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 
+/** Per-evaluation quantities. Port multipliers are recipe-relative, independent of throughput and tick scaling. */
 public class EffectResult {
 
     private int durationTicks;
@@ -12,6 +14,8 @@ public class EffectResult {
     private int throughputFactor;
     private RecipeProperty<? extends Number> energyRateProperty;
     private final Map<RecipeProperty<?>, Object> properties = new HashMap<>();
+    private final Map<Integer, Double> inputMultipliers = new HashMap<>();
+    private final Map<Integer, Double> outputMultipliers = new HashMap<>();
 
     public EffectResult(int durationTicks, double costPerT, int throughputFactor) {
         this.durationTicks = durationTicks;
@@ -56,5 +60,31 @@ public class EffectResult {
 
     public void throughputFactor(int value) {
         this.throughputFactor = value;
+    }
+
+    public double inputMultiplier(final int index) {
+        return inputMultipliers.getOrDefault(index, 1d);
+    }
+
+    public double inputMultiplier(final int index, final DoubleSupplier fallback) {
+        final Double value = inputMultipliers.get(index);
+        return value == null ? fallback.getAsDouble() : value;
+    }
+
+    public void inputMultiplier(final int index, final double value) {
+        inputMultipliers.put(index, value);
+    }
+
+    public double outputMultiplier(final int index) {
+        return outputMultipliers.getOrDefault(index, 1d);
+    }
+
+    public double outputMultiplier(final int index, final DoubleSupplier fallback) {
+        final Double value = outputMultipliers.get(index);
+        return value == null ? fallback.getAsDouble() : value;
+    }
+
+    public void outputMultiplier(final int index, final double value) {
+        outputMultipliers.put(index, value);
     }
 }

@@ -8,6 +8,7 @@ import com.sbancuz.plannh.data.setting.Settings;
 @FunctionalInterface
 public interface EffectComputer {
 
+    /** Returns fresh evaluation state; steps should read and write that result, not re-evaluate the profile. */
     EffectResult compute(MachineConfig cfg, RecipeContext ctx);
 
     default EffectComputer andThen(final EffectStep step) {
@@ -105,10 +106,8 @@ public interface EffectComputer {
     default EffectComputer applyParallelism() {
         return (cfg, ctx) -> {
             final EffectResult res = this.compute(cfg, ctx);
-            final int machines = cfg.getProfile()
-                .value(Settings.MACHINES, cfg, ctx);
-            final int parallels = cfg.getProfile()
-                .value(Settings.PARALLELS, cfg, ctx);
+            final int machines = cfg.value(Settings.MACHINES, ctx);
+            final int parallels = cfg.value(Settings.PARALLELS, ctx);
             res.throughputFactor(Math.multiplyExact(Math.multiplyExact(res.throughputFactor(), machines), parallels));
             return res;
         };

@@ -15,6 +15,7 @@ import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.RecipeContext;
+import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Port;
@@ -138,7 +139,8 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
         final Balancer.NodeBalance balance = parent.balance();
         final boolean balanced = balance != null && balance.durationPerOp() > 0;
         final RateUnit unit = rateUnit();
-        final int ticks = balanced ? balance.durationPerOp() : durationTicks(node);
+        final EffectResult effect = tryComputeEffect(node);
+        final int ticks = balanced ? balance.durationPerOp() : durationTicks(node, effect);
 
         final TooltipBuilder out = TooltipBuilder.create(tooltip);
 
@@ -151,7 +153,7 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
         out.group(
             "plannh.summary.title.inputs",
             rows -> { if (balanced) ports(rows, node.getInputs(), balance.effectiveInputs(), ticks, unit); });
-        out.group("plannh.summary.title.properties", rows -> properties(rows, node));
+        out.group("plannh.summary.title.properties", rows -> properties(rows, node, effect));
 
         writeTarget(out);
 
@@ -233,8 +235,9 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
 
     /** Every summary property this machine actually spends, sorted so the list does not jump around. */
     @SuppressWarnings("unchecked")
-    private static void properties(final TooltipBuilder out, final Node node) {
-        final Map<RecipeProperty<?>, Object> properties = node.displayProperties();
+    private static void properties(final TooltipBuilder out, final Node node, final EffectResult effect) {
+        final Map<RecipeProperty<?>, Object> properties = effect == null ? node.getProperties()
+            : node.displayProperties(effect);
         final List<SummaryProperty> found = new ArrayList<>();
         for (final Map.Entry<RecipeProperty<?>, Object> entry : properties.entrySet()) {
             if (!(entry.getKey() instanceof final SummaryProperty prop)) continue;
@@ -254,13 +257,22 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
 
     /** The recipe's own craft time, which a machine knows before it has ever been solved. */
     private static int durationTicks(final Node node) {
-        if (node.isAvailable()) {
-            try {
-                return Math.max(0, node.computeEffect().durationTicks());
-            } catch (final RuntimeException ignored) {}
-        }
+        return durationTicks(node, tryComputeEffect(node));
+    }
+
+    private static int durationTicks(final Node node, final EffectResult effect) {
+        if (effect != null) return Math.max(0, effect.durationTicks());
         final Object raw = node.getProperties().get(RecipePropertyAPI.DURATION_TICKS);
         return raw instanceof final Number n ? Math.max(0, n.intValue()) : 0;
+    }
+
+    private static EffectResult tryComputeEffect(final Node node) {
+        if (!node.isAvailable()) return null;
+        try {
+            return node.computeEffect();
+        } catch (final RuntimeException ignored) {
+            return null;
+        }
     }
 
     private static RateUnit rateUnit() {

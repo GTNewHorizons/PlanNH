@@ -274,7 +274,7 @@ public final class Balancer {
             for (int i = 0; i < node.getOutputs().size(); i++) {
                 final var outStack = node.getOutputs().get(i);
                 final double total = count * Math.max(0d, outStack.getAmount()) * outStack.getChance()
-                    * node.outputMultiplier(i)
+                    * eff.outputMultiplier(i)
                     * throughputFactor;
                 if (total <= 0) continue;
                 effOuts.put(i, total);
@@ -284,7 +284,7 @@ public final class Balancer {
             for (int i = 0; i < node.getInputs().size(); i++) {
                 final var inStack = node.getInputs().get(i);
                 final double total = count * Math.max(0d, inStack.getAmount()) * inStack.getChance()
-                    * node.inputMultiplier(i)
+                    * eff.inputMultiplier(i)
                     * throughputFactor;
                 if (total <= 0) continue;
                 effIns.put(i, total);
