@@ -128,7 +128,6 @@ dependencies {
     ]
     elkDeps.each { dep ->
         shadowImplementation(dep)
-        testImplementation(dep)
     }
     shadowImplementation("org.eclipse.elk:org.eclipse.elk.alg.layered:$elkVersion") {
         exclude group: 'org.eclipse.emf', module: 'org.eclipse.emf.ecore.xmi'
@@ -136,7 +135,19 @@ dependencies {
 
     // Headless test harness (corpus charts are gtnh-flow style YAML)
     testImplementation('org.junit.jupiter:junit-jupiter:5.10.2')
-    testRuntimeOnly('org.junit.platform:junit-platform-launcher:1.10.2')
     testImplementation('org.yaml:snakeyaml:2.2')
+    elkDeps.each { dep ->
+        testImplementation(dep)
+    }
+    testImplementation('com.github.GTNewHorizons:EnderIO:2.10.49:dev') { transitive = false }
+    testImplementation('com.github.GTNewHorizons:Binnie:2.6.48:dev') { transitive = false }
+    testImplementation('com.github.GTNewHorizons:ForestryMC:4.11.39:dev') { transitive = false }
+    testImplementation('com.github.GTNewHorizons:MagicBees:2.10.7-GTNH:dev') { transitive = false }
+    testImplementation('com.github.GTNewHorizons:neiaddons:1.18.1:dev') { transitive = false }
+
+    testRuntimeOnly('org.junit.platform:junit-platform-launcher:1.10.2')
+    testRuntimeOnly('com.github.GTNewHorizons:EnderCore:0.5.15:dev') { transitive = false }
     testRuntimeOnly('it.unimi.dsi:fastutil:8.5.18')
+    testRuntimeOnly('org.lwjgl.lwjgl:lwjgl:2.9.4-nightly-20150209')
+    testRuntimeOnly('com.mod-buildcraft:buildcraft:7.1.23:dev') { transitive = false }
 }
