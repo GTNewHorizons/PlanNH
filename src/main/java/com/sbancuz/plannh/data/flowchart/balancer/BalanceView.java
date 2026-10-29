@@ -129,7 +129,7 @@ public final class BalanceView {
                     port.getDisplayName(),
                     SolverMessage.BOUNDARY_FLOW.toNote(
                         port.getType()
-                            .formatAmount((float) rate) + "/s "
+                            .formatAmount(rate) + "/s "
                             + port.getDisplayName())));
         }
     }
@@ -273,9 +273,9 @@ public final class BalanceView {
     /** As above, but for a rate summed over several ports that share one ingredient. */
     private static String rateOf(final Graph graph, final External at, final double rate) {
         final Port<?> port = portOf(graph, at);
-        return (port == null ? GuiHelper.formatRate((float) rate)
+        return (port == null ? GuiHelper.formatRate(rate)
             : port.getType()
-                .formatAmount((float) rate))
+                .formatAmount(rate))
             + "/s";
     }
 

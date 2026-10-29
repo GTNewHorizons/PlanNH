@@ -207,10 +207,10 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
      * One row per port actually moving: a port this craft does not move, or moves at zero, is not a
      * row.
      */
-    private static void ports(final TooltipBuilder out, final List<Port<?>> ports, final Map<Integer, Float> perCycle,
+    private static void ports(final TooltipBuilder out, final List<Port<?>> ports, final Map<Integer, Double> perCycle,
         final int duration, final RateUnit unit) {
         for (int i = 0; i < ports.size(); i++) {
-            final Float rate = perCycle.get(i);
+            final Double rate = perCycle.get(i);
             if (rate == null || rate <= 0) continue;
             final Port<?> port = ports.get(i);
             out.detail(
@@ -237,8 +237,8 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
 
         for (final SummaryProperty prop : found) {
             final String name = prop.formatDisplayName(prop.getDefaultValue());
-            final float value = ((Number) node.getProperties()
-                .get(prop)).floatValue();
+            final double value = ((Number) node.getProperties()
+                .get(prop)).doubleValue();
             // A property named per tick is energy, and the pack marks energy wherever it turns up.
             out.detail(name, name.endsWith("/t") ? TooltipTheme.Role.POWER : TooltipTheme.Role.BODY,
                 prop.formatAmount(value));

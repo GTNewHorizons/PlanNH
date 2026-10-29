@@ -275,26 +275,26 @@ public final class Balancer {
             final long totalEnergy = Math.round(eutPerOp * durPerOp * count);
             if (durPerOp > totalDuration) totalDuration = durPerOp;
 
-            final Map<Integer, Float> effOuts = new HashMap<>(node.getOutputs().size());
+            final Map<Integer, Double> effOuts = new HashMap<>(node.getOutputs().size());
             for (int i = 0; i < node.getOutputs().size(); i++) {
                 final var outStack = node.getOutputs().get(i);
-                final int stackSize = outStack.getAmount();
+                final long stackSize = outStack.getAmount();
                 if (stackSize <= 0) continue;
-                final float total = (float) (count * stackSize * outStack.getChance()
+                final double total = count * stackSize * outStack.getChance()
                     * cfg.outputMultiplier(i)
-                    * throughputFactor);
+                    * throughputFactor;
                 if (total <= 0) continue;
                 effOuts.put(i, total);
             }
 
-            final Map<Integer, Float> effIns = new HashMap<>(node.getInputs().size());
+            final Map<Integer, Double> effIns = new HashMap<>(node.getInputs().size());
             for (int i = 0; i < node.getInputs().size(); i++) {
                 final var inStack = node.getInputs().get(i);
-                final int stackSize = inStack.getAmount();
+                final long stackSize = inStack.getAmount();
                 if (stackSize <= 0) continue;
-                final float total = (float) (count * stackSize * inStack.getChance()
+                final double total = count * stackSize * inStack.getChance()
                     * cfg.inputMultiplier(i)
-                    * throughputFactor);
+                    * throughputFactor;
                 if (total <= 0) continue;
                 effIns.put(i, total);
             }
@@ -316,6 +316,6 @@ public final class Balancer {
 
     /** One machine's share of a solved balance, for the node widget and the machine-count panel. */
     public record NodeBalance(double operations, long totalEnergy, int durationPerOp,
-        Map<Integer, Float> effectiveOutputs, Map<Integer, Float> effectiveInputs) {}
+        Map<Integer, Double> effectiveOutputs, Map<Integer, Double> effectiveInputs) {}
 
 }

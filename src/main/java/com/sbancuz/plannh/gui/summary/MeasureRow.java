@@ -16,7 +16,7 @@ final class MeasureRow extends SummaryFlow {
         super(GuiAxis.X);
         name("summary.measure");
 
-        final String raw = measure.displayAmount((float) (measure.amount() * scale));
+        final String raw = measure.displayAmount(measure.amount() * scale);
         final String amount = raw.isEmpty() ? "" : raw + suffix;
         fullWidth().coverChildrenHeight(SummaryBody.LINE_H)
             .paddingLeft(SummaryBody.TEXT_X)

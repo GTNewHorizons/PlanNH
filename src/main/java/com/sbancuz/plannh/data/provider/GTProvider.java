@@ -25,9 +25,12 @@ import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.effect.steps.GTOverclockStep;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
+import com.sbancuz.plannh.data.flowchart.resource.LongFluidStack;
+import com.sbancuz.plannh.data.flowchart.resource.LongItemStack;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.properties.SummaryProperty;
+import com.sbancuz.plannh.data.provider.gregtech.GTSpecialHandlers;
 import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.PositionedStack;
@@ -220,6 +223,9 @@ public class GTProvider implements PropertyProvider {
             if (ingredients == null || ingredients.isEmpty() || ingredients.getFirst().item == null) {
                 return props;
             }
+            inputStacks = ingredients;
+            final PositionedStack result = cr.getResult();
+            if (result != null) outputStacks = List.of(result);
 
             final String overlay = fh.getOverlayIdentifier();
             final RecipeMap<?> recipeMap;
@@ -293,30 +299,65 @@ public class GTProvider implements PropertyProvider {
             props.put(SPECIAL_VALUE, r.mSpecialValue);
         }
 
-        List<Port<?>> inputs = node.getInputs();
-        List<Port<?>> outputs = node.getOutputs();
+        node.getInputs().clear();
+        node.getOutputs().clear();
 
-        for (PositionedStack ps : inputStacks) {
-            if (ps instanceof GTNEIDefaultHandler.FixedPositionedStack fps && fps.isFluid())
-                inputs.add(fluidPort(fps));
-            else if(ps.item != null) inputs.add(Port.itemPort(ps));
-        }
+        final GTSpecialHandlers.GTSpecialHandler special = GTSpecialHandlers.get(gthMap);
+        if (special != null) special.buildPorts(r, node, inputStacks, outputStacks);
+        else buildGenericPorts(inputStacks, outputStacks, node);
 
-        for (PositionedStack ps : outputStacks) {
-            if (ps instanceof GTNEIDefaultHandler.FixedPositionedStack fps && fps.isFluid())
-                outputs.add(fluidPort(fps));
-            else outputs.add(Port.itemPort(ps));
-        }
+        filterDisplayItems(node);
 
         return props;
     }
 
-    private static Port<FluidStack> fluidPort(GTNEIDefaultHandler.FixedPositionedStack fps) {
+    private static void buildGenericPorts(final List<PositionedStack> inputStacks,
+        final List<PositionedStack> outputStacks, final Node node) {
+        for (final PositionedStack ps : inputStacks) {
+            if (ps instanceof GTNEIDefaultHandler.FixedPositionedStack fps && fps.isFluid()) {
+                node.getInputs()
+                    .add(fluidPort(fps));
+            } else if (ps.item != null) {
+                node.getInputs()
+                    .add(itemPort(ps));
+            }
+        }
+        for (final PositionedStack ps : outputStacks) {
+            if (ps instanceof GTNEIDefaultHandler.FixedPositionedStack fps && fps.isFluid()) {
+                node.getOutputs()
+                    .add(fluidPort(fps));
+            } else {
+                node.getOutputs()
+                    .add(itemPort(ps));
+            }
+        }
+    }
+
+    private static Port<LongItemStack> itemPort(final PositionedStack stack) {
+        final Port<LongItemStack> port = Port.itemPort(stack);
+        if (stack instanceof GTNEIDefaultHandler.FixedPositionedStack fixed) {
+            port.getValue().amount = fixed.realStackSize;
+        }
+        return port;
+    }
+
+    private static Port<LongFluidStack> fluidPort(final GTNEIDefaultHandler.FixedPositionedStack fps) {
+        final FluidStack fluid = StackInfo.getFluid(fps.item);
         return new Port<>(
             RecipePropertyAPI.FLUID,
-            StackInfo.getFluid(fps.item)
-                .copy(),
+            new LongFluidStack(fluid.copy(), fluid.amount),
             (float) fps.getChance() / CHANCE_FULL,
             fps.copy());
+    }
+
+    private static void filterDisplayItems(final Node node) {
+        node.getInputs()
+            .removeIf(
+                p -> p.getValue() instanceof LongItemStack lis
+                    && lis.stack.getItem() instanceof gregtech.common.items.ItemFluidDisplay);
+        node.getOutputs()
+            .removeIf(
+                p -> p.getValue() instanceof LongItemStack lis
+                    && lis.stack.getItem() instanceof gregtech.common.items.ItemFluidDisplay);
     }
 }

@@ -35,7 +35,7 @@ class PropertiesFold extends NodeFold {
 
         for (final SummaryProperty<?> prop : properties(data)) {
             final String name = name(prop);
-            final float amount = ((Number) properties.get(prop)).floatValue();
+            final double amount = ((Number) properties.get(prop)).doubleValue();
 
             child(
                 FlowchartFlow.row(node)
@@ -77,7 +77,7 @@ class PropertiesFold extends NodeFold {
         for (final Map.Entry<RecipeProperty<?>, Object> entry : node.getProperties()
             .entrySet()) {
             if (!(entry.getKey() instanceof final SummaryProperty<?> prop)) continue;
-            if (!(entry.getValue() instanceof final Number number) || number.floatValue() == 0) continue;
+            if (!(entry.getValue() instanceof final Number number) || number.doubleValue() == 0) continue;
             found.add(prop);
         }
         found.sort(Comparator.comparing(PropertiesFold::name));

@@ -36,6 +36,8 @@ import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
+import com.sbancuz.plannh.data.flowchart.resource.LongFluidStack;
+import com.sbancuz.plannh.data.flowchart.resource.LongItemStack;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.GuiHelper.RateUnit;
@@ -226,11 +228,13 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
 
     @SuppressWarnings("unchecked")
     private void setPermutationToStack(ItemStack itemStack) {
-        if (port.getType() == RecipePropertyAPI.ITEM) ((Port<ItemStack>) port).setValue(itemStack.copy());
+        if (port.getType() == RecipePropertyAPI.ITEM) {
+            ((Port<LongItemStack>) port).setValue(new LongItemStack(itemStack.copy(), port.getAmount()));
+        }
         if (port.getType() == RecipePropertyAPI.FLUID) {
             FluidStack fluid = StackInfo.getFluid(itemStack);
             if (fluid == null) return;
-            ((Port<FluidStack>) port).setValue(fluid.copy());
+            ((Port<LongFluidStack>) port).setValue(new LongFluidStack(fluid.copy(), port.getAmount()));
         }
 
         port.getAllStacks()
@@ -282,14 +286,14 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
 
     private void writeThroughput(final TooltipBuilder out) {
         final Balancer.NodeBalance balance = parent.balance();
-        final float perCycle = perCycle(balance);
+        final double perCycle = perCycle(balance);
         if (perCycle <= 0) return;
 
         writeThroughput(out, node, port, input, index.leftInt(), perCycle, balance.durationPerOp());
     }
 
     public static void writeThroughput(final TooltipBuilder out, final Node node, final Port<?> port,
-        final boolean input, final int portIndex, final float perCycle, final int duration) {
+        final boolean input, final int portIndex, final double perCycle, final int duration) {
         final MachineConfig config = node.getMachineConfig();
 
         final float bonus = input ? config.inputMultiplier(portIndex) : config.outputMultiplier(portIndex);
@@ -315,15 +319,15 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         } else out.langRow(LANG + "shift_hint");
     }
 
-    private float perCycle(final @Nullable Balancer.NodeBalance balance) {
+    private double perCycle(final @Nullable Balancer.NodeBalance balance) {
         if (balance == null || balance.durationPerOp() <= 0) return 0;
 
-        final Float perCycle = (input ? balance.effectiveInputs() : balance.effectiveOutputs()).get(index.leftInt());
+        final Double perCycle = (input ? balance.effectiveInputs() : balance.effectiveOutputs()).get(index.leftInt());
         return perCycle == null ? 0 : perCycle;
     }
 
     /** This port's rate in the given unit, as the corner, the row and the tooltip all state it. */
-    static String rateText(final Port<?> port, final float perCycle, final int duration, final RateUnit unit) {
+    static String rateText(final Port<?> port, final double perCycle, final int duration, final RateUnit unit) {
         return TooltipBuilder.rate(
             port.getType()
                 .formatAmount(GuiHelper.rate(perCycle, duration, unit)),

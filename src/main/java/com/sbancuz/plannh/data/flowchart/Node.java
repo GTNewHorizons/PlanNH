@@ -15,6 +15,8 @@ import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
+import com.sbancuz.plannh.data.flowchart.resource.LongFluidStack;
+import com.sbancuz.plannh.data.flowchart.resource.LongItemStack;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.properties.ResourceProperty;
@@ -131,12 +133,14 @@ public class Node extends GraphData {
     private void setConfiguration(int index, ItemStack itemStack) {
         Port<?> port = inputs.get(index);
         ResourceProperty<?> type = port.getType();
-        if (type == RecipePropertyAPI.ITEM) ((Port<ItemStack>) port).setValue(itemStack.copy());
+        if (type == RecipePropertyAPI.ITEM) {
+            ((Port<LongItemStack>) port).setValue(new LongItemStack(itemStack.copy(), port.getAmount()));
+        }
 
         if (type == RecipePropertyAPI.FLUID) {
             FluidStack fluid = StackInfo.getFluid(itemStack);
             if (fluid == null) return;
-            ((Port<FluidStack>) port).setValue(fluid.copy());
+            ((Port<LongFluidStack>) port).setValue(new LongFluidStack(fluid.copy(), port.getAmount()));
         }
 
         port.getAllStacks()

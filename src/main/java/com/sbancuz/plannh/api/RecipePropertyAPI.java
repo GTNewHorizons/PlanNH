@@ -13,6 +13,8 @@ import net.minecraftforge.fluids.FluidStack;
 import com.google.common.collect.ArrayListMultimap;
 import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.data.flowchart.Port;
+import com.sbancuz.plannh.data.flowchart.resource.LongFluidStack;
+import com.sbancuz.plannh.data.flowchart.resource.LongItemStack;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.properties.ResourceProperty;
@@ -33,46 +35,47 @@ public final class RecipePropertyAPI {
     public static final RecipeProperty<Integer> DURATION_TICKS = RecipeProperty.<Integer>builder("duration_ticks", 0)
         .build();
 
-    public static final ResourceProperty<ItemStack> ITEM = ResourceProperty.builder("item", new ItemStack(Blocks.dirt))
-        .displayFormatter(ItemStack::getDisplayName)
+    public static final ResourceProperty<LongItemStack> ITEM = ResourceProperty
+        .builder("item", new LongItemStack(new ItemStack(Blocks.dirt), 0))
+        .displayFormatter(value -> value.stack.getDisplayName())
         .amountFormatter(GuiHelper::formatRate)
-        .amountExtractor(stack -> stack.stackSize)
-        .amountUpdater((stack, newAmount) -> stack.stackSize = newAmount)
+        .amountExtractor(value -> value.amount)
+        .amountUpdater((value, newAmount) -> value.amount = newAmount)
         .connectionChecker(RecipePropertyAPI::itemPortsMatch)
         .hashCodeExtractor(
-            s -> 31 * s.getItem()
-                .hashCode() + s.getItemDamage())
-        .colorProvider(IngredientColors::itemColor)
+            value -> 31 * value.stack.getItem()
+                .hashCode() + value.stack.getItemDamage())
+        .colorProvider(value -> IngredientColors.itemColor(value.stack))
         .pinInputColor(PlannhColors.PIN_INPUT.getColor())
         .pinOutputColor(PlannhColors.PIN_OUTPUT.getColor())
         .arrowColor(PlannhColors.ARROW_ITEM.getColor())
         .build();
 
-    public static final ResourceProperty<FluidStack> FLUID = ResourceProperty
-        .<FluidStack>builder("fluid", new FluidStack(FluidRegistry.WATER, 0, null))
-        .displayFormatter(FluidStack::getLocalizedName)
+    public static final ResourceProperty<LongFluidStack> FLUID = ResourceProperty
+        .builder("fluid", new LongFluidStack(new FluidStack(FluidRegistry.WATER, 0, null), 0))
+        .displayFormatter(value -> value.stack.getLocalizedName())
         // Buckets past a thousand litres, litres below, and the same suffix table over whichever
         // unit is in play - so a big line reads 1.0kB rather than running out of digits at 1000.0B.
         .amountFormatter(amount -> {
-            if (amount >= 1000f) return GuiHelper.trimTrailingZeros(GuiHelper.formatRate(amount / 1000f)) + "B";
+            if (amount >= 1000d) return GuiHelper.trimTrailingZeros(GuiHelper.formatRate(amount / 1000d)) + "B";
             return GuiHelper.trimTrailingZeros(GuiHelper.formatRate(amount)) + "mB";
         })
-        .amountExtractor(fs -> fs.amount)
-        .amountUpdater((fs, newAmount) -> fs.amount = newAmount)
+        .amountExtractor(value -> value.amount)
+        .amountUpdater((value, newAmount) -> value.amount = newAmount)
         .connectionChecker(RecipePropertyAPI::fluidPortsMatch)
         .hashCodeExtractor(
-            fs -> fs.getFluid()
+            value -> value.stack.getFluid()
                 .hashCode())
-        .colorProvider(IngredientColors::fluidColor)
+        .colorProvider(value -> IngredientColors.fluidColor(value.stack))
         .pinInputColor(PlannhColors.PIN_FLUID_IN.getColor())
         .pinOutputColor(PlannhColors.PIN_FLUID_OUT.getColor())
         .arrowColor(PlannhColors.ARROW_FLUID.getColor())
         .build();
 
-    private static boolean itemPortsMatch(final Port<ItemStack> pa, final Port<ItemStack> pb) {
-        PositionedStack psa = pa.getAllStacks()
+    private static boolean itemPortsMatch(final Port<LongItemStack> pa, final Port<LongItemStack> pb) {
+        final PositionedStack psa = pa.getAllStacks()
             .getFirst();
-        PositionedStack psb = pb.getAllStacks()
+        final PositionedStack psb = pb.getAllStacks()
             .getFirst();
 
         ItemStack[] as = ((PositionedStackAccessor) psa).getPermutated() ? psa.items : new ItemStack[] { psa.item };
@@ -94,13 +97,15 @@ public final class RecipePropertyAPI {
         return false;
     }
 
-    private static boolean fluidPortsMatch(final Port<FluidStack> pa, final Port<FluidStack> pb) {
-        PositionedStack psa = pa.getAllStacks()
+    private static boolean fluidPortsMatch(final Port<LongFluidStack> pa, final Port<LongFluidStack> pb) {
+        final PositionedStack psa = pa.getAllStacks()
             .getFirst();
-        PositionedStack psb = pb.getAllStacks()
+        final PositionedStack psb = pb.getAllStacks()
             .getFirst();
-        ItemStack[] as = ((PositionedStackAccessor) psa).getPermutated() ? psa.items : new ItemStack[] { psa.item };
-        ItemStack[] bs = ((PositionedStackAccessor) psb).getPermutated() ? psb.items : new ItemStack[] { psb.item };
+        final ItemStack[] as = ((PositionedStackAccessor) psa).getPermutated() ? psa.items
+            : new ItemStack[] { psa.item };
+        final ItemStack[] bs = ((PositionedStackAccessor) psb).getPermutated() ? psb.items
+            : new ItemStack[] { psb.item };
 
         for (ItemStack a : as) {
             FluidStack fluidA = StackInfo.getFluid(a);

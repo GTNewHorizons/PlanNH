@@ -94,10 +94,10 @@ class ThroughputFold extends NodeFold {
     }
 
     /** One row per port moving this way, and nothing at all when none is. */
-    private void rates(final boolean input, final List<Port<?>> ports, final Map<Integer, Float> perCycle,
+    private void rates(final boolean input, final List<Port<?>> ports, final Map<Integer, Double> perCycle,
         final int duration, final RateUnit unit) {
         for (int i = 0; i < ports.size(); i++) {
-            final Float rate = perCycle.get(i);
+            final Double rate = perCycle.get(i);
             if (rate == null || rate <= 0) continue;
 
             final Flow row = rateRow(ports.get(i), i, input, rate, duration, unit);
@@ -106,7 +106,7 @@ class ThroughputFold extends NodeFold {
         }
     }
 
-    private Flow rateRow(final Port<?> port, final int portIndex, final boolean input, final float perCycle,
+    private Flow rateRow(final Port<?> port, final int portIndex, final boolean input, final double perCycle,
         final int duration, final RateUnit unit) {
         // The summary's shape: the bar, the name and the value are siblings in one row. The bar is
         // pixels, so it takes what it takes, and the two texts are given caps out of the rest - a name
@@ -138,7 +138,7 @@ class ThroughputFold extends NodeFold {
     }
 
     private void writeTooltip(final RichTooltip tooltip, final Port<?> port, final int portIndex, final boolean input,
-        final float perCycle, final int duration) {
+        final double perCycle, final int duration) {
         tooltip.addFromItem(
             port.getAllStacks()
                 .getFirst().item);

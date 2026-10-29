@@ -6,13 +6,12 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import net.minecraft.item.ItemStack;
-
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.flowchart.resource.LongItemStack;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.properties.SummaryProperty;
@@ -66,11 +65,11 @@ public final class AvaritiaProvider implements PropertyProvider {
 
         if (handler instanceof CompressionHandler && !node.getInputs()
             .isEmpty()) {
-            final ItemStack stack = (ItemStack) node.getInputs()
+            final LongItemStack stack = (LongItemStack) node.getInputs()
                 .getFirst()
                 .getValue();
-            if (stack != null && stack.stackSize > 0) {
-                props.put(COMPRESSION_COST, stack.stackSize);
+            if (stack != null && stack.amount > 0) {
+                props.put(COMPRESSION_COST, (int) Math.min(stack.amount, Integer.MAX_VALUE));
             }
         }
 

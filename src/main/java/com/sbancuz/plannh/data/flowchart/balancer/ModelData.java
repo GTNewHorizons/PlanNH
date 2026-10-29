@@ -58,14 +58,14 @@ public final class ModelData {
             for (int i = 0; i < inQty.length; i++) {
                 final var s = node.getInputs()
                     .get(i);
-                inQty[i] = Math.max(0, s.getAmount()) * s.getChance() * cfg.inputMultiplier(i) * tf;
+                inQty[i] = Math.max(0d, s.getAmount()) * s.getChance() * cfg.inputMultiplier(i) * tf;
             }
             this.outQty = new double[node.getOutputs()
                 .size()];
             for (int i = 0; i < outQty.length; i++) {
                 final var s = node.getOutputs()
                     .get(i);
-                outQty[i] = Math.max(0, s.getAmount()) * s.getChance() * cfg.outputMultiplier(i) * tf;
+                outQty[i] = Math.max(0d, s.getAmount()) * s.getChance() * cfg.outputMultiplier(i) * tf;
             }
 
             this.targetExtent = cfg.getTargetKind() == Pin.TARGET_RATE ? cfg.getRates()

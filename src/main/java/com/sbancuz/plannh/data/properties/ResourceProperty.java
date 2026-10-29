@@ -1,9 +1,10 @@
 package com.sbancuz.plannh.data.properties;
 
 import java.util.Objects;
-import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
+import java.util.function.ObjLongConsumer;
 import java.util.function.ToIntFunction;
+import java.util.function.ToLongFunction;
 
 import com.sbancuz.plannh.data.flowchart.Port;
 
@@ -14,9 +15,9 @@ import lombok.experimental.SuperBuilder;
 public class ResourceProperty<T> extends SummaryProperty<T> {
 
     @lombok.Builder.Default
-    private final ToIntFunction<T> amountExtractor = _ -> 1;
+    private final ToLongFunction<T> amountExtractor = _ -> 1;
     @lombok.Builder.Default
-    private final BiConsumer<T, Integer> amountUpdater = (_, _) -> {};
+    private final ObjLongConsumer<T> amountUpdater = (_, _) -> {};
 
     @lombok.Builder.Default
     private final BiPredicate<Port<T>, Port<T>> connectionChecker = (_, _) -> true;
@@ -42,11 +43,11 @@ public class ResourceProperty<T> extends SummaryProperty<T> {
         return getKey();
     }
 
-    public int extractAmount(final T value) {
-        return amountExtractor.applyAsInt(value);
+    public long extractAmount(final T value) {
+        return amountExtractor.applyAsLong(value);
     }
 
-    public void setAmount(final T value, final int newAmount) {
+    public void setAmount(final T value, final long newAmount) {
         amountUpdater.accept(value, newAmount);
     }
 
