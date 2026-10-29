@@ -15,9 +15,7 @@ import codechicken.nei.api.IConfigureNEI;
 import codechicken.nei.config.OptionCycled;
 import codechicken.nei.config.OptionIntegerField;
 import codechicken.nei.config.OptionTextField;
-import codechicken.nei.recipe.GuiOverlayButton;
 import codechicken.nei.recipe.GuiRecipe;
-import codechicken.nei.recipe.GuiRecipeButton;
 import codechicken.nei.recipe.GuiRecipeButton.UpdateRecipeButtonsEvent;
 import codechicken.nei.recipe.RecipeHandlerRef;
 import codechicken.nei.recipe.RecipeInfo;
@@ -109,14 +107,16 @@ public class NEIPlanConfig implements IConfigureNEI {
     @SubscribeEvent
     public void onPostButtonUpdate(final UpdateRecipeButtonsEvent.Post event) {
         final GuiRecipe<?> gui = (GuiRecipe<?>) event.gui;
-        if (!(gui.firstGui instanceof GuiContainerWrapper
-            && ((GuiContainerWrapper) gui.firstGui).getScreen() instanceof FlowchartScreen)) return;
+        if (!(gui.firstGui instanceof final GuiContainerWrapper wrapper
+            && wrapper.getScreen() instanceof FlowchartScreen)) return;
+        final RecipeHandlerRef ref = event.handlerRef;
+        if (!HANDLER.canCraft(wrapper, ref.handler, ref.recipeIndex)) return;
 
-        for (final GuiRecipeButton btn : event.buttonList) {
-            if (btn instanceof GuiOverlayButton) {
-                ((GuiOverlayButton) btn).setRequireShiftForOverlayRecipe(false);
-            }
-        }
+        // Informational handlers can omit an overlay identifier or suppress the default '+' entirely.
+        PlanRecipeButton.configure(event.buttonList, ref, event.width, event.height, () -> {
+            wrapper.mc.displayGuiScreen(wrapper);
+            HANDLER.overlayRecipe(wrapper, ref.handler, ref.recipeIndex, false);
+        });
     }
 
     @Override
