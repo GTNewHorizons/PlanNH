@@ -7,9 +7,11 @@ import net.minecraft.util.StatCollector;
 import com.cleanroommc.modularui.api.GuiAxis;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.drawable.Rectangle;
+import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.widget.Widget;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.data.flowchart.Summary.Line;
+import com.sbancuz.plannh.data.flowchart.balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.balancer.Severity;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.PlannhColors;
@@ -28,7 +30,7 @@ class SummaryBody extends SummaryFlow {
 
     private final Summary data;
     private final Summary.Section section;
-    private long rowsBuiltAt = Long.MIN_VALUE;
+    private BalanceResult rowsBalance;
     private Summary.Mode rowsMode = null;
     private GuiHelper.RateUnit rowsUnit = GuiHelper.RateUnit.SECONDS;
 
@@ -40,6 +42,7 @@ class SummaryBody extends SummaryFlow {
         this.rowsUnit = data.getRateUnit();
 
         fullWidth().coverChildrenHeight()
+            .crossAxisAlignment(Alignment.CrossAxis.START)
             .setEnabledIf(_ -> !data.isSummaryFold(section));
 
         rebuildRows(panel);
@@ -57,8 +60,8 @@ class SummaryBody extends SummaryFlow {
         super.onUpdate();
         final Summary.Mode mode = data.computedMode();
         final GuiHelper.RateUnit unit = data.getRateUnit();
-        if (rowsBuiltAt != data.calculatedAt() || rowsMode != mode || rowsUnit != unit) {
-            rowsBuiltAt = data.calculatedAt();
+        if (rowsBalance != data.balance() || rowsMode != mode || rowsUnit != unit) {
+            rowsBalance = data.balance();
             rowsMode = mode;
             rowsUnit = unit;
             rebuildRows(null);

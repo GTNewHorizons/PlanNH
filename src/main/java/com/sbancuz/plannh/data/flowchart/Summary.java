@@ -309,7 +309,7 @@ public final class Summary extends GraphData {
      * summary's {@link Mode}.
      */
     public Summary recompute(final Graph graph) {
-        if (atGraph == graph && atVersion >= graph.getVersion() && atMode == mode && atSettings == settingsVersion)
+        if (atGraph == graph && atVersion == graph.getVersion() && atMode == mode && atSettings == settingsVersion)
             return this;
         atGraph = graph;
         atMode = mode;

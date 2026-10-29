@@ -190,6 +190,36 @@ class UnavailableNodeCalculationTest {
     }
 
     @Test
+    void removingTheLastRecipeClearsTheSummary() {
+        final Graph graph = new Graph();
+        graph.setBalanceMode(BalanceMode.NONE);
+        final Node recipe = node("recipe", "product", 2);
+        graph.addNode(recipe);
+        final Summary summary = new Summary().recompute(graph);
+        assertFalse(
+            summary.lines(Summary.Section.OUTPUTS)
+                .isEmpty());
+
+        graph.removeNode(recipe.getId());
+        summary.recompute(graph);
+
+        assertEquals(graph.getVersion(), summary.calculatedAt());
+        assertTrue(
+            summary.lines(Summary.Section.OUTPUTS)
+                .isEmpty());
+        assertTrue(
+            summary.lines(Summary.Section.INPUTS)
+                .isEmpty());
+        assertTrue(
+            summary.lines(Summary.Section.MACHINE_COUNTS)
+                .isEmpty());
+        assertTrue(
+            summary.balance()
+                .nodeBalances()
+                .isEmpty());
+    }
+
+    @Test
     void resourceMismatchAtSamePortIndicesIsExcludedFromSolverAndConfiguredBoundary() {
         final Graph graph = connectedGraph("source", "target");
         final Edge edge = graph.getEdges()
