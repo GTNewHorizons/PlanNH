@@ -6,6 +6,7 @@ import java.util.List;
 import net.minecraft.client.gui.inventory.GuiContainer;
 
 import com.cleanroommc.modularui.screen.GuiContainerWrapper;
+import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.gui.CanvasWidget;
@@ -15,6 +16,8 @@ import codechicken.nei.PositionedStack;
 import codechicken.nei.api.IOverlayHandler;
 import codechicken.nei.recipe.GuiOverlayButton;
 import codechicken.nei.recipe.IRecipeHandler;
+import codechicken.nei.recipe.Recipe;
+import codechicken.nei.recipe.RecipeHandlerRef;
 
 public class PlanOverlayHandler implements IOverlayHandler {
 
@@ -33,6 +36,7 @@ public class PlanOverlayHandler implements IOverlayHandler {
 
     @Override
     public boolean canCraft(final GuiContainer firstGui, final IRecipeHandler handler, final int recipeIndex) {
+        if (!canResolve(handler, recipeIndex)) return false;
         for (final PropertyProvider p : RecipePropertyAPI.getExtractors(handler.getClass())) {
             if (p.canCraft(handler, recipeIndex)) return true;
         }
@@ -42,13 +46,19 @@ public class PlanOverlayHandler implements IOverlayHandler {
     @Override
     public boolean craft(final GuiContainer firstGui, final IRecipeHandler handler, final int recipeIndex,
         final int multiplier) {
-        for (final PropertyProvider p : RecipePropertyAPI.getExtractors(handler.getClass())) {
-            if (p.canCraft(handler, recipeIndex)) return true;
-        }
-        return false;
+        return canCraft(firstGui, handler, recipeIndex);
+    }
+
+    /** Only offer recipes that NEI can reconstruct when the saved node is loaded. */
+    public static boolean canResolve(final IRecipeHandler handler, final int recipeIndex) {
+        return RecipeHandlerRef.of(Recipe.RecipeId.of(handler, recipeIndex)) != null;
     }
 
     private static void addRecipe(final GuiContainer firstGui, final IRecipeHandler handler, final int recipeIndex) {
+        if (!canResolve(handler, recipeIndex)) {
+            PlanNH.LOG.warn("Cannot add unresolved recipe: handler={}, recipeIndex={}", handler.getHandlerId(), recipeIndex);
+            return;
+        }
         if (firstGui instanceof final GuiContainerWrapper wrapper
             && wrapper.getScreen() instanceof final FlowchartScreen screen) {
             CanvasWidget canvas =  screen.getCanvas();

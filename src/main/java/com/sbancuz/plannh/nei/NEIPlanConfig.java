@@ -20,7 +20,7 @@ import codechicken.nei.recipe.GuiOverlayButton;
 import codechicken.nei.recipe.GuiRecipe;
 import codechicken.nei.recipe.GuiRecipeButton;
 import codechicken.nei.recipe.GuiRecipeButton.UpdateRecipeButtonsEvent;
-import codechicken.nei.recipe.IRecipeHandler;
+import codechicken.nei.recipe.RecipeHandlerRef;
 import codechicken.nei.recipe.RecipeInfo;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
@@ -115,13 +115,13 @@ public class NEIPlanConfig implements IConfigureNEI {
         if (!(gui.firstGui instanceof final GuiContainerWrapper wrapper
             && wrapper.getScreen() instanceof FlowchartScreen)) return;
 
-        for (final Object h : gui.currenthandlers) {
-            if (!(h instanceof final IRecipeHandler r)) continue;
-            final String ident = r.getOverlayIdentifier();
-            if (ident != null && !ident.isEmpty()
-                && !RecipeInfo.hasOverlayHandler(GuiContainerWrapper.class, ident)) {
-                API.registerGuiOverlayHandler(GuiContainerWrapper.class, HANDLER, ident);
-            }
+        final RecipeHandlerRef ref = event.handlerRef;
+        if (!PlanOverlayHandler.canResolve(ref.handler, ref.recipeIndex)) return;
+
+        final String ident = ref.handler.getOverlayIdentifier();
+        if (ident != null && !ident.isEmpty()
+            && !RecipeInfo.hasOverlayHandler(GuiContainerWrapper.class, ident)) {
+            API.registerGuiOverlayHandler(GuiContainerWrapper.class, HANDLER, ident);
         }
     }
 
