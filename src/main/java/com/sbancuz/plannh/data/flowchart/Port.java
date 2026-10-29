@@ -16,6 +16,7 @@ import com.sbancuz.plannh.data.properties.ResourceProperty;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.item.ItemFluidDisplay;
+import codechicken.nei.recipe.StackInfo;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -36,11 +37,12 @@ public class Port<T> {
     }
 
     public static Port<LongFluidStack> fluid(final FluidStack stack, final float chance, final int x, final int y) {
-        return new Port<>(
-            RecipePropertyAPI.FLUID,
-            new LongFluidStack(stack.copy(), stack.amount),
-            chance,
-            new PositionedStack(ItemFluidDisplay.createStack(stack), x, y));
+        return fluid(stack, stack.amount, chance, new PositionedStack(ItemFluidDisplay.createStack(stack), x, y));
+    }
+
+    public static Port<LongFluidStack> fluid(final FluidStack stack, final long amount, final float chance,
+        final PositionedStack display) {
+        return new Port<>(RecipePropertyAPI.FLUID, new LongFluidStack(stack.copy(), amount), chance, display);
     }
 
     public long getAmount() {
@@ -90,6 +92,13 @@ public class Port<T> {
         }
         allStacks.addAll(other.allStacks);
         type.setAmount(value, newAmount);
+    }
+
+    public static Port<?> fromStack(final PositionedStack ps) {
+        if (!StackInfo.isFluidDisplayItem(ps.item)) return itemPort(ps);
+        final long amount = StackInfo.itemStackToNBT(ps.item)
+            .getLong("Count");
+        return fluid(StackInfo.getFluid(ps.item), amount, (float) ps.getChance() / CHANCE_FULL, ps.copy());
     }
 
     public static Port<LongItemStack> itemPort(final PositionedStack ps) {

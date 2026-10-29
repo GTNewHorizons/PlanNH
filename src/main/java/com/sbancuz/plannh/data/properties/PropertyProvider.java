@@ -28,12 +28,12 @@ public interface PropertyProvider {
         final int recipeIndex) {
         final List<PositionedStack> ins = handler.getIngredientStacks(recipeIndex);
         for (final PositionedStack ps : ins) if (ps != null && ps.item != null) node.getInputs()
-            .add(Port.itemPort(ps));
+            .add(Port.fromStack(ps));
 
         final PositionedStack result = handler.getResultStack(recipeIndex);
         if (result != null && result.item != null) {
             node.getOutputs()
-                .add(Port.itemPort(result));
+                .add(Port.fromStack(result));
             // warn if we find any handlers outside gt that have multiple output permutations
             if (result.items.length > 1 && (!Compat.GREGTECH.isLoaded || !(handler instanceof GTNEIDefaultHandler)))
                 PlanNH.LOG.warn("output found with permutations");
@@ -48,16 +48,16 @@ public interface PropertyProvider {
                         .get(Settings.BURNABLE_OVERRIDE)
                         .equals(Settings.Burnable.IN)) {
                         node.getInputs()
-                            .add(Port.itemPort(ps));
+                            .add(Port.fromStack(ps));
                     } else if (node.getMachineConfig()
                         .get(Settings.BURNABLE_OVERRIDE)
                         .equals(Settings.Burnable.OUT)) {
                             node.getOutputs()
-                                .add(Port.itemPort(ps));
+                                .add(Port.fromStack(ps));
                         }
                 } else if (TileEntityFurnace.getItemBurnTime(ps.item) <= 0) {
                     node.getOutputs()
-                        .add(Port.itemPort(ps));
+                        .add(Port.fromStack(ps));
                 }
             }
         }
