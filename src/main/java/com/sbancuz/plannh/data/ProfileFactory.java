@@ -1,6 +1,5 @@
 package com.sbancuz.plannh.data;
 
-import java.util.Objects;
 import java.util.function.BiConsumer;
 
 /** Shared configuration specialized once into an independent, identified builder. */
@@ -11,7 +10,8 @@ public final class ProfileFactory<M> {
 
     ProfileFactory(final MachineProfile.Definition<?> source, final BiConsumer<MachineProfile.Builder, M> specialize) {
         template = new MachineProfile.Template(source);
-        this.specialize = Objects.requireNonNull(specialize);
+        if (specialize == null) throw new NullPointerException();
+        this.specialize = specialize;
     }
 
     public MachineProfile.Builder builder(final String id, final M modifiers) {

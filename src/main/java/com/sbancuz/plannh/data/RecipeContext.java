@@ -5,7 +5,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 import javax.annotation.Nullable;
 
@@ -70,7 +69,8 @@ public final class RecipeContext {
         private Builder() {}
 
         public <T> Builder property(final RecipeProperty<T> property, @Nullable final T value) {
-            properties.put(Objects.requireNonNull(property), value);
+            if (property == null) throw new NullPointerException();
+            properties.put(property, value);
             return this;
         }
 
@@ -89,12 +89,14 @@ public final class RecipeContext {
         }
 
         public Builder input(final Port<?> port) {
-            inputs.add(Objects.requireNonNull(port));
+            if (port == null) throw new NullPointerException();
+            inputs.add(port);
             return this;
         }
 
         public Builder output(final Port<?> port) {
-            outputs.add(Objects.requireNonNull(port));
+            if (port == null) throw new NullPointerException();
+            outputs.add(port);
             return this;
         }
 

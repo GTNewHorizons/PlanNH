@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -69,7 +68,7 @@ public final class MachineProfile {
     private final PortMultiplier outputMultiplier;
 
     private MachineProfile(final String id, final Definition<?> definition) {
-        this.id = Objects.requireNonNull(id, "id");
+        this.id = id;
         this.provider = definition.provider;
         this.icon = definition.icon;
         this.iconTooltip = definition.iconTooltip;
@@ -211,7 +210,8 @@ public final class MachineProfile {
         protected abstract B self();
 
         public B provider(final PropertyProvider provider) {
-            this.provider = Objects.requireNonNull(provider);
+            if (provider == null) throw new NullPointerException();
+            this.provider = provider;
             return self();
         }
 
@@ -220,7 +220,8 @@ public final class MachineProfile {
         }
 
         public B icon(final BiFunction<IRecipeHandler, Integer, IDrawable> icon, final Consumer<RichTooltip> tooltip) {
-            this.icon = Objects.requireNonNull(icon);
+            if (icon == null) throw new NullPointerException();
+            this.icon = icon;
             this.iconTooltip = tooltip;
             return self();
         }
@@ -269,7 +270,8 @@ public final class MachineProfile {
         }
 
         public <T> B derive(final SettingDef<T> def, final Default<T> rule) {
-            defaults.put(def, Objects.requireNonNull(rule));
+            if (rule == null) throw new NullPointerException();
+            defaults.put(def, rule);
             return self();
         }
 
@@ -277,8 +279,8 @@ public final class MachineProfile {
         @SuppressWarnings("unchecked")
         public <T> B deriveIf(final SettingDef<T> def, final BiPredicate<MachineConfig, RecipeContext> condition,
             final Default<T> rule) {
-            Objects.requireNonNull(condition);
-            Objects.requireNonNull(rule);
+            if (condition == null) throw new NullPointerException();
+            if (rule == null) throw new NullPointerException();
             final Default<T> previous = (Default<T>) defaults.get(def);
             return derive(def, (cfg, ctx) -> {
                 if (condition.test(cfg, ctx)) return rule.apply(cfg, ctx);
@@ -298,12 +300,14 @@ public final class MachineProfile {
         }
 
         public B inputMultiplier(final PortMultiplier rule) {
-            inputMultiplier = Objects.requireNonNull(rule);
+            if (rule == null) throw new NullPointerException();
+            inputMultiplier = rule;
             return self();
         }
 
         public B outputMultiplier(final PortMultiplier rule) {
-            outputMultiplier = Objects.requireNonNull(rule);
+            if (rule == null) throw new NullPointerException();
+            outputMultiplier = rule;
             return self();
         }
 
@@ -363,12 +367,14 @@ public final class MachineProfile {
         private final String id;
 
         private Builder(final String id) {
-            this.id = Objects.requireNonNull(id, "id");
+            if (id == null) throw new NullPointerException("id");
+            this.id = id;
         }
 
         Builder(final String id, final Definition<?> source) {
             super(source);
-            this.id = Objects.requireNonNull(id, "id");
+            if (id == null) throw new NullPointerException("id");
+            this.id = id;
         }
 
         @Override

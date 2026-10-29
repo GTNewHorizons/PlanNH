@@ -1,7 +1,5 @@
 package com.sbancuz.plannh.data.flowchart.balancer;
 
-import java.util.Objects;
-
 /**
  * What one chain element leaves behind: a payload for the next element, or the reason it stalled.
  * A stage that finds nothing for itself is not a failure - it hands the {@link Continue} payload
@@ -17,7 +15,7 @@ public sealed interface Outcome<OUT> permits Outcome.Continue,Outcome.Fail {
     record Continue<OUT> (OUT value) implements Outcome<OUT> {
 
         public Continue {
-            Objects.requireNonNull(value);
+            if (value == null) throw new NullPointerException();
         }
     }
 
