@@ -7,21 +7,26 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import net.minecraft.item.ItemStack;
+
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.setting.Settings;
 
+import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
 import tconstruct.library.crafting.CastingRecipe;
 import tconstruct.plugins.nei.RecipeHandlerAlloying;
 import tconstruct.plugins.nei.RecipeHandlerCastingBase;
+import tconstruct.plugins.nei.RecipeHandlerCastingBase.CachedCastingRecipe;
 import tconstruct.plugins.nei.RecipeHandlerCastingBasin;
 import tconstruct.plugins.nei.RecipeHandlerCastingTable;
 import tconstruct.plugins.nei.RecipeHandlerDryingRack;
@@ -83,22 +88,49 @@ public final class TinkersConstructProvider implements PropertyProvider {
         }
 
         if (handler instanceof final RecipeHandlerCastingBase cb) {
-            final List<CastingRecipe> castingRecipes = cb.getCastingRecipes();
-            final var resultPos = cached.getResult();
-            if (resultPos != null && resultPos.item != null) {
-                CastingRecipe match = null;
-                for (final CastingRecipe cr : castingRecipes) {
-                    if (cr.output.isItemEqual(resultPos.item)) {
-                        match = cr;
-                        break;
-                    }
-                }
-                if (match != null && match.coolTime > 0) {
-                    props.put(RecipePropertyAPI.DURATION_TICKS, match.coolTime);
-                }
-            }
+            return extractCasting(node, cb, cached, props);
         }
 
         return props;
+    }
+
+    private static Map<RecipeProperty<?>, Object> extractCasting(final Node node,
+        final RecipeHandlerCastingBase handler, final TemplateRecipeHandler.CachedRecipe cached,
+        final Map<RecipeProperty<?>, Object> props) {
+        node.getInputs().clear();
+        node.getOutputs().clear();
+        if (!(cached instanceof final CachedCastingRecipe casting)) return props;
+
+        final PositionedStack result = casting.getResult();
+        final CastingRecipe match = findCastingRecipe(handler, casting, result);
+        if (match == null) return props;
+
+        if (match.castingMetal.amount > 0) {
+            final var position = casting.getFluidTanks().getFirst().position;
+            node.getInputs().add(Port.fluid(match.castingMetal, 1f, position.x, position.y));
+        }
+        if (match.cast != null) {
+            final var cast = Port.itemPort(casting.getIngredients().getFirst());
+            if (!match.consumeCast) cast.getValue().amount = 0;
+            node.getInputs().add(cast);
+        }
+        node.getOutputs().add(Port.itemPort(result));
+        if (match.coolTime > 0) props.put(RecipePropertyAPI.DURATION_TICKS, match.coolTime);
+        return props;
+    }
+
+    /** Match the cached recipe's complete backing recipe, not merely its output item. */
+    private static CastingRecipe findCastingRecipe(final RecipeHandlerCastingBase handler,
+        final CachedCastingRecipe cached, final PositionedStack result) {
+        final List<PositionedStack> ingredients = cached.getIngredients();
+        final ItemStack cast = ingredients.isEmpty() ? null : ingredients.getFirst().item;
+        final var cachedMetal = cached.getFluidTanks()
+            .getFirst().fluid;
+        for (final CastingRecipe candidate : handler.getCastingRecipes()) {
+            if (!ItemStack.areItemStacksEqual(candidate.output, result.item)) continue;
+            if (candidate.castingMetal.amount != cachedMetal.amount || !candidate.matches(cachedMetal, cast)) continue;
+            return candidate;
+        }
+        return null;
     }
 }
