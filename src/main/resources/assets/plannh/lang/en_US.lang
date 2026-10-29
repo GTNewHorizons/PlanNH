@@ -41,6 +41,30 @@ plannh.settings.vis_per_tick=Vis/t
 
 ## Settings - Forestry
 plannh.settings.forestry_rf_per_tick=For. RF/t
+plannh.settings.bee_speed=Bee Speed
+plannh.settings.bee_lifespan=Bee Lifespan
+plannh.settings.bee_frame_1=Frame 1
+plannh.settings.bee_frame_2=Frame 2
+plannh.settings.bee_frame_3=Frame 3
+plannh.settings.bee_alveary_stimulator_1_board_type=Stimulator 1
+plannh.settings.bee_alveary_stimulator_2_board_type=Stimulator 2
+plannh.settings.bee_alveary_stimulator_3_board_type=Stimulator 3
+plannh.settings.bee_alveary_stimulator_1_circuit_1=Circuit 1.1
+plannh.settings.bee_alveary_stimulator_1_circuit_2=Circuit 1.2
+plannh.settings.bee_alveary_stimulator_1_circuit_3=Circuit 1.3
+plannh.settings.bee_alveary_stimulator_1_circuit_4=Circuit 1.4
+plannh.settings.bee_alveary_stimulator_2_circuit_1=Circuit 2.1
+plannh.settings.bee_alveary_stimulator_2_circuit_2=Circuit 2.2
+plannh.settings.bee_alveary_stimulator_2_circuit_3=Circuit 2.3
+plannh.settings.bee_alveary_stimulator_2_circuit_4=Circuit 2.4
+plannh.settings.bee_alveary_stimulator_3_circuit_1=Circuit 3.1
+plannh.settings.bee_alveary_stimulator_3_circuit_2=Circuit 3.2
+plannh.settings.bee_alveary_stimulator_3_circuit_3=Circuit 3.3
+plannh.settings.bee_alveary_stimulator_3_circuit_4=Circuit 3.4
+plannh.settings.bee_no_stimulator=None
+plannh.settings.bee_magic_production_aura=Production Aura
+plannh.settings.bee_magic_lifespan_aura=Lifespan Aura
+plannh.settings.bee_no_frame=None
 plannh.settings.choice_hint=Left/right-click: cycle. Middle-click: restore default.
 plannh.settings.item_drop_hint=Drop an item from NEI to select it. No items are consumed.
 plannh.settings.item_choice_hint=Click: choose item. Middle-click: restore default.
@@ -49,6 +73,42 @@ plannh.settings.middle_reset_hint=Middle-click: restore default.
 plannh.settings.item_reset=Reset
 plannh.settings.choice_auto=Default from this recipe.
 plannh.settings.choice_manual=Custom selection.
+plannh.bees.genetic_speed=Genetic speed
+plannh.bees.base_lifespan=Base lifespan
+plannh.bees.work_cycles=%s work cycles
+plannh.bees.calculation=Production model
+plannh.bees.requirements=Requirements
+plannh.bees.details_hint=Hold Shift for details.
+plannh.bees.lifetime_model=One operation is a queen lifetime plus rebreeding time.
+plannh.bees.supplied_conditions=Assumes a stable breed, flowers and specialty conditions supplied.
+plannh.bees.unmodeled_effects=World effects and flower-provider bonus products are not modeled.
+plannh.bees.aura_on=Supplied
+plannh.bees.aura_off=Not supplied
+plannh.bees.aura_toggle=Click: toggle whether this aura is maintained.
+plannh.bees.aura_supply=The aura must be replenished throughout production.
+plannh.bees.aura_cost=Mana and vis supply costs are not included.
+plannh.bees.stimulator_energy=Energy per bee cycle
+plannh.bees.mj_per_cycle=%s MJ / work cycle
+plannh.gui.bees.frames=Frames
+plannh.gui.bees.frame_hint=Click: choose frame. Drop: use a frame from NEI.
+plannh.gui.bees.frame_slot=Frame slot
+plannh.gui.bees.frame_empty=No frame installed.
+plannh.gui.bees.frame_reset=Middle-click: clear this frame slot.
+plannh.gui.bees.frame_maintenance=Frames are replaced as needed; replacement costs are not included.
+plannh.gui.bees.frame_order=Frame order matters for capped bonuses. Boards are applied afterward.
+plannh.gui.bees.board_hint=Click: choose circuit board.
+plannh.gui.bees.board_drop=Drop a board to replace it, or a tube to fill the next empty socket.
+plannh.gui.bees.board_reset=Middle-click: clear this board and restore its default tier.
+plannh.gui.bees.board_powered=All selected stimulators are assumed to be continuously powered.
+plannh.gui.bees.board_caps=Bonus caps are applied separately to each board.
+plannh.gui.bees.stimulator=Stimulator
+plannh.gui.bees.sockets=Installed circuits
+plannh.gui.bees.total_stimulator_energy=All stimulator energy
+plannh.gui.bees.tube_hint=Click: choose circuit. Drop: use an electron tube from NEI.
+plannh.gui.bees.tube_reset=Middle-click: clear this circuit socket.
+plannh.gui.bees.circuit=Circuit
+plannh.gui.bees.circuit_empty=Empty circuit socket.
+plannh.gui.bees.circuit_effects=Circuit effects
 
 ## Settings - Ender IO
 plannh.settings.eio_capacitor=Capacitor
@@ -103,6 +163,7 @@ plannh.properties.thaumcraft.num_components=Components
 
 ## Properties - Forestry
 plannh.properties.forestry.processing_time=Processing Time
+plannh.properties.bee_species=Bee Species
 
 ## Properties - Cofh core
 plannh.properties.cofh.rf_total=RF Total

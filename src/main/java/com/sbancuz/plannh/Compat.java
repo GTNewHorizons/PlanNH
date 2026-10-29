@@ -1,5 +1,7 @@
 package com.sbancuz.plannh;
 
+import java.util.Arrays;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -17,7 +19,6 @@ import com.sbancuz.plannh.data.provider.EnderIOProvider;
 import com.sbancuz.plannh.data.provider.ForestryProvider;
 import com.sbancuz.plannh.data.provider.GTProvider;
 import com.sbancuz.plannh.data.provider.GalacticraftProvider;
-import com.sbancuz.plannh.data.provider.GendustryProvider;
 import com.sbancuz.plannh.data.provider.HarvestCraftProvider;
 import com.sbancuz.plannh.data.provider.LogisticsPipesProvider;
 import com.sbancuz.plannh.data.provider.ProjectBlueProvider;
@@ -29,6 +30,10 @@ import com.sbancuz.plannh.data.provider.ThaumicTinkererProvider;
 import com.sbancuz.plannh.data.provider.TinkersConstructProvider;
 import com.sbancuz.plannh.data.provider.VanillaProvider;
 import com.sbancuz.plannh.data.provider.WitchingGadgetsProvider;
+import com.sbancuz.plannh.data.provider.bee.BeeProvider;
+import com.sbancuz.plannh.data.provider.bee.ExtraBeesProvider;
+import com.sbancuz.plannh.data.provider.bee.GendustryProvider;
+import com.sbancuz.plannh.data.provider.bee.MagicBeesProvider;
 
 import cpw.mods.fml.common.Loader;
 import lombok.Getter;
@@ -56,7 +61,10 @@ public enum Compat {
     THAUMICTINKERER(IDs.THAUMICTINKERER, ThaumicTinkererProvider.class),
     TINKERSCONSTRUCT(IDs.TINKERSCONSTRUCT, TinkersConstructProvider.class),
     WITCHINGGADGETS(IDs.WITCHINGGADGETS, WitchingGadgetsProvider.class),
-    EFR(IDs.EFR, EFRProvider.class);
+    EFR(IDs.EFR, EFRProvider.class),
+    NEIADDONS(IDs.NEIADDONS, BeeProvider.class, IDs.FORESTRY),
+    EXTRABEES(IDs.EXTRABEES, ExtraBeesProvider.class, IDs.NEIADDONS, IDs.FORESTRY, IDs.BINNIECORE),
+    MAGICBEES(IDs.MAGICBEES, MagicBeesProvider.class, IDs.NEIADDONS, IDs.FORESTRY);
 
     public static class IDs {
 
@@ -85,6 +93,10 @@ public enum Compat {
         public static final String TINKERSCONSTRUCT = "TConstruct";
         public static final String WITCHINGGADGETS = "WitchingGadgets";
         public static final String EFR = "etfuturum";
+        public static final String NEIADDONS = "NEIAddons";
+        public static final String EXTRABEES = "ExtraBees";
+        public static final String MAGICBEES = "MagicBees";
+        public static final String BINNIECORE = "BinnieCore";
     }
 
     public final String modid;
@@ -96,9 +108,10 @@ public enum Compat {
     @Nonnull
     private final Class<? extends PropertyProvider> providerFactory;
 
-    Compat(final String modid, final Class<? extends PropertyProvider> providerFactory) {
+    Compat(final String modid, final Class<? extends PropertyProvider> providerFactory, final String... dependencies) {
         this.modid = modid;
-        this.isLoaded = Loader.isModLoaded(modid);
+        this.isLoaded = Loader.isModLoaded(modid) && Arrays.stream(dependencies)
+            .allMatch(Loader::isModLoaded);
         this.providerFactory = providerFactory;
     }
 
@@ -107,7 +120,7 @@ public enum Compat {
         try {
             return clazz.getDeclaredConstructor()
                 .newInstance();
-        } catch (Exception | NoClassDefFoundError _) {}
+        } catch (Exception | LinkageError _) {}
         return null;
     }
 

@@ -1,4 +1,4 @@
-package com.sbancuz.plannh.data.provider;
+package com.sbancuz.plannh.data.provider.bee;
 
 import java.util.List;
 
