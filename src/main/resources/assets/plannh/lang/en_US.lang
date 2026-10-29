@@ -41,6 +41,14 @@ plannh.settings.vis_per_tick=Vis/t
 
 ## Settings - Forestry
 plannh.settings.forestry_rf_per_tick=For. RF/t
+plannh.settings.choice_hint=Left/right-click: cycle. Middle-click: restore default.
+plannh.settings.item_drop_hint=Drop an item from NEI to select it. No items are consumed.
+plannh.settings.item_choice_hint=Click: choose item. Middle-click: restore default.
+plannh.settings.item_choice_invalid=Unavailable with the current settings.
+plannh.settings.middle_reset_hint=Middle-click: restore default.
+plannh.settings.item_reset=Reset
+plannh.settings.choice_auto=Default from this recipe.
+plannh.settings.choice_manual=Custom selection.
 
 ## Settings - Ender IO
 plannh.settings.eio_capacitor=Capacitor

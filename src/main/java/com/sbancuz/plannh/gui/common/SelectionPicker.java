@@ -5,6 +5,7 @@ import java.util.function.Supplier;
 
 import com.cleanroommc.modularui.api.IPanelHandler;
 import com.cleanroommc.modularui.api.widget.IWidget;
+import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.widgets.Dialog;
 
@@ -47,6 +48,12 @@ public final class SelectionPicker {
         if (handler != null) handler.closePanel();
     }
 
+    /** Lets the screen route a middle-click to the owner before a popup intercepts ghost input. */
+    public boolean resetOwnerSelection() {
+        if (!(owner instanceof Interactable interactable)) return false;
+        return interactable.onMousePressed(2) == Interactable.Result.SUCCESS;
+    }
+
     boolean isOwnerAvailable() {
         for (IWidget widget = owner; widget != null; widget = widget.getParent()) {
             if (!widget.isValid() || !widget.isEnabled()) return false;
@@ -73,14 +80,8 @@ public final class SelectionPicker {
             child(grid);
         }
 
-        @Override
-        public boolean onMousePressed(final int mouseButton) {
-            try {
-                if (isOwnerAvailable()) super.onMousePressed(mouseButton);
-            } finally {
-                closeIfOpen();
-            }
-            return true;
+        public boolean resetOwnerSelection() {
+            return SelectionPicker.this.resetOwnerSelection();
         }
 
         @Override

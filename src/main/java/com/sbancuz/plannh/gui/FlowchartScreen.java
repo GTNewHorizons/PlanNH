@@ -1,10 +1,13 @@
 package com.sbancuz.plannh.gui;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.item.ItemStack;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
+import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.drawable.Rectangle;
+import com.cleanroommc.modularui.integration.nei.NEIUtil;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.ModularScreen;
 import com.cleanroommc.modularui.screen.UISettings;
@@ -26,7 +29,10 @@ import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
+import com.sbancuz.plannh.gui.common.SelectionPicker;
 import com.sbancuz.plannh.gui.layout.ElkLayoutStrategy;
+import com.sbancuz.plannh.gui.node.SettingsFold;
+import com.sbancuz.plannh.gui.setting.ItemChoiceWidget;
 import com.sbancuz.plannh.gui.summary.SummaryWidget;
 import com.sbancuz.plannh.nei.NEIPlanConfig;
 
@@ -315,6 +321,36 @@ public class FlowchartScreen extends ModularScreen {
                 getContext().getAbsMouseY(),
                 Math.max(10, Math.min(280, getScreenArea().width - 18))));
         messages.scheduleResize();
+    }
+
+    @Override
+    public boolean onMousePressed(final int mouseButton) {
+        // Handle reset before popup/parent ghost-drop dispatch. A popup is a separate panel, so its
+        // hovered children do not have the choice widget in their parent chain.
+        if (mouseButton == 2) {
+            final ItemStack ghost = NEIUtil.getNEIDragAndDropTarget(getContext());
+            if (getPanelManager().getTopMostPanel() instanceof SelectionPicker.Popup picker && picker.getContext()
+                .isMouseAbove(picker) && picker.resetOwnerSelection()) {
+                stopNEIGhostDrag(ghost);
+                return true;
+            }
+            for (IWidget widget = getContext().getTopHovered(); widget != null; widget = widget.getParent()) {
+                if (widget instanceof ItemChoiceWidget choice && choice.resetSelection()) {
+                    stopNEIGhostDrag(ghost);
+                    return true;
+                }
+                if (widget instanceof SettingsFold.SettingsRow row && row.resetSelection()) {
+                    stopNEIGhostDrag(ghost);
+                    return true;
+                }
+            }
+        }
+        return super.onMousePressed(mouseButton);
+    }
+
+    private static void stopNEIGhostDrag(final ItemStack ghost) {
+        if (ghost != null) ghost.stackSize = 0;
+        NEIUtil.stopNEIGhostDrag();
     }
 
     // Screen level, not canvas level: the panel only offers keys to the hovered widget, so the

@@ -24,7 +24,7 @@ public class SelectionGrid extends Grid {
         final int count = Math.max(1, buttons.size());
         final int columns = Math.clamp((int) Math.ceil(Math.sqrt(count)), 1, Math.max(1, maxColumns));
         final int totalRows = (count + columns - 1) / columns;
-        final int rows = Math.min(totalRows, Math.max(1, maxRows));
+        final int rows = Math.clamp(maxRows, 1, totalRows);
         final boolean scrolling = totalRows > rows;
         pickerWidth = columns * SLOT + (scrolling ? 4 : 0);
         pickerHeight = rows * SLOT;
