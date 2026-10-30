@@ -67,12 +67,20 @@ public final class BeeSettings {
                         getLabel(),
                         TooltipTheme.Role.TUNABLE,
                         StatCollector.translateToLocal(enabled ? "plannh.bees.aura_on" : "plannh.bees.aura_off"));
-                    out.langRows("plannh.bees.aura_toggle", "plannh.settings.middle_reset_hint");
+                    out.langRows(
+                        "plannh.bees.aura_toggle",
+                        "plannh.bees.aura_booster_source",
+                        "plannh.settings.middle_reset_hint");
 
                     if (GuiHelper.shiftHeld()) {
                         out.group(
                             "plannh.bees.requirements",
-                            rows -> rows.langRows("plannh.bees.aura_supply", "plannh.bees.aura_cost"));
+                            rows -> rows.langRows(
+                                "plannh.bees.aura_supply",
+                                "plannh.bees.aura_cost",
+                                "plannh.bees.aura_renewal",
+                                "plannh.bees.aura_steady_state",
+                                "plannh.bees.aura_provider_limit"));
                     } else out.langRow("plannh.bees.details_hint");
                     out.flush();
                 })

@@ -1,5 +1,6 @@
 package com.sbancuz.plannh.data.provider.bee;
 
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -27,8 +28,10 @@ import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
 import binnie.core.machines.power.PowerSystem;
 import binnie.extrabees.apiary.machine.stimulator.StimulatorCircuit;
+import forestry.api.apiculture.BeeManager;
 import forestry.api.apiculture.DefaultBeeModifier;
 import forestry.api.apiculture.IBeeGenome;
+import forestry.api.apiculture.IBeeHousing;
 import forestry.api.apiculture.IBeeModifier;
 import forestry.api.circuits.ChipsetManager;
 import forestry.api.circuits.ICircuit;
@@ -43,6 +46,7 @@ import forestry.plugins.PluginCore;
 /** Extra Bees stimulator boards that can be installed as alveary modules. */
 public final class AlvearyStimulators {
 
+    // TODO: Open an upstream Forestry PR to expose the circuit board socket limit.
     private static final int SOCKETS = 4;
     private static final String STIMULATOR_LAYOUT = "binnie.circuitLayoutStimulator";
 
@@ -407,7 +411,24 @@ public final class AlvearyStimulators {
 
     /** Start each board at production 0 and lifespan 1, regardless of preceding frames or boards. */
     static IBeeModifier boardModifier(final List<? extends IBeeModifier> circuits) {
-        final IBeeModifier inner = BeeModifiers.combine(circuits);
+        final List<IBeeModifier> snapshot = List.copyOf(circuits);
+        // Forestry's combiner only needs the modifier list, not a live housing or world.
+        final IBeeHousing housing = (IBeeHousing) Proxy.newProxyInstance(
+            IBeeHousing.class.getClassLoader(),
+            new Class<?>[] { IBeeHousing.class },
+            (proxy, method, args) -> {
+                if (method.getDeclaringClass() == Object.class) {
+                    return switch (method.getName()) {
+                        case "equals" -> proxy == (args == null ? null : args[0]);
+                        case "hashCode" -> System.identityHashCode(proxy);
+                        case "toString" -> "BeeModifiers housing proxy";
+                        default -> throw new UnsupportedOperationException(method.toString());
+                    };
+                }
+                if ("getBeeModifiers".equals(method.getName())) return snapshot;
+                throw new UnsupportedOperationException("No world or inventory in a bee modifier combiner");
+            });
+        final IBeeModifier inner = BeeManager.beeRoot.createBeeHousingModifier(housing);
         return new DefaultBeeModifier() {
 
             @Override

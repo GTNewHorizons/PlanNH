@@ -1,5 +1,6 @@
 package com.sbancuz.plannh.data.provider.bee;
 
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -31,15 +32,18 @@ import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.IRecipeHandler;
+import cpw.mods.fml.common.Loader;
 import forestry.api.apiculture.BeeManager;
 import forestry.api.apiculture.IAlleleBeeSpecies;
 import forestry.api.apiculture.IBee;
 import forestry.api.apiculture.IBeeGenome;
+import forestry.api.apiculture.IBeeHousing;
 import forestry.api.apiculture.IBeeModifier;
 import forestry.api.apiculture.IBeekeepingMode;
 import forestry.api.apiculture.IHiveFrame;
 import forestry.api.genetics.AlleleManager;
 import forestry.api.genetics.IAllele;
+import forestry.apiculture.AlvearyBeeModifier;
 import forestry.apiculture.ApiaryBeeModifier;
 import forestry.apiculture.BeehouseBeeModifier;
 import forestry.apiculture.blocks.BlockApicultureType;
@@ -53,7 +57,7 @@ public class BeeProvider implements PropertyProvider {
     public static final RecipeProperty<String> SPECIES = RecipeProperty.<String>builder("bee_species", "")
         .build();
 
-    private final List<MachineProfile> profiles;
+    protected final List<MachineProfile> profiles;
     private final Supplier<IBeekeepingMode> modeSupplier;
     private final ProfileFactory<Housing> housingFactory;
 
@@ -72,6 +76,9 @@ public class BeeProvider implements PropertyProvider {
                 .build(),
             housingBuilder("forestry:beehouse", new Housing(new BeehouseBeeModifier(), 0)).icon(
                 (_, _) -> new ItemDrawable(PluginApiculture.blocks.apiculture, BlockApicultureType.BEEHOUSE.getMeta()))
+                .build(),
+            housingBuilder("forestry:alveary", new Housing(new AlvearyBeeModifier(), 0))
+                .icon((_, _) -> new ItemDrawable(PluginApiculture.blocks.alveary))
                 .build());
     }
 
@@ -84,7 +91,7 @@ public class BeeProvider implements PropertyProvider {
                 return template[binding.chromosome()
                     .ordinal()].getUID();
             })
-            .icon((_, _) -> GuiTextures.SUN)
+            .icon((_, _) -> GuiTextures.PROCESSOR)
             .asFactory(
                 (builder, housing) -> builder
                     .configureIf(housing.frameSlots() > 0, b -> b.setting(BeeSettings.FRAMES.getFirst()))
@@ -127,20 +134,27 @@ public class BeeProvider implements PropertyProvider {
         }
     }
 
-    record HousingExtras(List<IBeeModifier> modifiers, double rfPerWorkCycle) {
+    record HousingExtras(List<IBeeModifier> modifiers, double rfPerWorkCycle, double rfPerOperation) {
 
-        private static final HousingExtras EMPTY = new HousingExtras(List.of(), 0);
+        private static final HousingExtras EMPTY = new HousingExtras(List.of(), 0, 0);
+
+        HousingExtras(final List<IBeeModifier> modifiers, final double rfPerWorkCycle) {
+            this(modifiers, rfPerWorkCycle, 0);
+        }
 
         HousingExtras {
             if (modifiers == null) throw new IllegalArgumentException("Bee housing modifiers are required");
             if (!Double.isFinite(rfPerWorkCycle) || rfPerWorkCycle < 0)
                 throw new IllegalArgumentException("Invalid bee housing energy");
+            if (!Double.isFinite(rfPerOperation) || rfPerOperation < 0)
+                throw new IllegalArgumentException("Invalid bee operation energy");
         }
     }
 
     @Override
     public void register() {
-        RecipePropertyAPI.registerExtractor(BeeProduceHandler.class, this);
+        if (Loader.isModLoaded("NEIAddons") && Loader.isModLoaded("Forestry"))
+            RecipePropertyAPI.registerExtractor(BeeProduceHandler.class, this);
     }
 
     @Override
@@ -150,56 +164,70 @@ public class BeeProvider implements PropertyProvider {
 
     @Override
     public boolean canCraft(final IRecipeHandler handler, final int recipeIndex) {
-        return handler instanceof BeeProduceHandler;
+        return handler.getClass()
+            .getName()
+            .equals("net.bdew.neiaddons.forestry.bees.BeeProduceHandler");
     }
 
     @Override
     public void populate(final RecipeContext.Builder recipe, final IRecipeHandler handler, final int recipeIndex) {
-        final String speciesUid = speciesUid(handler, recipeIndex);
+        if (!canCraft(handler, recipeIndex))
+            throw new IllegalArgumentException("Bee production handler is unavailable");
 
-        for (final PositionedStack ingredient : handler.getIngredientStacks(recipeIndex)) {
-            if (ingredient == null || ingredient.item == null || !BeeManager.beeRoot.isMember(ingredient.item))
-                continue;
-
-            final Port<LongItemStack> bee = Port.itemPort(ingredient);
-            // Retain the handler's displayed bee, but the stable breed is not consumed per work cycle.
-            bee.getValue().amount = 0;
-            recipe.input(bee);
-        }
-
-        addOutput(recipe, handler.getResultStack(recipeIndex));
-        for (final PositionedStack stack : handler.getOtherStacks(recipeIndex)) addOutput(recipe, stack);
-        recipe.property(SPECIES, speciesUid);
-    }
-
-    static String speciesUid(final IRecipeHandler handler, final int recipeIndex) {
+        String speciesUid = null;
         for (final PositionedStack ingredient : handler.getIngredientStacks(recipeIndex)) {
             if (ingredient == null || ingredient.item == null || !BeeManager.beeRoot.isMember(ingredient.item))
                 continue;
 
             final IBee bee = BeeManager.beeRoot.getMember(ingredient.item);
             if (bee == null || bee.getGenome() == null) continue;
-
             final IAlleleBeeSpecies species = bee.getGenome()
                 .getPrimary();
-            if (species != null) return species.getUID();
+            if (species != null) {
+                speciesUid = species.getUID();
+                break;
+            }
+        }
+        if (speciesUid == null)
+            throw new IllegalArgumentException("Bee production recipe has no species-bearing bee ingredient");
+
+        for (final PositionedStack ingredient : handler.getIngredientStacks(recipeIndex)) {
+            if (ingredient == null || ingredient.item == null || !BeeManager.beeRoot.isMember(ingredient.item))
+                continue;
+
+            final Port<LongItemStack> bee = Port.itemPort(ingredient);
+            // The displayed queen/princess identifies the selected breed but is not consumed per work cycle.
+            bee.getValue().amount = 0;
+            recipe.input(bee);
         }
 
-        throw new IllegalArgumentException("Bee production recipe has no species-bearing bee ingredient");
+        final List<PositionedStack> displayedOutputs = new ArrayList<>();
+        displayedOutputs.add(handler.getResultStack(recipeIndex));
+        displayedOutputs.addAll(handler.getOtherStacks(recipeIndex));
+        for (final PositionedStack stack : displayedOutputs) {
+            if (stack == null || stack.item == null || BeeManager.beeRoot.isMember(stack.item)) continue;
+
+            boolean duplicate = false;
+            for (final Port<?> output : recipe.outputs()) {
+                final ItemStack item = output.getAllStacks()
+                    .getFirst().item;
+                if (item.isItemEqual(stack.item) && ItemStack.areItemStackTagsEqual(item, stack.item)) {
+                    duplicate = true;
+                    break;
+                }
+            }
+            if (duplicate) continue;
+
+            final PositionedStack product = stack.copy();
+            product.item.stackSize = 1;
+            recipe.output(Port.itemPort(product));
+        }
+        recipe.property(SPECIES, speciesUid);
     }
 
-    private static void addOutput(final RecipeContext.Builder recipe, final PositionedStack stack) {
-        if (stack == null || stack.item == null || BeeManager.beeRoot.isMember(stack.item)) return;
-
-        for (final Port<?> output : recipe.outputs()) {
-            final ItemStack item = output.getAllStacks()
-                .getFirst().item;
-            if (item.isItemEqual(stack.item) && ItemStack.areItemStackTagsEqual(item, stack.item)) return;
-        }
-
-        final PositionedStack product = stack.copy();
-        product.item.stackSize = 1;
-        recipe.output(Port.itemPort(product));
+    protected final void populateDefault(final RecipeContext.Builder recipe, final IRecipeHandler handler,
+        final int recipeIndex) {
+        PropertyProvider.super.populate(recipe, handler, recipeIndex);
     }
 
     private static IAllele[] template(final RecipeContext ctx) {
@@ -258,7 +286,24 @@ public class BeeProvider implements PropertyProvider {
         }
 
         final IBeeGenome genome = BeeManager.beeRoot.templateAsGenome(alleles, alleles);
-        final IBeeModifier housing = BeeModifiers.combine(modifiers);
+        final List<IBeeModifier> modifierSnapshot = List.copyOf(modifiers);
+        // Forestry's combiner only needs the modifier list, not a live housing or world.
+        final IBeeHousing modifierHousing = (IBeeHousing) Proxy.newProxyInstance(
+            IBeeHousing.class.getClassLoader(),
+            new Class<?>[] { IBeeHousing.class },
+            (proxy, method, args) -> {
+                if (method.getDeclaringClass() == Object.class) {
+                    return switch (method.getName()) {
+                        case "equals" -> proxy == (args == null ? null : args[0]);
+                        case "hashCode" -> System.identityHashCode(proxy);
+                        case "toString" -> "BeeModifiers housing proxy";
+                        default -> throw new UnsupportedOperationException(method.toString());
+                    };
+                }
+                if ("getBeeModifiers".equals(method.getName())) return modifierSnapshot;
+                throw new UnsupportedOperationException("No world or inventory in a bee modifier combiner");
+            });
+        final IBeeModifier housing = BeeManager.beeRoot.createBeeHousingModifier(modifierHousing);
         final IBeekeepingMode selectedMode = modeSupplier.get();
         if (selectedMode == null) throw new IllegalStateException("Forestry beekeeping mode is unavailable");
         final IBeeModifier mode = selectedMode.getBeeModifier();
@@ -279,7 +324,7 @@ public class BeeProvider implements PropertyProvider {
 
         final EffectResult result = new EffectResult((int) Math.round(ticks), 0, 1);
         result.properties()
-            .put(CoFHCompat.RF_COST, extras.rfPerWorkCycle() * cycles);
+            .put(CoFHCompat.RF_COST, extras.rfPerWorkCycle() * cycles + extras.rfPerOperation());
 
         final IAlleleBeeSpecies primary = genome.getPrimary();
         final IAlleleBeeSpecies secondary = genome.getSecondary();

@@ -25,10 +25,15 @@ public final class ExtraBeesProvider extends BeeProvider {
     public ExtraBeesProvider(final Supplier<IBeekeepingMode> modeSupplier) {
         super(modeSupplier);
         final Housing alveary = new Housing(new AlvearyBeeModifier(), 3, ExtraBeesProvider::resolveModules);
-        profiles = List.of(
-            housingBuilder("forestry:alveary", alveary).settings(AlvearyStimulators.BOARD_TYPES)
-                .icon((_, _) -> new ItemDrawable(PluginApiculture.blocks.alveary))
-                .build());
+        final MachineProfile enrichedAlveary = housingBuilder("forestry:alveary", alveary)
+            .settings(AlvearyStimulators.BOARD_TYPES)
+            .icon((_, _) -> new ItemDrawable(PluginApiculture.blocks.alveary))
+            .build();
+        profiles = super.profiles.stream()
+            .map(
+                profile -> profile.id()
+                    .equals("forestry:alveary") ? enrichedAlveary : profile)
+            .toList();
     }
 
     @Override
