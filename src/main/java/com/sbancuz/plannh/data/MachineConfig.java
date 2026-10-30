@@ -27,6 +27,7 @@ public class MachineConfig {
     @Getter(AccessLevel.NONE)
     private final Map<SettingDef<?>, Object> settings = new HashMap<>();
     private transient MachineProfile profile;
+    private String profileId;
 
     private final CopyCountTarget copies = new CopyCountTarget();
     private final OutputRateTarget rates = new OutputRateTarget();
@@ -43,12 +44,13 @@ public class MachineConfig {
 
     /** Creates a sparse user configuration; defaults remain owned by the profile. */
     public MachineConfig(final MachineProfile requested, final Map<SettingDef<?>, Object> settings) {
-        profile = requested;
+        setProfile(requested);
         this.settings.putAll(settings);
     }
 
     public MachineConfig(final MachineConfig source) {
         profile = source.profile;
+        profileId = source.profileId;
         settings.putAll(source.settings);
         copies.setCopies(source.copies.copies());
         rates.rates()
@@ -97,13 +99,18 @@ public class MachineConfig {
         return profile.computeEffect(this, ctx);
     }
 
+    public void setProfile(@Nullable final MachineProfile profile) {
+        this.profile = profile;
+        if (profile != null) profileId = profile.id();
+    }
+
     public void selectProfile(final MachineProfile newProfile) {
         if (!Objects.equals(profile, newProfile)) {
             settings.clear();
             inputConsumption.clear();
             outputProductivity.clear();
         }
-        profile = newProfile;
+        setProfile(newProfile);
     }
 
     public void copySettingsFrom(final MachineConfig other) {

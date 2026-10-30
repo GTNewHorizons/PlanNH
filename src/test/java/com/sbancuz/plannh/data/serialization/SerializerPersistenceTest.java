@@ -158,9 +158,11 @@ class SerializerPersistenceTest {
             .getAsJsonObject();
         final Node restored = Serializer.GSON.fromJson(encoded, Node.class);
 
-        assertFalse(
+        assertEquals(
+            "test",
             encoded.getAsJsonObject("machineConfig")
-                .has("profileId"));
+                .get("profileId")
+                .getAsString());
         assertEquals(original.getId(), restored.getId());
         assertEquals(original.getMachineName(), restored.getMachineName());
         assertEquals(original.getX(), restored.getX());
@@ -169,6 +171,10 @@ class SerializerPersistenceTest {
         assertNull(
             restored.getMachineConfig()
                 .getProfile());
+        assertEquals(
+            "test",
+            restored.getMachineConfig()
+                .getProfileId());
         assertFalse(restored.isAvailable());
     }
 

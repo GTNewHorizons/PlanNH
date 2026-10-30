@@ -17,6 +17,7 @@ import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
+import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.cleanroommc.modularui.screen.RichTooltip;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
@@ -25,8 +26,10 @@ import com.sbancuz.plannh.data.effect.EffectFunction;
 import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
+import com.sbancuz.plannh.data.setting.IntegerSettingDef;
 import com.sbancuz.plannh.data.setting.SettingDef;
 import com.sbancuz.plannh.data.setting.Settings;
+import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.RecipeHandlerRef;
@@ -42,7 +45,7 @@ public final class MachineProfile {
     @FunctionalInterface
     public interface PortMultiplier {
 
-        double apply(MachineConfig cfg, RecipeContext ctx, int index);
+        double apply(EffectResult effect, MachineConfig cfg, RecipeContext ctx, int index);
     }
 
     public record Entry(SettingDef<?> def, BiPredicate<MachineConfig, RecipeContext> visible) {
@@ -64,6 +67,7 @@ public final class MachineProfile {
     private final List<Entry> settings;
     private final EffectComputer effectComputer;
     private final Map<SettingDef<?>, Default<?>> defaults;
+    private final Map<IntegerSettingDef, int[]> integerBounds;
     private final PortMultiplier inputMultiplier;
     private final PortMultiplier outputMultiplier;
 
@@ -75,6 +79,7 @@ public final class MachineProfile {
         this.settings = List.copyOf(definition.settings);
         this.effectComputer = definition.effectComputer;
         this.defaults = Map.copyOf(definition.defaults);
+        this.integerBounds = Map.copyOf(definition.integerBounds);
         this.inputMultiplier = definition.inputMultiplier;
         this.outputMultiplier = definition.outputMultiplier;
     }
@@ -93,24 +98,43 @@ public final class MachineProfile {
     }
 
     public <T> T value(final SettingDef<T> def, final MachineConfig cfg, final RecipeContext ctx) {
-        return cfg.getOrDefault(def, () -> {
+        final T value = cfg.getOrDefault(def, () -> {
             final Default<T> rule = defaultRule(def);
             return rule == null ? def.getDefaultValue() : rule.apply(cfg, ctx);
         });
+        if (def instanceof IntegerSettingDef integerDef && integerBounds.containsKey(integerDef)) {
+            @SuppressWarnings("unchecked")
+            final T bounded = (T) Integer
+                .valueOf(Math.clamp((Integer) value, minimum(integerDef), maximum(integerDef)));
+            return bounded;
+        }
+        return value;
+    }
+
+    public int minimum(final IntegerSettingDef def) {
+        final int[] bounds = integerBounds.get(def);
+        return bounds == null ? def.getMin() : bounds[0];
+    }
+
+    public int maximum(final IntegerSettingDef def) {
+        final int[] bounds = integerBounds.get(def);
+        return bounds == null ? def.getMax() : bounds[1];
     }
 
     /** Evaluates a single-port query; consumers reading multiple values should reuse {@link #computeEffect}. */
     public double inputMultiplier(final MachineConfig cfg, final RecipeContext ctx, final int index) {
-        return cfg.inputMultiplier(
-            index,
-            () -> computeEffect(cfg, ctx).inputMultiplier(index, () -> inputMultiplier.apply(cfg, ctx, index)));
+        return cfg.inputMultiplier(index, () -> {
+            final EffectResult result = computeEffect(cfg, ctx);
+            return result.inputMultiplier(index, () -> inputMultiplier.apply(result, cfg, ctx, index));
+        });
     }
 
     /** Evaluates a single-port query; consumers reading multiple values should reuse {@link #computeEffect}. */
     public double outputMultiplier(final MachineConfig cfg, final RecipeContext ctx, final int index) {
-        return cfg.outputMultiplier(
-            index,
-            () -> computeEffect(cfg, ctx).outputMultiplier(index, () -> outputMultiplier.apply(cfg, ctx, index)));
+        return cfg.outputMultiplier(index, () -> {
+            final EffectResult result = computeEffect(cfg, ctx);
+            return result.outputMultiplier(index, () -> outputMultiplier.apply(result, cfg, ctx, index));
+        });
     }
 
     public EffectResult computeEffect(final MachineConfig cfg, final RecipeContext ctx) {
@@ -137,8 +161,10 @@ public final class MachineProfile {
             .size();
         for (int i = 0; i < inputCount; i++) {
             final int index = i;
-            final DoubleSupplier rule = () -> inputMultiplier.apply(cfg, ctx, index);
+            final DoubleSupplier rule = () -> inputMultiplier.apply(result, cfg, ctx, index);
             final double multiplier = cfg.inputMultiplier(index, () -> result.inputMultiplier(index, rule));
+            if (!Double.isFinite(multiplier) || multiplier < 0)
+                throw new IllegalArgumentException("Invalid input multiplier: " + multiplier);
             result.inputMultiplier(index, multiplier);
         }
 
@@ -146,8 +172,10 @@ public final class MachineProfile {
             .size();
         for (int i = 0; i < outputCount; i++) {
             final int index = i;
-            final DoubleSupplier rule = () -> outputMultiplier.apply(cfg, ctx, index);
+            final DoubleSupplier rule = () -> outputMultiplier.apply(result, cfg, ctx, index);
             final double multiplier = cfg.outputMultiplier(index, () -> result.outputMultiplier(index, rule));
+            if (!Double.isFinite(multiplier) || multiplier < 0)
+                throw new IllegalArgumentException("Invalid output multiplier: " + multiplier);
             result.outputMultiplier(index, multiplier);
         }
 
@@ -159,16 +187,30 @@ public final class MachineProfile {
     }
 
     public IDrawable getIcon(final RecipeHandlerRef ref) {
-        return icon.apply(ref.handler, ref.recipeIndex);
+        final IDrawable drawable = icon == null ? null : icon.apply(ref.handler, ref.recipeIndex);
+        if (drawable == null || drawable instanceof ItemDrawable item && !hasItem(item)
+            || !IDrawable.isVisible(drawable)) return GuiTextures.PROCESSOR;
+        return drawable;
     }
 
     public void addIconTooltip(final IDrawable drawable, final RichTooltip tooltip) {
+        if (drawable instanceof ItemDrawable item && hasItem(item)) {
+            tooltip.addFromItem(item.getItem());
+            return;
+        }
         if (iconTooltip != null) iconTooltip.accept(tooltip);
-        else if (drawable instanceof ItemDrawable item && item.getItem() != null
-            && item.getItem()
-                .getItem() != null) {
-                    tooltip.addFromItem(item.getItem());
-                }
+        if (tooltip.isEmpty()) TooltipBuilder.create(tooltip)
+            .flag(
+                id == null || id.isBlank() ? "Machine"
+                    : id.replace(':', ' ')
+                        .replace('_', ' ')
+                        .replace('.', ' '))
+            .flush();
+    }
+
+    private static boolean hasItem(final ItemDrawable drawable) {
+        return drawable.getItem() != null && drawable.getItem()
+            .getItem() != null;
     }
 
     @Nonnull
@@ -186,19 +228,21 @@ public final class MachineProfile {
 
         private final List<Entry> settings = new ArrayList<>();
         private final Map<SettingDef<?>, Default<?>> defaults = new HashMap<>();
+        private final Map<IntegerSettingDef, int[]> integerBounds = new HashMap<>();
         private PropertyProvider provider;
         private BiFunction<IRecipeHandler, Integer, IDrawable> icon = (_, _) -> IDrawable.EMPTY;
         private Consumer<RichTooltip> iconTooltip;
         private EffectComputer effectComputer = (cfg,
             ctx) -> new EffectResult(ctx.get(RecipePropertyAPI.DURATION_TICKS), 0, 1);
-        private PortMultiplier inputMultiplier = (_, _, _) -> 1d;
-        private PortMultiplier outputMultiplier = (_, _, _) -> 1d;
+        private PortMultiplier inputMultiplier = (_, _, _, _) -> 1d;
+        private PortMultiplier outputMultiplier = (_, _, _, _) -> 1d;
 
         private Definition() {}
 
         private Definition(final Definition<?> source) {
             settings.addAll(source.settings);
             defaults.putAll(source.defaults);
+            integerBounds.putAll(source.integerBounds);
             provider = source.provider;
             icon = source.icon;
             iconTooltip = source.iconTooltip;
@@ -210,7 +254,6 @@ public final class MachineProfile {
         protected abstract B self();
 
         public B provider(final PropertyProvider provider) {
-            if (provider == null) throw new NullPointerException();
             this.provider = provider;
             return self();
         }
@@ -220,7 +263,6 @@ public final class MachineProfile {
         }
 
         public B icon(final BiFunction<IRecipeHandler, Integer, IDrawable> icon, final Consumer<RichTooltip> tooltip) {
-            if (icon == null) throw new NullPointerException();
             this.icon = icon;
             this.iconTooltip = tooltip;
             return self();
@@ -233,6 +275,14 @@ public final class MachineProfile {
         public B setting(final SettingDef<?> def, final BiPredicate<MachineConfig, RecipeContext> visible) {
             settings.add(new Entry(def, visible));
             return self();
+        }
+
+        /** Adds an integer setting with bounds specialized for this profile. */
+        public B setting(final IntegerSettingDef def, final int min, final int max) {
+            if (min > max || min < def.getMin() || max > def.getMax())
+                throw new IllegalArgumentException("Invalid integer setting bounds for " + def.getKey());
+            integerBounds.put(def, new int[] { min, max });
+            return setting(def);
         }
 
         public B settings(final Consumer<B> consumer) {
@@ -270,7 +320,6 @@ public final class MachineProfile {
         }
 
         public <T> B derive(final SettingDef<T> def, final Default<T> rule) {
-            if (rule == null) throw new NullPointerException();
             defaults.put(def, rule);
             return self();
         }
@@ -279,8 +328,6 @@ public final class MachineProfile {
         @SuppressWarnings("unchecked")
         public <T> B deriveIf(final SettingDef<T> def, final BiPredicate<MachineConfig, RecipeContext> condition,
             final Default<T> rule) {
-            if (condition == null) throw new NullPointerException();
-            if (rule == null) throw new NullPointerException();
             final Default<T> previous = (Default<T>) defaults.get(def);
             return derive(def, (cfg, ctx) -> {
                 if (condition.test(cfg, ctx)) return rule.apply(cfg, ctx);
@@ -300,13 +347,11 @@ public final class MachineProfile {
         }
 
         public B inputMultiplier(final PortMultiplier rule) {
-            if (rule == null) throw new NullPointerException();
             inputMultiplier = rule;
             return self();
         }
 
         public B outputMultiplier(final PortMultiplier rule) {
-            if (rule == null) throw new NullPointerException();
             outputMultiplier = rule;
             return self();
         }
@@ -367,13 +412,11 @@ public final class MachineProfile {
         private final String id;
 
         private Builder(final String id) {
-            if (id == null) throw new NullPointerException("id");
             this.id = id;
         }
 
         Builder(final String id, final Definition<?> source) {
             super(source);
-            if (id == null) throw new NullPointerException("id");
             this.id = id;
         }
 

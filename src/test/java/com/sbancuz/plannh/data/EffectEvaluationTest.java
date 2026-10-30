@@ -19,8 +19,8 @@ class EffectEvaluationTest {
                 result.outputMultiplier(0, 3d);
                 return result;
             })
-            .inputMultiplier((cfg, ctx, index) -> 10d + index)
-            .outputMultiplier((cfg, ctx, index) -> 20d + index)
+            .inputMultiplier((_, cfg, ctx, index) -> 10d + index)
+            .outputMultiplier((_, cfg, ctx, index) -> 20d + index)
             .build();
         final MachineConfig config = new MachineConfig(profile);
         config.inputMultiplier(0, 0d);
@@ -43,7 +43,7 @@ class EffectEvaluationTest {
                 final int parallels = cfg.value(Settings.PARALLELS, ctx);
                 return new EffectResult(machines + parallels, 0, 1);
             })
-            .inputMultiplier((cfg, ctx, index) -> cfg.value(Settings.MACHINES, ctx))
+            .inputMultiplier((_, cfg, ctx, index) -> cfg.value(Settings.MACHINES, ctx))
             .build();
         final MachineConfig config = new MachineConfig(profile);
         config.set(Settings.MACHINES, 2);
