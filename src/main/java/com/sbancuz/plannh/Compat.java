@@ -22,12 +22,14 @@ import com.sbancuz.plannh.data.provider.GalacticraftProvider;
 import com.sbancuz.plannh.data.provider.HarvestCraftProvider;
 import com.sbancuz.plannh.data.provider.LogisticsPipesProvider;
 import com.sbancuz.plannh.data.provider.ProjectBlueProvider;
+import com.sbancuz.plannh.data.provider.ProjectRedProvider;
 import com.sbancuz.plannh.data.provider.RailcraftProvider;
 import com.sbancuz.plannh.data.provider.RandomThingsProvider;
 import com.sbancuz.plannh.data.provider.ThaumcraftProvider;
 import com.sbancuz.plannh.data.provider.ThaumicExplorationProvider;
 import com.sbancuz.plannh.data.provider.ThaumicTinkererProvider;
 import com.sbancuz.plannh.data.provider.TinkersConstructProvider;
+import com.sbancuz.plannh.data.provider.TwilightForestProvider;
 import com.sbancuz.plannh.data.provider.VanillaProvider;
 import com.sbancuz.plannh.data.provider.WitchingGadgetsProvider;
 import com.sbancuz.plannh.data.provider.bee.BeeProvider;
@@ -42,7 +44,7 @@ public enum Compat {
 
     AVARITIA(IDs.AVARITIA, AvaritiaProvider.class),
     APPLIEDENERGISTICS2(IDs.AE2, AE2Provider.class),
-    BINNIE(IDs.BINNIE, BinnieProvider.class),
+    BINNIE(IDs.BINNIECORE, BinnieProvider.class),
     BLOODMAGIC(IDs.BLOODMAGIC, BloodMagicProvider.class),
     BOTANIA(IDs.BOTANIA, BotaniaProvider.class),
     DRACONICEVOLUTION(IDs.DRACONICEVOLUTION, DraconicEvolutionProvider.class),
@@ -54,12 +56,14 @@ public enum Compat {
     HARVESTCRAFT(IDs.HARVESTCRAFT, HarvestCraftProvider.class),
     LOGISTICSPIPES(IDs.LOGISTICSPIPES, LogisticsPipesProvider.class),
     PROJECTBLUE(IDs.PROJECTBLUE, ProjectBlueProvider.class),
+    PROJECTRED(IDs.PROJECTRED, ProjectRedProvider.class),
     RAILCRAFT(IDs.RAILCRAFT, RailcraftProvider.class),
     RANDOMTHINGS(IDs.RANDOMTHINGS, RandomThingsProvider.class),
     THAUMCRAFT(IDs.THAUMCRAFT, ThaumcraftProvider.class),
     THAUMICEXPLORATION(IDs.THAUMICEXPLORATION, ThaumicExplorationProvider.class),
     THAUMICTINKERER(IDs.THAUMICTINKERER, ThaumicTinkererProvider.class),
     TINKERSCONSTRUCT(IDs.TINKERSCONSTRUCT, TinkersConstructProvider.class),
+    TWILIGHTFOREST(IDs.TWILIGHTFOREST, TwilightForestProvider.class),
     WITCHINGGADGETS(IDs.WITCHINGGADGETS, WitchingGadgetsProvider.class),
     EFR(IDs.EFR, EFRProvider.class),
     NEIADDONS(IDs.NEIADDONS, BeeProvider.class, IDs.FORESTRY),
@@ -70,7 +74,6 @@ public enum Compat {
 
         public static final String AVARITIA = "Avaritia";
         public static final String AE2 = "appliedenergistics2";
-        public static final String BINNIE = "Binnie";
         public static final String BLOODMAGIC = "AWWayofTime";
         public static final String BOTANIA = "Botania";
         public static final String DRACONICEVOLUTION = "DraconicEvolution";
@@ -85,18 +88,22 @@ public enum Compat {
         public static final String MODULARUI2 = "modularui2";
         public static final String NEI = "NotEnoughItems";
         public static final String PROJECTBLUE = "ProjectBlue";
+        public static final String PROJECTRED = "ProjRed|Expansion";
         public static final String RAILCRAFT = "Railcraft";
         public static final String RANDOMTHINGS = "RandomThings";
         public static final String THAUMCRAFT = "Thaumcraft";
         public static final String THAUMICEXPLORATION = "ThaumicExploration";
         public static final String THAUMICTINKERER = "ThaumicTinkerer";
         public static final String TINKERSCONSTRUCT = "TConstruct";
+        public static final String TWILIGHTFOREST = "TwilightForest";
         public static final String WITCHINGGADGETS = "WitchingGadgets";
         public static final String EFR = "etfuturum";
         public static final String NEIADDONS = "NEIAddons";
         public static final String EXTRABEES = "ExtraBees";
         public static final String MAGICBEES = "MagicBees";
         public static final String BINNIECORE = "BinnieCore";
+        public static final String GENETICS = "Genetics";
+        public static final String EXTRATREES = "ExtraTrees";
     }
 
     public final String modid;
@@ -120,7 +127,9 @@ public enum Compat {
         try {
             return clazz.getDeclaredConstructor()
                 .newInstance();
-        } catch (Exception | LinkageError _) {}
+        } catch (Exception | LinkageError failure) {
+            PlanNH.LOG.warn("Could not initialize recipe provider {}", clazz.getName(), failure);
+        }
         return null;
     }
 
@@ -129,10 +138,17 @@ public enum Compat {
         DefaultProvider.INSTANCE.register();
         new VanillaProvider().register();
         for (final Compat mod : values()) {
+            // Extra Bees supplies the same BeeProduceHandler choices with an enriched Alveary.
+            // Keep one extractor owner so forestry:alveary cannot be duplicated.
+            if (mod == NEIADDONS && EXTRABEES.isLoaded) continue;
             if (mod.isLoaded) {
                 mod.extractor = create(mod.providerFactory);
                 if (mod.extractor != null) {
-                    mod.extractor.register();
+                    try {
+                        mod.extractor.register();
+                    } catch (RuntimeException | LinkageError failure) {
+                        PlanNH.LOG.warn("Could not register recipe provider for {}", mod.modid, failure);
+                    }
                 }
             }
         }

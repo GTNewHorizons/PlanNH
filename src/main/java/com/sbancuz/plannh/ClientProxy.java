@@ -24,6 +24,7 @@ import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.Loader;
 import cpw.mods.fml.common.event.FMLConstructionEvent;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
+import cpw.mods.fml.common.event.FMLPostInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.InputEvent;
@@ -51,9 +52,6 @@ public class ClientProxy extends CommonProxy {
     public void init(final FMLInitializationEvent event) {
         super.init(event);
 
-        // Vanilla has to go first since the furnace handler is likely to be overwritten
-        Compat.init();
-
         ClientRegistry.registerKeyBinding(openFlowchartKey);
         if (Loader.isModLoaded("offscreen")) {
             OffscreenHandler.init();
@@ -79,6 +77,12 @@ public class ClientProxy extends CommonProxy {
             .func_152344_a(ElkLayoutStrategy::warmUp);
         Minecraft.getMinecraft()
             .func_152344_a(GPUProgram.BLUR::compile);
+    }
+
+    @Override
+    public void postInit(final FMLPostInitializationEvent event) {
+        super.postInit(event);
+        Compat.init();
     }
 
     @SubscribeEvent
