@@ -15,6 +15,7 @@ import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.IDraggable;
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.api.widget.Interactable;
+import com.cleanroommc.modularui.drawable.DynamicDrawable;
 import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.RichTooltip;
@@ -26,6 +27,7 @@ import com.cleanroommc.modularui.widget.sizer.Area;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
+import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Plan;
@@ -33,6 +35,7 @@ import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
 import com.sbancuz.plannh.data.flowchart.resource.LongFluidStack;
 import com.sbancuz.plannh.data.flowchart.resource.LongItemStack;
+import com.sbancuz.plannh.data.flowchart.resource.MagicResources;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.GuiHelper.RateUnit;
@@ -59,9 +62,13 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     private static final String LANG = "plannh.gui.node.port.";
 
     // needed for proper positioning of ports
-    private static final int PORT_OFFSET_X = 1;
-    private static final int PORT_OFFSET_Y = -1;
-    private static final int PORT_SIZE = 18;
+    static final int PORT_OFFSET_X = 1;
+    static final int PORT_OFFSET_Y = -1;
+    static final int PORT_SIZE = 18;
+
+    private static final int INACTIVE_BORDER = Color.argb(170, 170, 170, 170);
+    private static final int INACTIVE_OVERLAY = Color.argb(80, 128, 128, 128);
+    private static final int TRANSPARENT = Color.argb(0, 0, 0, 0);
 
     private final CanvasWidget canvas;
 
@@ -88,6 +95,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     private final NodeWidget parent;
     private final Map<IntIntPair, PortWidget> siblingPortWidgets;
     private SelectionPicker picker;
+    private boolean inactiveDemand;
 
     public PortWidget(NodeWidget parent, IntIntPair index, boolean isInput, PortType portType, int yShift,
         Map<IntIntPair, PortWidget> siblingPortWidgets) {
@@ -108,10 +116,13 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
             .get(index.secondInt());
 
         final int color = portType == PortType.CATALYST ? portType.borderColor : port.getPinColor(input);
+        refreshInactiveState();
 
         background(
-            new Rectangle().color(color)
-                .hollow());
+            new DynamicDrawable(() -> new Rectangle().color(inactiveDemand ? INACTIVE_OVERLAY : TRANSPARENT)),
+            new DynamicDrawable(
+                () -> new Rectangle().color(inactiveDemand ? INACTIVE_BORDER : color)
+                    .hollow()));
         hoverOverlay(new Rectangle().color(Color.argb(255, 255, 255, 128)));
         pos(stack.relx + PORT_OFFSET_X, stack.rely + PORT_OFFSET_Y + yShift);
         size(PORT_SIZE);
@@ -220,26 +231,40 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     }
 
     private void writeTooltip(final RichTooltip tooltip) {
-        tooltip.addFromItem(stack.item);
+        refreshInactiveState();
+        final EffectResult tooltipEffect = currentEffect();
+        if (stack.item != null && stack.item.getItem() != null) tooltip.addFromItem(stack.item);
+        else tooltip.addLine(IKey.str(port.getDisplayName()));
 
         final TooltipBuilder out = TooltipBuilder.create(tooltip);
         if (configurable()) out.langRow(LANG + "configure_hint");
+        if (inactiveDemand) out.langRow(LANG + "inactive");
 
-        writeThroughput(out);
+        final Balancer.NodeBalance balance = parent.balance();
+        writeThroughput(out, balance, tooltipEffect);
+        if (port.getType() == MagicResources.AURA_CHARGE) out.langRow("plannh.bees.aura_port", port.getDisplayName());
         out.flush();
+        final String unit = MagicResources.unitKey(port.getType());
+        if (unit != null) tooltip.addLine(IKey.lang(unit));
     }
 
-    private void writeThroughput(final TooltipBuilder out) {
-        final Balancer.NodeBalance balance = parent.balance();
+    private void writeThroughput(final TooltipBuilder out, final @Nullable Balancer.NodeBalance balance,
+        final @Nullable EffectResult throughputEffect) {
         final double perCycle = perCycle(balance);
         if (perCycle <= 0) return;
 
-        writeThroughput(out, node, port, input, index.leftInt(), perCycle, balance.durationPerOp());
+        writeThroughput(out, node, port, input, index.leftInt(), perCycle, balance.durationPerOp(), throughputEffect);
     }
 
     public static void writeThroughput(final TooltipBuilder out, final Node node, final Port<?> port,
         final boolean input, final int portIndex, final double perCycle, final int duration) {
-        final var effect = node.computeEffect();
+        writeThroughput(out, node, port, input, portIndex, perCycle, duration, node.computeEffect());
+    }
+
+    private static void writeThroughput(final TooltipBuilder out, final Node node, final Port<?> port,
+        final boolean input, final int portIndex, final double perCycle, final int duration,
+        final @Nullable EffectResult effect) {
+        if (effect == null) return;
         final double bonus = input ? effect.inputMultiplier(portIndex) : effect.outputMultiplier(portIndex);
 
         // A rule between this and what came before it - unless it is the first thing in the tooltip,
@@ -282,6 +307,35 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         return Plan.getInstance()
             .getSummary()
             .getRateUnit();
+    }
+
+    private boolean configuredInactiveDemand() {
+        if (!input || portType != PortType.INPUT) return false;
+        final EffectResult current = currentEffect();
+        return current != null && isInactiveDemand(true, portType, current.inputMultiplier(index.leftInt()));
+    }
+
+    static boolean isInactiveDemand(final boolean input, final PortType portType, final double multiplier) {
+        return input && portType == PortType.INPUT && multiplier == 0d;
+    }
+
+    private @Nullable EffectResult currentEffect() {
+        return parent.effectSnapshot();
+    }
+
+    private void refreshInactiveState() {
+        final boolean next = configuredInactiveDemand();
+        if (next == inactiveDemand) return;
+        inactiveDemand = next;
+        markTooltipDirty();
+    }
+
+    static int portRight(final int stackX) {
+        return stackX + PORT_OFFSET_X + PORT_SIZE;
+    }
+
+    static int portBottom(final int stackY, final int yShift) {
+        return stackY + PORT_OFFSET_Y + yShift + PORT_SIZE;
     }
 
     @Override
@@ -397,6 +451,12 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
 
     @Override
     public void drawMovingState(ModularGuiContext context, float partialTicks) {}
+
+    @Override
+    public void onUpdate() {
+        super.onUpdate();
+        refreshInactiveState();
+    }
 
     @Override
     public @Nullable Area getMovingArea() {

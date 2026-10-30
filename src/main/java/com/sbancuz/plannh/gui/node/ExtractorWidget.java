@@ -31,6 +31,7 @@ final class ExtractorWidget extends ButtonWidget<ExtractorWidget> {
                             icon.asIcon()
                                 .size(16))
                         .tooltipBuilder(tooltip -> profile.addIconTooltip(icon, tooltip))
+                        .tooltipAutoUpdate(true)
                         .onMousePressed(mouse -> {
                             if (mouse != 0 && mouse != 1) return false;
                             if (profile.equals(data.getSelectedProfile())) return true;
@@ -58,8 +59,8 @@ final class ExtractorWidget extends ButtonWidget<ExtractorWidget> {
         overlay(
             icon.asIcon()
                 .size(16));
-        // TODO: Fix
         if (selected != null) tooltipBuilder(tooltip -> selected.addIconTooltip(icon, tooltip));
+        tooltipAutoUpdate(true);
         onMousePressed(mouse -> {
             if (mouse != 0 && mouse != 1 || data.getAvailableProfiles()
                 .isEmpty()) return false;

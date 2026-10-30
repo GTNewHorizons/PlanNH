@@ -96,13 +96,21 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
                 .map(Port::getAllStacks)
                 .flatMap(List::stream)
                 .toList());
+        final Stream<PositionedStack> portStacks = Stream.concat(inputs.stream(), outputs.stream())
+            .flatMap(
+                port -> port.getAllStacks()
+                    .stream());
+        final int portsWidth = portStacks.mapToInt(stack -> PortWidget.portRight(stack.relx))
+            .max()
+            .orElse(0);
         final int portsHeight = Stream.concat(inputs.stream(), outputs.stream())
             .flatMap(
                 port -> port.getAllStacks()
                     .stream())
-            .mapToInt(stack -> stack.rely + stack.height + yShift + 1)
+            .mapToInt(stack -> PortWidget.portBottom(stack.rely, yShift))
             .max()
             .orElse(0);
+        recipeWidth = widthWithPorts(recipeWidth, portsWidth);
         size(recipeWidth, Math.max(recipeHeight, portsHeight));
 
         // inputs
@@ -188,5 +196,9 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
 
     public Map<IntIntPair, PortWidget> getPortWidgets(boolean isInput) {
         return isInput ? inputPortWidgets : outputPortWidgets;
+    }
+
+    static int widthWithPorts(final int recipeWidth, final int rightmostPort) {
+        return Math.max(recipeWidth, rightmostPort);
     }
 }

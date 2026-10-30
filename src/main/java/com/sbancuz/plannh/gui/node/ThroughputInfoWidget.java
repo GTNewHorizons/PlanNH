@@ -94,7 +94,7 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
     private void rebuild() {
         final Node node = parent.getData();
         final Balancer.NodeBalance balance = parent.balance();
-        final int duration = balance == null ? durationTicks(node) : balance.durationPerOp();
+        final int duration = balance == null ? durationTicks(node, parent.effectSnapshot()) : balance.durationPerOp();
         final double operations = balance == null ? -1 : balance.operations();
 
         if (operations == lastOperations && duration == lastDuration) return;
@@ -139,7 +139,7 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
         final Balancer.NodeBalance balance = parent.balance();
         final boolean balanced = balance != null && balance.durationPerOp() > 0;
         final RateUnit unit = rateUnit();
-        final EffectResult effect = tryComputeEffect(node);
+        final EffectResult effect = parent.effectSnapshot();
         final int ticks = balanced ? balance.durationPerOp() : durationTicks(node, effect);
 
         final TooltipBuilder out = TooltipBuilder.create(tooltip);
@@ -256,23 +256,10 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
     }
 
     /** The recipe's own craft time, which a machine knows before it has ever been solved. */
-    private static int durationTicks(final Node node) {
-        return durationTicks(node, tryComputeEffect(node));
-    }
-
     private static int durationTicks(final Node node, final EffectResult effect) {
         if (effect != null) return Math.max(0, effect.durationTicks());
         final Object raw = node.getProperties().get(RecipePropertyAPI.DURATION_TICKS);
         return raw instanceof final Number n ? Math.max(0, n.intValue()) : 0;
-    }
-
-    private static EffectResult tryComputeEffect(final Node node) {
-        if (!node.isAvailable()) return null;
-        try {
-            return node.computeEffect();
-        } catch (final RuntimeException ignored) {
-            return null;
-        }
     }
 
     private static RateUnit rateUnit() {

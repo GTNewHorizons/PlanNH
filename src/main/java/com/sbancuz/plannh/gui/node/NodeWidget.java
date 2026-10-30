@@ -8,6 +8,8 @@ import java.util.UUID;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
+import javax.annotation.Nullable;
+
 import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.drawable.UITexture;
@@ -18,6 +20,7 @@ import com.cleanroommc.modularui.widgets.CycleButtonWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
+import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
@@ -52,6 +55,8 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
     private boolean lastTargetOpen;
     private boolean lastThroughputOpen;
     private boolean lastPropertiesOpen;
+    private long effectVersion = Long.MIN_VALUE;
+    private EffectResult effect;
 
     @Getter
     private final List<ArrowWidget> arrowWidgets = new ArrayList<>();
@@ -242,6 +247,23 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
             .balance()
             .nodeBalances()
             .get(data.getId());
+    }
+
+    /** Port state and tooltip rows share one evaluation for the current graph revision. */
+    public @Nullable EffectResult effectSnapshot() {
+        if (!data.isAvailable()) return null;
+        final long version = canvas.getGraph()
+            .getVersion();
+        if (effectVersion != version) {
+            effectVersion = version;
+            try {
+                effect = data.computeEffect();
+            } catch (RuntimeException | LinkageError failure) {
+                effect = null;
+                PlanNH.LOG.warn("Could not evaluate machine effect for {}", data.getMachineName(), failure);
+            }
+        }
+        return effect;
     }
 
     /** The mode the whole chart is being solved in, which is what decides which pins exist at all. */
