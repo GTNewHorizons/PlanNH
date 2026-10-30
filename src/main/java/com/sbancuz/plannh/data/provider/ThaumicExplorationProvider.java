@@ -6,6 +6,7 @@ import javax.annotation.Nonnull;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.drawable.GuiTextures;
+import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
@@ -14,6 +15,7 @@ import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.recipe.IRecipeHandler;
+import flaxbeard.thaumicexploration.ThaumicExploration;
 import flaxbeard.thaumicexploration.integration.nei.ReplicatorHandler;
 
 public final class ThaumicExplorationProvider implements PropertyProvider {
@@ -30,7 +32,8 @@ public final class ThaumicExplorationProvider implements PropertyProvider {
 
     @Nonnull
     private IDrawable icon(final IRecipeHandler handler, final int recipeIndex) {
-        return GuiTextures.MAXIMIZE;
+        return ThaumicExploration.replicator == null ? GuiTextures.PROCESSOR
+            : new ItemDrawable(ThaumicExploration.replicator);
     }
 
     @Override
@@ -39,7 +42,7 @@ public final class ThaumicExplorationProvider implements PropertyProvider {
 
     }
 
-    // TODO: Make a PR to expose this constant
+    // TODO: open an upstream PR to expose this copied constant.
     // Thaumic Replicator: base countdown time (ticks) from TileReplicator
     private static final int REPLICATOR_COUNTDOWN = 100;
 

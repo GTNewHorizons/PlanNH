@@ -6,6 +6,7 @@ import javax.annotation.Nonnull;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.drawable.GuiTextures;
+import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
@@ -15,6 +16,8 @@ import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.recipe.IRecipeHandler;
 import thaumic.tinkerer.client.nei.NEINecromancyHandler;
+import thaumic.tinkerer.common.ThaumicTinkerer;
+import thaumic.tinkerer.common.item.ItemSoulMould;
 
 public final class ThaumicTinkererProvider implements PropertyProvider {
 
@@ -30,11 +33,12 @@ public final class ThaumicTinkererProvider implements PropertyProvider {
 
     @Nonnull
     private IDrawable icon(final IRecipeHandler handler, final int recipeIndex) {
-        return GuiTextures.MOON;
+        final var item = ThaumicTinkerer.registry == null ? null
+            : ThaumicTinkerer.registry.getFirstItemFromClass(ItemSoulMould.class);
+        return item == null ? GuiTextures.PROCESSOR : new ItemDrawable(item);
     }
 
-    // TODO: Make a PR to expose this constant
-    // Soul Mould: scan interval (ticks) from TileSoulMould
+    // TODO: Open an upstream PR to expose the Soul Mould scan interval from TileSoulMould.
     private static final int SCAN_INTERVAL = 300;
 
     @Override
