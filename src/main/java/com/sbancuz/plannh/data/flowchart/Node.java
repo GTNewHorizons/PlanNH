@@ -136,7 +136,6 @@ public class Node extends GraphData {
         return context.properties();
     }
 
-    // TODO
     public double inputMultiplier(final int index) {
         if (!isAvailable() || machineConfig.getProfile() == null)
             throw new IllegalStateException("Machine profile is unavailable");
@@ -231,18 +230,24 @@ public class Node extends GraphData {
             final RecipeHandlerRef ref = RecipeHandlerRef.of(recipeId);
             if (ref == null) return;
 
-            availableProfiles = RecipePropertyAPI.getExtractors(ref.handler.getClass())
-                .stream()
-                .filter(provider -> provider.canCraft(ref.handler, ref.recipeIndex))
-                .flatMap(
-                    provider -> provider.getProfiles(ref.handler, ref.recipeIndex)
-                        .stream())
-                .toList();
+            availableProfiles = RecipePropertyAPI.getProfiles(ref.handler, ref.recipeIndex);
 
             handlerRef = ref;
             if (availableProfiles.isEmpty()) return;
-            final int index = machineConfig == null ? 0
-                : Math.max(0, availableProfiles.indexOf(machineConfig.getProfile()));
+            int index = 0;
+            if (machineConfig != null && machineConfig.getProfileId() != null) {
+                index = -1;
+                for (int i = 0; i < availableProfiles.size(); i++) {
+                    if (availableProfiles.get(i)
+                        .id()
+                        .equals(machineConfig.getProfileId())) {
+                        index = i;
+                        break;
+                    }
+                }
+                // Keep a missing saved machine unavailable rather than calculate with another machine's settings.
+                if (index < 0) return;
+            }
 
             final Node candidate = new Node(this);
             candidate.handlerRef = ref;

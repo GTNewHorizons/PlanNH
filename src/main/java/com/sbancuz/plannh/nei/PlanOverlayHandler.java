@@ -8,7 +8,6 @@ import net.minecraft.client.gui.inventory.GuiContainer;
 import com.cleanroommc.modularui.screen.GuiContainerWrapper;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
-import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.FlowchartScreen;
 
@@ -37,10 +36,8 @@ public class PlanOverlayHandler implements IOverlayHandler {
     @Override
     public boolean canCraft(final GuiContainer firstGui, final IRecipeHandler handler, final int recipeIndex) {
         if (!canResolve(handler, recipeIndex)) return false;
-        for (final PropertyProvider p : RecipePropertyAPI.getExtractors(handler.getClass())) {
-            if (p.canCraft(handler, recipeIndex)) return true;
-        }
-        return false;
+        return !RecipePropertyAPI.getProfiles(handler, recipeIndex)
+            .isEmpty();
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.sbancuz.plannh.api;
 
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 
@@ -10,8 +11,12 @@ import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
 
+import com.cleanroommc.modularui.api.drawable.IDrawable;
+import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.google.common.collect.ArrayListMultimap;
 import com.sbancuz.plannh.Compat;
+import com.sbancuz.plannh.PlanNH;
+import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.flowchart.resource.LongFluidStack;
 import com.sbancuz.plannh.data.flowchart.resource.LongItemStack;
@@ -24,6 +29,9 @@ import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.mixins.PositionedStackAccessor;
 
 import codechicken.nei.PositionedStack;
+import codechicken.nei.api.ItemInfo;
+import codechicken.nei.recipe.IRecipeHandler;
+import codechicken.nei.recipe.RecipeHandlerRef;
 import codechicken.nei.recipe.StackInfo;
 import gregtech.nei.GTNEIDefaultHandler;
 
@@ -134,5 +142,35 @@ public final class RecipePropertyAPI {
 
     public static void reset() {
         extractors.clear();
+    }
+
+    /** A broken optional integration must not hide other machines for the same recipe. */
+    public static List<MachineProfile> getProfiles(final IRecipeHandler handler, final int recipeIndex) {
+        final List<MachineProfile> result = new ArrayList<>();
+        final RecipeHandlerRef ref = RecipeHandlerRef.of(handler, recipeIndex);
+        for (final PropertyProvider provider : getExtractors(handler.getClass())) {
+            try {
+                if (!provider.canCraft(handler, recipeIndex)) continue;
+                for (final MachineProfile profile : List.copyOf(provider.getProfiles(handler, recipeIndex))) {
+                    // Respect NEI's metadata, NBT and rule-based machine hiding, not the search filter.
+                    try {
+                        final IDrawable icon = profile.getIcon(ref);
+                        if (icon instanceof ItemDrawable item && ItemInfo.isHidden(item.getItem())) continue;
+                    } catch (RuntimeException | LinkageError failure) {
+                        // A missing optional icon must not disable an otherwise usable machine.
+                        PlanNH.LOG.debug("Could not check NEI visibility for {}", profile.id(), failure);
+                    }
+                    result.add(profile);
+                }
+            } catch (RuntimeException | LinkageError failure) {
+                PlanNH.LOG.warn(
+                    "Could not resolve machine profiles from {} for {}",
+                    provider.getClass()
+                        .getName(),
+                    handler.getHandlerId(),
+                    failure);
+            }
+        }
+        return List.copyOf(result);
     }
 }

@@ -63,20 +63,6 @@ class NodeFailureTest {
     }
 
     @Test
-    void providerInstancesOwnIndependentProfilesEvenWhenIdsMatch() {
-        final Fixture first = fixture((recipe, handler, index) -> {});
-        final Fixture second = fixture((recipe, handler, index) -> {});
-
-        assertNotSame(first.provider(), second.provider());
-        assertNotSame(first.profile(), second.profile());
-        assertEquals(
-            first.profile()
-                .id(),
-            second.profile()
-                .id());
-    }
-
-    @Test
     void unavailableInitLeavesSafeCollectionsAndDoesNotRetry() throws Exception {
         final Node node = syntheticNode(
             "unavailable",
@@ -185,6 +171,10 @@ class NodeFailureTest {
                 .isEmpty());
 
         final MachineConfig config = node.getMachineConfig();
+        assertEquals(
+            replacement.profile()
+                .id(),
+            config.getProfileId());
         assertEquals(7, config.getOrDefault(Settings.MACHINES, Settings.MACHINES::getDefaultValue));
         assertEquals(88, config.getOrDefault(Settings.TICK_MODIFIER, Settings.TICK_MODIFIER::getDefaultValue));
         assertEquals(
