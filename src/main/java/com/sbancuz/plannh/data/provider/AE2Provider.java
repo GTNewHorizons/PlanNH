@@ -1,8 +1,12 @@
 package com.sbancuz.plannh.data.provider;
 
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 
 import javax.annotation.Nonnull;
+
+import net.minecraft.item.ItemStack;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.drawable.GuiTextures;
@@ -11,6 +15,7 @@ import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.annotation.Versioned;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
+import com.sbancuz.plannh.data.ProfileFactory;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.effect.steps.CoFHCompat;
@@ -18,6 +23,9 @@ import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.setting.Settings;
 
 import appeng.api.AEApi;
+import appeng.api.config.PowerUnits;
+import appeng.api.definitions.IBlockDefinition;
+import appeng.api.definitions.IBlocks;
 import appeng.api.features.IGrinderEntry;
 import appeng.integration.modules.NEIHelpers.NEIAEShapedRecipeHandler;
 import appeng.integration.modules.NEIHelpers.NEIAEShapelessRecipeHandler;
@@ -31,99 +39,134 @@ import codechicken.nei.recipe.ShapedRecipeHandler;
 @Versioned.Mod(modId = Compat.IDs.AE2, sinceVersion = "rv3-beta-1017-GTNH")
 public final class AE2Provider implements PropertyProvider {
 
+    private static final Map<String, Function<IBlocks, IBlockDefinition>> ICONS = Map.of(
+        "ae2:quartz_grinder",
+        IBlocks::grindStone,
+        "ae2:inscriber",
+        IBlocks::inscriber,
+        "ae2:advanced_inscriber",
+        IBlocks::advancedInscriber,
+        "ae2:molecular_assembler",
+        IBlocks::molecularAssembler);
+
+    private static double rfFromAe(final double ae) {
+        return PowerUnits.AE.convertTo(PowerUnits.RF, ae);
+    }
+
+    private record InscriberModel(int maxCards, int maxProcessingTime, int basePowerPerTick, int baseSpeed,
+        int animationTicks) {}
+
     private final MachineProfile QUARTZ_GRINDER = MachineProfile.builder("ae2:quartz_grinder")
         .setting(Settings.MACHINES)
         .setting(Settings.TICK_MODIFIER)
         .setting(Settings.DURATION_TICKS)
         .effect(DefaultProvider::noopEffect)
         .provider(this)
-        .icon(this::icon)
+        .icon((_, _) -> icon("ae2:quartz_grinder"))
         .build();
 
-    private final MachineProfile INSCRIBER = MachineProfile.builder("ae2:inscriber")
+    private final ProfileFactory<InscriberModel> INSCRIBER_FACTORY = MachineProfile.template()
         .setting(Settings.MACHINES)
         .setting(Settings.TICK_MODIFIER)
-        .setting(Settings.CATALYST_ACCEL_CARD)
-        .effect(Effects.durationFromFormula((cfg, ctx) -> {
-            final int cards = cfg.getOrDefault(Settings.CATALYST_ACCEL_CARD);
-            final int speedFactor = TileInscriber.BASE_SPEED + cards;
-            return Math.max(1, (TileInscriber.MAX_PROCESSING_TIME + speedFactor - 1) / speedFactor);
-        })
-            .withCostPerT(CoFHCompat.RF_PER_T, (current, cfg, ctx) -> {
-                final int cards = cfg.getOrDefault(Settings.CATALYST_ACCEL_CARD);
-                final int speedFactor = TileInscriber.BASE_SPEED + cards;
-                return (long) TileInscriber.BASE_POWER_PER_TICK * speedFactor;
-            })
-            .applyParallelism()
-            .computeTotal(CoFHCompat.RF_COST))
         .provider(this)
-        .icon(this::icon)
+        .asFactory(
+            (builder, model) -> builder.setting(Settings.CATALYST_ACCEL_CARD, 0, model.maxCards())
+                .effect(Effects.durationFromFormula((cfg, ctx) -> {
+                    final int cards = cfg.value(Settings.CATALYST_ACCEL_CARD, ctx);
+                    final int speed = model.baseSpeed() + cards;
+                    final int processingTicks = model.animationTicks() == 0
+                        ? (model.maxProcessingTime() + speed - 1) / speed
+                        : model.maxProcessingTime() / speed + 1;
+                    return processingTicks + model.animationTicks();
+                })
+                    .withTotalCost(CoFHCompat.RF_COST, (current, cfg, ctx) -> {
+                        final int cards = cfg.value(Settings.CATALYST_ACCEL_CARD, ctx);
+                        final int speed = model.baseSpeed() + cards;
+                        final int processingTicks = model.animationTicks() == 0
+                            ? (model.maxProcessingTime() + speed - 1) / speed
+                            : model.maxProcessingTime() / speed + 1;
+                        return rfFromAe((long) model.basePowerPerTick() * speed * processingTicks);
+                    })
+                    .withCostPerT(CoFHCompat.RF_PER_T, (current, cfg, ctx) -> current.energyPerT())
+                    .applyParallelism())
+                .icon((_, _) -> icon(model.animationTicks() == 0 ? "ae2:advanced_inscriber" : "ae2:inscriber")));
+
+    // TODO: Open an upstream AE2 PR to expose each machine's acceleration-card capacity.
+    private final MachineProfile INSCRIBER = INSCRIBER_FACTORY
+        .builder(
+            "ae2:inscriber",
+            new InscriberModel(
+                3,
+                TileInscriber.MAX_PROCESSING_TIME,
+                TileInscriber.BASE_POWER_PER_TICK,
+                TileInscriber.BASE_SPEED,
+                TileInscriber.SMASH_ANIMATION_TICKS))
+        .build();
+
+    private final MachineProfile ADVANCED_INSCRIBER = INSCRIBER_FACTORY
+        .builder(
+            "ae2:advanced_inscriber",
+            new InscriberModel(
+                5,
+                TileAdvancedInscriber.MAX_PROCESSING_TIME,
+                TileAdvancedInscriber.BASE_POWER_PER_TICK,
+                TileAdvancedInscriber.BASE_SPEED,
+                0))
         .build();
 
     private final MachineProfile MOLECULAR_ASSEMBLER = MachineProfile.builder("ae2:molecular_assembler")
         .setting(Settings.MACHINES)
         .setting(Settings.TICK_MODIFIER)
-        .setting(Settings.CATALYST_ACCEL_CARD)
+        .setting(Settings.CATALYST_ACCEL_CARD, 0, 5)
         .effect(Effects.durationFromFormula((cfg, ctx) -> {
-            final int cards = Math
-                .min(cfg.getOrDefault(Settings.CATALYST_ACCEL_CARD), TileMolecularAssembler.SPEED.length - 1);
+            final int cards = cfg.value(Settings.CATALYST_ACCEL_CARD, ctx);
             final int speed = TileMolecularAssembler.SPEED[cards];
             return Math.max(1, (TileMolecularAssembler.MAX_PROCESSING_TIME + speed - 1) / speed);
         })
             .andThen((current, cfg, ctx) -> {
-                final int cards = Math
-                    .min(cfg.getOrDefault(Settings.CATALYST_ACCEL_CARD), TileMolecularAssembler.SPEED.length - 1);
+                final int cards = cfg.value(Settings.CATALYST_ACCEL_CARD, ctx);
                 final int speed = TileMolecularAssembler.SPEED[cards];
                 final double tax = TileMolecularAssembler.ACCELERATION_TAX[cards];
-                current.energyPerT(Math.round(speed * tax));
+                current.energyPerT(rfFromAe(speed * tax));
                 return current;
             })
             .applyParallelism())
         .provider(this)
-        .icon(this::icon)
+        .icon((_, _) -> icon("ae2:molecular_assembler"))
         .build();
 
     @Nonnull
-    private IDrawable icon(final IRecipeHandler handler, final int recipeIndex) {
-        if (handler instanceof NEIGrinderRecipeHandler) {
-            final var stack = AEApi.instance()
-                .definitions()
-                .blocks()
-                .grindStone()
-                .maybeStack(1)
-                .orNull();
-            return stack == null ? GuiTextures.MATERIAL : new ItemDrawable(stack);
-        }
-        if (handler instanceof NEIInscriberRecipeHandler) {
-            final var stack = AEApi.instance()
-                .definitions()
-                .blocks()
-                .inscriber()
-                .maybeStack(1)
-                .orNull();
-            return stack == null ? GuiTextures.MATERIAL : new ItemDrawable(stack);
-        }
-        if (handler instanceof NEIAEShapedRecipeHandler || handler instanceof NEIAEShapelessRecipeHandler
-            || handler instanceof ShapedRecipeHandler) {
-            final var stack = AEApi.instance()
-                .definitions()
-                .blocks()
-                .molecularAssembler()
-                .maybeStack(1)
-                .orNull();
-            return stack == null ? GuiTextures.MATERIAL : new ItemDrawable(stack);
-        }
-        return GuiTextures.MATERIAL;
+    private IDrawable icon(final String profileId) {
+        final ItemStack stack = ICONS.get(profileId)
+            .apply(
+                AEApi.instance()
+                    .definitions()
+                    .blocks())
+            .maybeStack(1)
+            .orNull();
+        return stack == null ? GuiTextures.MATERIAL : new ItemDrawable(stack);
     }
 
+    // TODO: Open an upstream AE2 PR to expose these processing, power and animation constants.
     @Versioned.Class
     public static class TileInscriber {
 
         public static final int MAX_PROCESSING_TIME = 100;
         public static final int BASE_POWER_PER_TICK = 10;
         public static final int BASE_SPEED = 1;
+        public static final int SMASH_ANIMATION_TICKS = 16;
     }
 
+    // TODO: Open an upstream AE2 PR to expose advanced-inscriber processing and power constants.
+    @Versioned.Class
+    public static class TileAdvancedInscriber {
+
+        public static final int MAX_PROCESSING_TIME = 100;
+        public static final int BASE_POWER_PER_TICK = 10;
+        public static final int BASE_SPEED = 1;
+    }
+
+    // TODO: Open an upstream AE2 PR to expose assembler processing, speed and acceleration-tax constants.
     @Versioned.Class
     public static class TileMolecularAssembler {
 
@@ -144,40 +187,47 @@ public final class AE2Provider implements PropertyProvider {
     }
 
     @Override
+    public boolean canCraft(final IRecipeHandler handler, final int recipeIndex) {
+        if (handler instanceof NEIGrinderRecipeHandler || handler instanceof NEIInscriberRecipeHandler) return true;
+        if (handler instanceof NEIAEShapedRecipeHandler || handler instanceof NEIAEShapelessRecipeHandler
+            || handler instanceof ShapedRecipeHandler)
+            return new CraftingRecipeSupport(handler, recipeIndex).isEligible();
+        return false;
+    }
+
+    @Override
     public List<MachineProfile> getProfiles(final IRecipeHandler handler, final int recipeIndex) {
-        return switch (handler) {
-            case NEIGrinderRecipeHandler _ -> List.of(QUARTZ_GRINDER);
-            case NEIInscriberRecipeHandler _-> List.of(INSCRIBER);
-            case NEIAEShapedRecipeHandler _, NEIAEShapelessRecipeHandler _, ShapedRecipeHandler _ ->
-                List.of(MOLECULAR_ASSEMBLER);
-            default -> List.of();
-        };
+        if (handler instanceof NEIGrinderRecipeHandler) return List.of(QUARTZ_GRINDER);
+        if (handler instanceof NEIInscriberRecipeHandler) return List.of(INSCRIBER, ADVANCED_INSCRIBER);
+        if (handler instanceof NEIAEShapedRecipeHandler || handler instanceof NEIAEShapelessRecipeHandler
+            || handler instanceof ShapedRecipeHandler) {
+            return new CraftingRecipeSupport(handler, recipeIndex).isEligible() ? List.of(MOLECULAR_ASSEMBLER)
+                : List.of();
+        }
+        return List.of();
     }
 
     @Override
     public void populate(final RecipeContext.Builder recipe, final IRecipeHandler handler, final int recipeIndex) {
+        final CraftingRecipeSupport crafting = new CraftingRecipeSupport(handler, recipeIndex);
+        final boolean isCrafting = crafting.isEligible();
+        if (isCrafting) crafting.selectMissingPermutations();
         PropertyProvider.super.populate(recipe, handler, recipeIndex);
+        if (isCrafting) crafting.addContainerReturns(recipe);
 
         if (handler instanceof NEIGrinderRecipeHandler) {
-            final int duration = findGrinderDuration(handler, recipeIndex);
-            if (duration > 0) {
-                recipe.property(RecipePropertyAPI.DURATION_TICKS, duration);
+            final PositionedStack result = handler.getResultStack(recipeIndex);
+            if (result == null || result.item == null) return;
+            for (final IGrinderEntry entry : AEApi.instance()
+                .registries()
+                .grinder()
+                .getRecipes()) {
+                if (NEIServerUtils.areStacksSameTypeCrafting(entry.getOutput(), result.item)) {
+                    if (entry.getEnergyCost() > 0)
+                        recipe.property(RecipePropertyAPI.DURATION_TICKS, entry.getEnergyCost());
+                    break;
+                }
             }
         }
-    }
-
-    private static int findGrinderDuration(final IRecipeHandler handler, final int recipeIndex) {
-        final PositionedStack result = handler.getResultStack(recipeIndex);
-        if (result == null || result.item == null) return 0;
-
-        for (final IGrinderEntry entry : AEApi.instance()
-            .registries()
-            .grinder()
-            .getRecipes()) {
-            if (NEIServerUtils.areStacksSameTypeCrafting(entry.getOutput(), result.item)) {
-                return entry.getEnergyCost();
-            }
-        }
-        return 0;
     }
 }
