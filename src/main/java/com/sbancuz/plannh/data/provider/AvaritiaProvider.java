@@ -6,6 +6,7 @@ import javax.annotation.Nonnull;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.drawable.GuiTextures;
+import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
@@ -17,13 +18,15 @@ import com.sbancuz.plannh.data.properties.SummaryProperty;
 import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.recipe.IRecipeHandler;
+import fox.spiteful.avaritia.blocks.LudicrousBlocks;
 import fox.spiteful.avaritia.compat.nei.CompressionHandler;
 
 public final class AvaritiaProvider implements PropertyProvider {
 
     @Nonnull
     private IDrawable icon(final IRecipeHandler handler, final int recipeIndex) {
-        return GuiTextures.MAXIMIZE;
+        return LudicrousBlocks.compressor == null ? GuiTextures.PROCESSOR
+            : new ItemDrawable(LudicrousBlocks.compressor);
     }
 
     public static final RecipeProperty<Integer> COMPRESSION_COST = SummaryProperty

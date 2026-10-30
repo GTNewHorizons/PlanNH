@@ -8,10 +8,10 @@ import net.minecraft.item.ItemStack;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.drawable.GuiTextures;
+import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
-import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
@@ -20,6 +20,7 @@ import com.sbancuz.plannh.data.setting.Settings;
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
+import tconstruct.armor.TinkerArmor;
 import tconstruct.library.crafting.CastingRecipe;
 import tconstruct.plugins.nei.RecipeHandlerAlloying;
 import tconstruct.plugins.nei.RecipeHandlerCastingBase;
@@ -30,6 +31,8 @@ import tconstruct.plugins.nei.RecipeHandlerDryingRack;
 import tconstruct.plugins.nei.RecipeHandlerDryingRack.CachedDryingRackRecipe;
 import tconstruct.plugins.nei.RecipeHandlerMelting;
 import tconstruct.plugins.nei.RecipeHandlerToolMaterials;
+import tconstruct.smeltery.TinkerSmeltery;
+import tconstruct.tools.TinkerTools;
 
 public final class TinkersConstructProvider implements PropertyProvider {
 
@@ -45,7 +48,18 @@ public final class TinkersConstructProvider implements PropertyProvider {
 
     @Nonnull
     private IDrawable icon(final IRecipeHandler handler, final int recipeIndex) {
-        return GuiTextures.WRENCH;
+        if (handler instanceof RecipeHandlerDryingRack)
+            return TinkerArmor.dryingRack == null ? GuiTextures.PROCESSOR : new ItemDrawable(TinkerArmor.dryingRack);
+        if (handler instanceof RecipeHandlerToolMaterials)
+            return TinkerTools.toolForge == null ? GuiTextures.PROCESSOR : new ItemDrawable(TinkerTools.toolForge);
+        if (handler instanceof RecipeHandlerCastingTable)
+            return TinkerSmeltery.searedBlock == null ? GuiTextures.PROCESSOR
+                : new ItemDrawable(TinkerSmeltery.searedBlock, 0);
+        if (handler instanceof RecipeHandlerCastingBasin)
+            return TinkerSmeltery.searedBlock == null ? GuiTextures.PROCESSOR
+                : new ItemDrawable(TinkerSmeltery.searedBlock, 2);
+        if (TinkerSmeltery.smeltery == null) return GuiTextures.PROCESSOR;
+        return new ItemDrawable(TinkerSmeltery.smeltery, 0);
     }
 
     @Override
@@ -74,7 +88,7 @@ public final class TinkersConstructProvider implements PropertyProvider {
         PropertyProvider.super.populate(recipe, handler, recipeIndex);
         if (!(handler instanceof final TemplateRecipeHandler trh)) return;
 
-        final List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(trh);
+        final List<TemplateRecipeHandler.CachedRecipe> recipes = trh.arecipes;
         if (recipeIndex < 0 || recipeIndex >= recipes.size()) return;
 
         final TemplateRecipeHandler.CachedRecipe cached = recipes.get(recipeIndex);

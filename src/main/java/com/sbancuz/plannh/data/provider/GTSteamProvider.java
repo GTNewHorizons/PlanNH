@@ -1,7 +1,6 @@
 package com.sbancuz.plannh.data.provider;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import javax.annotation.Nonnull;
@@ -73,19 +72,6 @@ public class GTSteamProvider implements PropertyProvider {
         "gtpp.recipe.multimixer",
         "gtpp.recipe.simplewasher");
 
-    private static final Map<String, String> STEAM_MACHINE_IDS = Map.ofEntries(
-        Map.entry("gt.recipe.furnace", "gregtech:steam_furnace"),
-        Map.entry("gt.recipe.efrblasting", "gregtech:steam_efr_blasting"),
-        Map.entry("gt.recipe.efrsmelting", "gregtech:steam_efr_smelting"),
-        Map.entry("gt.recipe.macerator", "gregtech:steam_macerator"),
-        Map.entry("gt.recipe.compressor", "gregtech:steam_compressor"),
-        Map.entry("gt.recipe.hammer", "gregtech:steam_hammer"),
-        Map.entry("gt.recipe.alloysmelter", "gregtech:steam_alloy_smelter"),
-        Map.entry("gt.recipe.centrifuge", "gregtech:steam_centrifuge"),
-        Map.entry("gt.recipe.orewasher", "gregtech:steam_ore_washer"),
-        Map.entry("gtpp.recipe.multimixer", "gregtech:steam_multimixer"),
-        Map.entry("gtpp.recipe.simplewasher", "gregtech:steam_simple_washer"));
-
     private final MachineProfile steamProfile = MachineProfile.builder("gregtech:steam")
         .setting(Settings.SPEED)
         .setting(Settings.PARALLELS)
@@ -119,21 +105,6 @@ public class GTSteamProvider implements PropertyProvider {
     @Override
     public List<MachineProfile> getProfiles(final IRecipeHandler handler, final int recipeIndex) {
         return canCraft(handler, recipeIndex) ? List.of(steamProfile) : List.of();
-    }
-
-    @Override
-    public String getMachineId(final IRecipeHandler handler, final int recipeIndex) {
-        final String mapName;
-        if (handler instanceof final FurnaceRecipeHandler fh) {
-            mapName = furnaceRecipeMap(fh);
-        } else if (handler instanceof final GTNEIDefaultHandler gth) {
-            final RecipeMap<?> map = gth.getRecipeMap();
-            mapName = map == null ? null : map.unlocalizedName;
-        } else {
-            return PropertyProvider.super.getMachineId(handler, recipeIndex);
-        }
-        return mapName == null ? PropertyProvider.super.getMachineId(handler, recipeIndex)
-            : STEAM_MACHINE_IDS.getOrDefault(mapName, PropertyProvider.super.getMachineId(handler, recipeIndex));
     }
 
     @Override

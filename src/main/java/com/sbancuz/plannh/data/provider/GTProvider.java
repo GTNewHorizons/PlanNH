@@ -14,7 +14,6 @@ import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
-import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.effect.steps.GTOverclockStep;
 import com.sbancuz.plannh.data.flowchart.Port;
@@ -223,7 +222,7 @@ public class GTProvider implements PropertyProvider {
         List<PositionedStack> outputStacks = List.of();
 
         if (handler instanceof final FurnaceRecipeHandler fh) {
-            final List<TemplateRecipeHandler.CachedRecipe> fRecipes = RecipeHandlerAccess.getArecipes(fh);
+            final List<TemplateRecipeHandler.CachedRecipe> fRecipes = fh.arecipes;
             recipe.property(RecipePropertyAPI.DURATION_TICKS, FURNACE_COOK_TICKS);
 
             if (recipeIndex < 0 || recipeIndex >= fRecipes.size()) {
@@ -259,7 +258,7 @@ public class GTProvider implements PropertyProvider {
             }
 
         } else if (handler instanceof final GTNEIDefaultHandler gth) {
-            final List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(gth);
+            final List<TemplateRecipeHandler.CachedRecipe> recipes = gth.arecipes;
             if (recipeIndex < 0 || recipeIndex >= recipes.size()) return;
 
             final CachedDefaultRecipe cached = (CachedDefaultRecipe) recipes.get(recipeIndex);

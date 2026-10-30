@@ -49,13 +49,6 @@ public class VanillaProvider implements PropertyProvider {
     }
 
     @Override
-    public String getMachineId(final IRecipeHandler handler, final int recipeIndex) {
-        if (handler instanceof FurnaceRecipeHandler) return "minecraft:furnace";
-        if (handler instanceof ShapedRecipeHandler) return "minecraft:crafting";
-        return PropertyProvider.super.getMachineId(handler, recipeIndex);
-    }
-
-    @Override
     public void populate(final RecipeContext.Builder recipe, final IRecipeHandler handler, final int recipeIndex) {
         PropertyProvider.super.populate(recipe, handler, recipeIndex);
         if (handler instanceof FurnaceRecipeHandler)

@@ -6,6 +6,7 @@ import javax.annotation.Nonnull;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.drawable.GuiTextures;
+import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
@@ -13,6 +14,7 @@ import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.setting.Settings;
 
+import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.IRecipeHandler;
 import gcewing.projectblue.nei.NEIRecipeHandler;
 
@@ -30,7 +32,8 @@ public final class ProjectBlueProvider implements PropertyProvider {
 
     @Nonnull
     private IDrawable icon(final IRecipeHandler handler, final int recipeIndex) {
-        return GuiTextures.GRAPH;
+        final PositionedStack result = handler.getResultStack(recipeIndex);
+        return result == null || result.item == null ? GuiTextures.PROCESSOR : new ItemDrawable(result.item);
     }
 
     @Override

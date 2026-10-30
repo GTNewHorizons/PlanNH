@@ -13,7 +13,6 @@ import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
-import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.effect.steps.CoFHCompat;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
@@ -66,9 +65,9 @@ public class ForestryProvider implements PropertyProvider {
 
     private static final String PROFILE_ID = "forestry:basic";
 
+    // TODO: open an upstream PR to expose these copied constants.
     private static final int GAME_TICKS_PER_WORK_TICK = 5;
 
-    // TODO: Make a PR to expose these constants
     // TileBottler: TICKS_PER_RECIPE_TIME=5, ENERGY_PER_RECIPE_TIME=1000
     private static final int BOTTLER_TICKS = 5;
     private static final int BOTTLER_RF = 1000;
@@ -120,7 +119,7 @@ public class ForestryProvider implements PropertyProvider {
         PropertyProvider.super.populate(recipe, handler, recipeIndex);
         if (!(handler instanceof final TemplateRecipeHandler trh)) return;
 
-        final List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(trh);
+        final List<TemplateRecipeHandler.CachedRecipe> recipes = trh.arecipes;
         if (recipeIndex < 0 || recipeIndex >= recipes.size()) return;
 
         final TemplateRecipeHandler.CachedRecipe cached = recipes.get(recipeIndex);

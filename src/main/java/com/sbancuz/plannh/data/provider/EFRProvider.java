@@ -18,7 +18,7 @@ import codechicken.nei.recipe.FurnaceRecipeHandler;
 import codechicken.nei.recipe.IRecipeHandler;
 import ganymedes01.etfuturum.ModBlocks;
 
-// TODO: Make a PR to expose these constants
+// TODO: open an upstream PR to expose these copied constants.
 // Smoker and Blast Furnace cook at half the speed of a vanilla furnace (200/2 = 100 ticks)
 // Matches vanilla Minecraft 1.13+ behavior (smoker/blast furnace cook in 100 ticks)
 public class EFRProvider implements PropertyProvider {
@@ -38,8 +38,6 @@ public class EFRProvider implements PropertyProvider {
 
     public static final String SMOKER_OVERLAY = "etfuturum.smoker";
     public static final String BLAST_FURNACE_OVERLAY = "etfuturum.blastfurnace";
-    public static final String SMOKER_MACHINE_ID = "etfuturum:smoker";
-    public static final String BLAST_FURNACE_MACHINE_ID = "etfuturum:blast_furnace";
 
     private static final int COOK_TICKS = 100;
 
@@ -62,17 +60,6 @@ public class EFRProvider implements PropertyProvider {
     @Override
     public List<MachineProfile> getProfiles(final IRecipeHandler handler, final int recipeIndex) {
         return canCraft(handler, recipeIndex) ? List.of(profile) : List.of();
-    }
-
-    @Override
-    public String getMachineId(final IRecipeHandler handler, final int recipeIndex) {
-        if (!(handler instanceof FurnaceRecipeHandler fh))
-            return PropertyProvider.super.getMachineId(handler, recipeIndex);
-        return switch (fh.getOverlayIdentifier()) {
-            case SMOKER_OVERLAY -> SMOKER_MACHINE_ID;
-            case BLAST_FURNACE_OVERLAY -> BLAST_FURNACE_MACHINE_ID;
-            default -> PropertyProvider.super.getMachineId(handler, recipeIndex);
-        };
     }
 
     @Override

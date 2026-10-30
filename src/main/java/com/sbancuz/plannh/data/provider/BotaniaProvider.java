@@ -6,10 +6,10 @@ import javax.annotation.Nonnull;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.drawable.GuiTextures;
+import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
-import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
@@ -29,12 +29,31 @@ import vazkii.botania.client.integration.nei.recipe.RecipeHandlerPetalApothecary
 import vazkii.botania.client.integration.nei.recipe.RecipeHandlerPureDaisy;
 import vazkii.botania.client.integration.nei.recipe.RecipeHandlerRunicAltar;
 import vazkii.botania.client.integration.nei.recipe.RecipeHandlerRunicAltar.CachedRunicAltarRecipe;
+import vazkii.botania.common.block.ModBlocks;
+import vazkii.botania.common.item.ModItems;
+import vazkii.botania.common.item.block.ItemBlockSpecialFlower;
 
 public class BotaniaProvider implements PropertyProvider {
 
     @Nonnull
     private IDrawable icon(final IRecipeHandler handler, final int recipeIndex) {
-        return GuiTextures.SUN;
+        if (handler instanceof RecipeHandlerPureDaisy)
+            return ModBlocks.specialFlower == null ? GuiTextures.PROCESSOR
+                : new ItemDrawable(ItemBlockSpecialFlower.ofType("pureDaisy"));
+        if (handler instanceof RecipeHandlerElvenTrade)
+            return ModBlocks.alfPortal == null ? GuiTextures.PROCESSOR : new ItemDrawable(ModBlocks.alfPortal);
+        if (handler instanceof RecipeHandlerLexicaBotania)
+            return ModItems.lexicon == null ? GuiTextures.PROCESSOR : new ItemDrawable(ModItems.lexicon);
+
+        final var block = switch (handler) {
+            case RecipeHandlerFloatingFlowers _ -> ModBlocks.floatingFlower;
+            case RecipeHandlerRunicAltar _ -> ModBlocks.runeAltar;
+            case RecipeHandlerPetalApothecary _ -> ModBlocks.altar;
+            case RecipeHandlerManaPool _ -> ModBlocks.pool;
+            case RecipeHandlerBrewery _ -> ModBlocks.brewery;
+            default -> null;
+        };
+        return block == null ? GuiTextures.PROCESSOR : new ItemDrawable(block);
     }
 
     public static final RecipeProperty<Integer> MANA_COST = SummaryProperty.builder("botania.mana_cost", 0)
@@ -86,7 +105,7 @@ public class BotaniaProvider implements PropertyProvider {
 
         if (!(handler instanceof final TemplateRecipeHandler trh)) return;
 
-        final List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(trh);
+        final List<TemplateRecipeHandler.CachedRecipe> recipes = trh.arecipes;
         if (recipeIndex < 0 || recipeIndex >= recipes.size()) return;
 
         final TemplateRecipeHandler.CachedRecipe cached = recipes.get(recipeIndex);

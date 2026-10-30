@@ -4,9 +4,11 @@ import java.util.List;
 
 import javax.annotation.Nonnull;
 
+import com.brandon3055.draconicevolution.common.ModBlocks;
 import com.brandon3055.draconicevolution.integration.nei.ReactorNEIHandler;
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.drawable.GuiTextures;
+import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
@@ -32,7 +34,7 @@ public final class DraconicEvolutionProvider implements PropertyProvider {
 
     @Nonnull
     private IDrawable icon(final IRecipeHandler handler, final int recipeIndex) {
-        return GuiTextures.SPHERE;
+        return ModBlocks.reactorCore == null ? GuiTextures.PROCESSOR : new ItemDrawable(ModBlocks.reactorCore);
     }
 
     @Override

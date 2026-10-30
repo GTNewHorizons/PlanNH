@@ -6,6 +6,8 @@ import javax.annotation.Nonnull;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.drawable.GuiTextures;
+import com.cleanroommc.modularui.drawable.ItemDrawable;
+import com.pam.harvestcraft.BlockRegistry;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
@@ -22,7 +24,7 @@ import tonius.neiintegration.mods.harvestcraft.RecipeHandlerPresser;
 import tonius.neiintegration.mods.harvestcraft.RecipeHandlerPresserOld;
 import tonius.neiintegration.mods.harvestcraft.RecipeHandlerQuern;
 
-// TODO: Make a PR to expose these constants in the GTNH HarvestCraft fork
+// TODO: open an upstream PR to expose these copied constants in the GTNH HarvestCraft fork.
 // Source: com.pam.harvestcraft.TileEntityPamPresser (combPresserCookTime hardcoded to 125)
 // Source: com.pam.harvestcraft.TileEntityChurn (churnCookTime hardcoded to 200)
 // Source: com.pam.harvestcraft.TileEntityOven (ovenCookTime hardcoded to 200)
@@ -44,7 +46,15 @@ public class HarvestCraftProvider implements PropertyProvider {
 
     @Nonnull
     private IDrawable icon(final IRecipeHandler handler, final int recipeIndex) {
-        return GuiTextures.FILE;
+        final var block = switch (handler) {
+            case RecipeHandlerPresser _, RecipeHandlerPresserOld _ -> BlockRegistry.pamPresser;
+            case RecipeHandlerOven _ -> BlockRegistry.pamOven;
+            case RecipeHandlerChurn _ -> BlockRegistry.pamChurn;
+            case RecipeHandlerQuern _ -> BlockRegistry.pamQuern;
+            case RecipeHandlerApiary _ -> BlockRegistry.pamApiary;
+            default -> null;
+        };
+        return block == null ? GuiTextures.PROCESSOR : new ItemDrawable(block);
     }
 
     private static final int PRESSER_TICKS = 125;

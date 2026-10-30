@@ -6,6 +6,7 @@ import javax.annotation.Nonnull;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.drawable.GuiTextures;
+import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
@@ -15,6 +16,8 @@ import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.recipe.IRecipeHandler;
+import logisticspipes.LogisticsPipes;
+import logisticspipes.blocks.LogisticsSolidBlock;
 import logisticspipes.nei.NEISolderingStationRecipeManager;
 
 public final class LogisticsPipesProvider implements PropertyProvider {
@@ -34,7 +37,8 @@ public final class LogisticsPipesProvider implements PropertyProvider {
 
     @Nonnull
     private IDrawable icon(final IRecipeHandler handler, final int recipeIndex) {
-        return GuiTextures.RIGHTLOAD;
+        return LogisticsPipes.LogisticsSolidBlock == null ? GuiTextures.PROCESSOR
+            : new ItemDrawable(LogisticsPipes.LogisticsSolidBlock, LogisticsSolidBlock.SOLDERING_STATION);
     }
 
     @Override

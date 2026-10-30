@@ -6,6 +6,7 @@ import javax.annotation.Nonnull;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.drawable.GuiTextures;
+import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
@@ -15,6 +16,7 @@ import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.IRecipeHandler;
+import lumien.randomthings.Blocks.ModBlocks;
 import lumien.randomthings.Handler.ModCompability.NEI.ImbuingStationRecipeHandler;
 
 public final class RandomThingsProvider implements PropertyProvider {
@@ -31,12 +33,8 @@ public final class RandomThingsProvider implements PropertyProvider {
 
     @Nonnull
     private IDrawable icon(final IRecipeHandler handler, final int recipeIndex) {
-        return GuiTextures.SPHERE;
+        return ModBlocks.imbuingStation == null ? GuiTextures.PROCESSOR : new ItemDrawable(ModBlocks.imbuingStation);
     }
-
-    // TODO: Make a PR to expose this constant
-    // Imbuing Station: base process length (ticks) from TileEntityImbuingStation
-    private static final int IMBUING_LENGTH = 200;
 
     @Override
     public StackRole otherStackRole(final IRecipeHandler handler, final int recipeIndex, final PositionedStack stack) {
@@ -61,6 +59,8 @@ public final class RandomThingsProvider implements PropertyProvider {
     @Override
     public void populate(final RecipeContext.Builder recipe, final IRecipeHandler handler, final int recipeIndex) {
         PropertyProvider.super.populate(recipe, handler, recipeIndex);
-        recipe.property(RecipePropertyAPI.DURATION_TICKS, IMBUING_LENGTH);
+        recipe.property(
+            RecipePropertyAPI.DURATION_TICKS,
+            (int) Math.ceil(lumien.randomthings.Configuration.Settings.IMBUING_LENGTH));
     }
 }

@@ -12,7 +12,6 @@ import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.FurnaceRecipeHandler;
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.RecipeHandlerRef;
-import codechicken.nei.recipe.TemplateRecipeHandler;
 import gregtech.nei.GTNEIDefaultHandler;
 
 public interface PropertyProvider {
@@ -68,14 +67,4 @@ public interface PropertyProvider {
         return true;
     }
 
-    // TODO: Remove?
-    /** Providers with native machine IDs override this; handler names are never identities. */
-    default String getMachineId(final IRecipeHandler handler, final int recipeIndex) {
-        final String overlay = handler instanceof TemplateRecipeHandler template ? template.getOverlayIdentifier()
-            : null;
-        return getClass().getName() + "/"
-            + handler.getClass()
-                .getName()
-            + (overlay == null ? "" : "/" + overlay);
-    }
 }
