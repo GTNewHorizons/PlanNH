@@ -38,6 +38,20 @@ plannh.settings.mana_per_tick=Mana/t
 
 ## Settings - Thaumcraft (and friends)
 plannh.settings.vis_per_tick=Vis/t
+plannh.settings.thaumcraft.bellows=Bellows
+plannh.settings.thaumcraft.fire_vis=Fire Vis Supplied
+plannh.settings.thaumcraft.furnace_boost_source=Boost Supply
+plannh.settings.thaumcraft.vis_discount=Vis Discount (%)
+plannh.settings.thaumcraft.furnace_boost_source.none=None
+plannh.settings.thaumcraft.furnace_boost_source.network_vis=Centivis
+plannh.settings.thaumcraft.furnace_boost_source.essentia_nozzle=Essentia Nozzle
+plannh.tooltip.thaumcraft.furnace_steady_state=Steady-state, fully supplied operation; startup buffers are excluded. Network vis and nozzle essentia are alternative supplies.
+plannh.settings.witchinggadgets.bellows=Bellows
+
+## Settings - Furnaces
+plannh.settings.railcraft.steam_oven_batch_size=Items per Batch
+plannh.settings.galacticraft.arc_power_tier=Power Tier
+plannh.settings.twilightforest.cinder_log_count=Cinder Logs
 
 ## Settings - Forestry
 plannh.settings.forestry_rf_per_tick=For. RF/t
@@ -62,9 +76,20 @@ plannh.settings.bee_alveary_stimulator_3_circuit_2=Circuit 3.2
 plannh.settings.bee_alveary_stimulator_3_circuit_3=Circuit 3.3
 plannh.settings.bee_alveary_stimulator_3_circuit_4=Circuit 3.4
 plannh.settings.bee_no_stimulator=None
-plannh.settings.bee_magic_production_aura=Production Aura
-plannh.settings.bee_magic_lifespan_aura=Lifespan Aura
+plannh.settings.bee_magic_production_aura=Production Booster
+plannh.settings.bee_magic_lifespan_aura=Queen Lifespan Booster
 plannh.settings.bee_no_frame=None
+plannh.settings.gendustry_apiary_upgrade_1=Apiary Upgrade 1
+plannh.settings.gendustry_apiary_upgrade_2=Apiary Upgrade 2
+plannh.settings.gendustry_apiary_upgrade_3=Apiary Upgrade 3
+plannh.settings.gendustry_apiary_upgrade_4=Apiary Upgrade 4
+plannh.settings.gendustry_apiary_upgrade_1_count=Upgrade 1 Count
+plannh.settings.gendustry_apiary_upgrade_2_count=Upgrade 2 Count
+plannh.settings.gendustry_apiary_upgrade_3_count=Upgrade 3 Count
+plannh.settings.gendustry_apiary_upgrade_4_count=Upgrade 4 Count
+plannh.gui.gendustry.upgrades=Apiary Upgrades
+plannh.gui.gendustry.upgrade_scroll=Scroll over the item to change its installed stack size.
+plannh.gui.gendustry.installed=Installed
 plannh.settings.choice_hint=Left/right-click: cycle. Middle-click: restore default.
 plannh.settings.item_drop_hint=Drop an item from NEI to select it. No items are consumed.
 plannh.settings.item_choice_hint=Click: choose item. Middle-click: restore default.
@@ -82,11 +107,18 @@ plannh.bees.details_hint=Hold Shift for details.
 plannh.bees.lifetime_model=One operation is a queen lifetime plus rebreeding time.
 plannh.bees.supplied_conditions=Assumes a stable breed, flowers and specialty conditions supplied.
 plannh.bees.unmodeled_effects=World effects and flower-provider bonus products are not modeled.
-plannh.bees.aura_on=Supplied
-plannh.bees.aura_off=Not supplied
-plannh.bees.aura_toggle=Click: toggle whether this aura is maintained.
-plannh.bees.aura_supply=The aura must be replenished throughout production.
-plannh.bees.aura_cost=Mana and vis supply costs are not included.
+plannh.bees.aura_on=Booster supplied
+plannh.bees.aura_off=No booster
+plannh.bees.aura_toggle=Click: enable or disable the bonus supplied by a Magic Apiary booster.
+plannh.bees.aura_booster_source=Bonus source: a Vis Apiary Booster or Mana Apiary Booster within 6 blocks.
+plannh.bees.aura_supply=The selected booster bonus is assumed to remain active throughout production.
+plannh.bees.aura_cost=The input is a booster charge, not a booster block, essentia or stored vis. Provider-side costs are not inferred.
+plannh.bees.aura_production=Production bonus
+plannh.bees.aura_death=Queen lifespan bonus
+plannh.bees.aura_port=Magic Apiary booster charge: %s (not an item).
+plannh.bees.aura_renewal=MagicBees 2.10.7 does not reset expiry after renewal: maintained auras consume one charge per tick after their first expiry.
+plannh.bees.aura_steady_state=Demand covers continuous operation and rebreeding, excluding the initial activation buffer and idle periods.
+plannh.bees.aura_provider_limit=Native aura providers are not guaranteed to sustain this rate. Do not assume nominal periodic renewal or a fixed mana cost.
 plannh.bees.stimulator_energy=Energy per bee cycle
 plannh.bees.mj_per_cycle=%s MJ / work cycle
 plannh.gui.bees.frames=Frames
@@ -124,6 +156,22 @@ plannh.settings.steam_eut_discount=Steam EU%
 plannh.settings.steam_duration_modifier=Steam Spd%
 
 ## Properties
+## Typed Magic Resources
+plannh.resources.essentia=Essentia
+plannh.resources.stored_vis=Stored Vis
+plannh.resources.network_vis=Network Vis
+plannh.resources.aura_charge=Aura Charge
+plannh.resources.unit.centivis=centivis
+plannh.resources.unit.aura=aura
+plannh.resources.thaumcraft.essentia.hint=Physical essentia, distinct from stored and network vis.
+plannh.resources.thaumcraft.stored_vis.hint=Base recipe vis cost. Player, wand and equipment discounts are not inferred.
+plannh.resources.thaumcraft.network_vis.hint=Thaumcraft vis-network supply, distinct from stored vis and essentia.
+plannh.resources.magicbees.aura_charge.hint=External steady-state supply: maintained auras consume one charge per tick after expiry in MagicBees 2.10.7. Provider conversion is not modeled.
+plannh.properties.thaumcraft.essentia_units=Essentia Units
+plannh.properties.thaumcraft.stored_vis_units=Stored Vis Units
+plannh.gui.node.port.inactive=Not required by the current settings (zero demand).
+plannh.gui.node.port.base_amount=Base Amount
+plannh.gui.node.port.per_operation=Per Operation
 ## Properties - General
 plannh.properties.duration_ticks=Duration
 plannh.properties.num_components=Components
@@ -153,6 +201,7 @@ plannh.properties.botania.mana_cost=Mana Cost
 ## Properties - BloodMagic
 plannh.properties.bloodmagic.lp_amount=LP Cost
 plannh.properties.bloodmagic.lp_tier=LP Tier
+plannh.properties.bloodmagic.reagent=Reagent
 
 ## Properties - Thaumcraft (and friends)
 plannh.properties.thaumcraft.vis_cost=Vis Cost
@@ -160,6 +209,10 @@ plannh.properties.thaumcraft.instability=Instability
 plannh.properties.thaumcraft.total_vis=Total Vis
 plannh.properties.thaumcraft.research_key=Research Key
 plannh.properties.thaumcraft.num_components=Components
+plannh.properties.thaumcraft.essentia=Essentia
+plannh.properties.witchinggadgets.fire_essentia_per_fuel=Fire Essentia per Fuel Refill
+plannh.properties.galacticraft.gj_per_t=gJ/t
+plannh.properties.projectred.power_units_per_t=ProjectRed Power/t
 
 ## Properties - Forestry
 plannh.properties.forestry.processing_time=Processing Time
@@ -391,3 +444,4 @@ plannh.gui.number.multiple=×%s
 plannh.unsupported_pack.header=PlanNH %s needs newer versions of these mods:
 plannh.unsupported_pack.outdated_mod=%s %s is older than %s
 plannh.unsupported_pack.footer=Remove PlanNH from the mods folder, or update to GT New Horizons %s or newer.
+plannh.settings.item_count_scroll=Scroll to change the installed count
