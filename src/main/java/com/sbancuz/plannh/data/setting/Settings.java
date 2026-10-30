@@ -1,11 +1,22 @@
 package com.sbancuz.plannh.data.setting;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
+import com.cleanroommc.modularui.api.widget.IWidget;
 import com.sbancuz.plannh.PlanNH;
+import com.sbancuz.plannh.data.MachineConfig;
+import com.sbancuz.plannh.data.RecipeContext;
+import com.sbancuz.plannh.gui.setting.ItemChoiceWidget;
+
+import appeng.api.AEApi;
+import crazypants.enderio.EnderIO;
+import crazypants.enderio.power.Capacitors;
 
 public final class Settings {
 
@@ -55,7 +66,34 @@ public final class Settings {
     public static final IntegerSettingDef VIS_PER_TICK = new IntegerSettingDef("vis_per_tick", 1, 1, 100);
     public static final IntegerSettingDef INPUTS_PER_TICK = new IntegerSettingDef("inputs_per_tick", 1, 1, 10000);
     public static final IntegerSettingDef LP_PER_TICK = new IntegerSettingDef("lp_per_tick", 20, 1, 100000);
-    public static final IntegerSettingDef EIO_CAPACITOR = new IntegerSettingDef("eio_capacitor", 0, 0, 6);
+    // TODO: Open an upstream EnderIO PR to expose the primary capacitor tiers and alternate mappings.
+    public static final IntegerSettingDef EIO_CAPACITOR = new IntegerSettingDef("eio_capacitor", 0, 0, 6) {
+
+        @Override
+        public IWidget settingsWidget(final MachineConfig cfg, final RecipeContext ctx, final Consumer<Runnable> edit) {
+            return new ItemChoiceWidget(
+                this,
+                cfg,
+                ctx,
+                edit,
+                () -> EnderIO.itemBasicCapacitor == null ? List.of()
+                    : Arrays.stream(Capacitors.VALUES, getMin(), getMax() + 1)
+                        .map(Capacitors::getItemStack)
+                        .toList(),
+                tier -> EnderIO.itemBasicCapacitor == null ? null
+                    : Capacitors.VALUES[Math.clamp(tier, getMin(), getMax())].getItemStack(),
+                stack -> {
+                    if (stack == null || stack.getItem() == null || stack.getItem() != EnderIO.itemBasicCapacitor)
+                        return null;
+                    final int metadata = stack.getItemDamage();
+                    if (metadata >= getMin() && metadata <= getMax()) return metadata;
+                    return switch (metadata) {
+                        case 7, 8, 9 -> metadata - 7;
+                        default -> null;
+                    };
+                }).name("settings.eio_capacitor");
+        }
+    };
     public static final IntegerSettingDef RF_PER_TICK = new IntegerSettingDef("rf_per_tick", 0, 0, 1000000);
 
     public static final IntegerSettingDef STEAM_EUT_DISCOUNT = new IntegerSettingDef(
@@ -82,7 +120,22 @@ public final class Settings {
         0,
         0,
         8637);
-    public static final IntegerSettingDef CATALYST_ACCEL_CARD = new IntegerSettingDef("catalyst_accel_card", 0, 0, 5);
+    public static final IntegerSettingDef CATALYST_ACCEL_CARD = new IntegerSettingDef("catalyst_accel_card", 0, 0, 5) {
+
+        @Override
+        public IWidget settingsWidget(final MachineConfig cfg, final RecipeContext ctx, final Consumer<Runnable> edit) {
+            return itemCountWidget(
+                cfg,
+                ctx,
+                edit,
+                () -> AEApi.instance()
+                    .definitions()
+                    .materials()
+                    .cardSpeed()
+                    .maybeStack(1)
+                    .orNull());
+        }
+    };
 
     // ── enum-type settings ──
     public static final EnumSettingDef<Voltage> VOLTAGE = new EnumSettingDef<>("voltage", Voltage.OFF, Voltage.class);

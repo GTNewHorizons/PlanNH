@@ -54,69 +54,67 @@ public class ChoiceSettingDef<T> extends SettingDef<T> {
 
     @Override
     public IWidget settingsWidget(final MachineConfig cfg, final RecipeContext ctx, final Consumer<Runnable> edit) {
-        final List<T> values = choices.get();
-        final boolean itemChoice = type == ItemStack.class;
-        final int width = itemChoice ? 18
-            : Math.max(
-                40,
-                values.stream()
-                    .map(display)
-                    .mapToInt(
-                        label -> TextRenderer.getFontRenderer()
-                            .getStringWidth(label) + 10)
-                    .max()
-                    .orElse(40));
-        final ButtonWidget<?> button = (itemChoice ? new ItemChoiceWidget(
-            () -> (ItemStack) cfg.getProfile()
-                .value(this, cfg, ctx),
-            this::acceptsItem,
-            stack -> cfg.set(this, type.cast(stack)),
-            edit).picker(
+        if (type == ItemStack.class) {
+            return new ItemChoiceWidget(
+                this,
+                cfg,
+                ctx,
+                edit,
                 () -> choices.get()
                     .stream()
                     .map(value -> (ItemStack) value)
                     .toList(),
-                () -> cfg.reset(this))
-            : new ButtonWidget<>()).name("settings.choice")
-                .width(width)
-                .tooltipBuilder(tooltip -> {
-                    final T value = cfg.getProfile()
-                        .value(this, cfg, ctx);
-                    final TooltipBuilder out = TooltipBuilder.create(tooltip);
-                    if (!itemChoice || value == null) tooltip(value).accept(out);
-                    out.langRow(cfg.isExplicit(this) ? "plannh.settings.choice_manual" : "plannh.settings.choice_auto");
-                    out.langRow(itemChoice ? "plannh.settings.item_choice_hint" : "plannh.settings.choice_hint")
-                        .flush();
-                })
-                .tooltipAutoUpdate(true);
-        if (!itemChoice) {
-            button.overlay(
-                IKey.dynamic(
-                    () -> display.apply(
-                        cfg.getProfile()
-                            .value(this, cfg, ctx))))
-                .onMousePressed(mouseButton -> {
-                    if (mouseButton == 2) {
-                        edit.accept(() -> cfg.reset(this));
-                        return true;
-                    }
-                    if (mouseButton != 0 && mouseButton != 1 || values.isEmpty()) return false;
-                    int index = -1;
-                    final T current = cfg.getProfile()
-                        .value(this, cfg, ctx);
-                    for (int i = 0; i < values.size(); i++) {
-                        if (equality.test(values.get(i), current)) {
-                            index = i;
-                            break;
-                        }
-                    }
-                    final int nextIndex = index < 0 ? (mouseButton == 0 ? 0 : values.size() - 1)
-                        : Math.floorMod(index + (mouseButton == 0 ? 1 : -1), values.size());
-                    final T next = values.get(nextIndex);
-                    edit.accept(() -> cfg.set(this, next));
-                    return true;
-                });
+                value -> (ItemStack) value,
+                stack -> acceptsItem(stack) ? type.cast(stack) : null);
         }
+        final List<T> values = choices.get();
+        final int width = Math.max(
+            40,
+            values.stream()
+                .map(display)
+                .mapToInt(
+                    label -> TextRenderer.getFontRenderer()
+                        .getStringWidth(label) + 10)
+                .max()
+                .orElse(40));
+        final ButtonWidget<?> button = new ButtonWidget<>().name("settings.choice")
+            .width(width)
+            .tooltipBuilder(tooltip -> {
+                final T value = cfg.getProfile()
+                    .value(this, cfg, ctx);
+                final TooltipBuilder out = TooltipBuilder.create(tooltip);
+                tooltip(value).accept(out);
+                out.langRow(cfg.isExplicit(this) ? "plannh.settings.choice_manual" : "plannh.settings.choice_auto");
+                out.langRow("plannh.settings.choice_hint")
+                    .flush();
+            })
+            .tooltipAutoUpdate(true);
+        button.overlay(
+            IKey.dynamic(
+                () -> display.apply(
+                    cfg.getProfile()
+                        .value(this, cfg, ctx))))
+            .onMousePressed(mouseButton -> {
+                if (mouseButton == 2) {
+                    edit.accept(() -> cfg.reset(this));
+                    return true;
+                }
+                if (mouseButton != 0 && mouseButton != 1 || values.isEmpty()) return false;
+                int index = -1;
+                final T current = cfg.getProfile()
+                    .value(this, cfg, ctx);
+                for (int i = 0; i < values.size(); i++) {
+                    if (equality.test(values.get(i), current)) {
+                        index = i;
+                        break;
+                    }
+                }
+                final int nextIndex = index < 0 ? (mouseButton == 0 ? 0 : values.size() - 1)
+                    : Math.floorMod(index + (mouseButton == 0 ? 1 : -1), values.size());
+                final T next = values.get(nextIndex);
+                edit.accept(() -> cfg.set(this, next));
+                return true;
+            });
         return button;
     }
 

@@ -25,15 +25,17 @@ import lombok.Getter;
 public abstract class SettingDef<T> implements JsonSerializer<Object>, JsonDeserializer<Object> {
 
     protected final String key;
-    protected final String label;
     protected final T defaultValue;
 
     protected SettingDef(final String key, final T defaultValue) {
         this.key = key;
-        this.label = StatCollector.translateToLocal("plannh.settings." + key);
         this.defaultValue = defaultValue;
 
         Settings.register(this);
+    }
+
+    public String getLabel() {
+        return StatCollector.translateToLocal("plannh.settings." + key);
     }
 
     public Consumer<TooltipBuilder> tooltip(final T value) {

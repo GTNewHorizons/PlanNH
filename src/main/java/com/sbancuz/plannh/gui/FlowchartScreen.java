@@ -3,6 +3,7 @@ package com.sbancuz.plannh.gui;
 import net.minecraft.client.Minecraft;
 import net.minecraft.item.ItemStack;
 
+import com.cleanroommc.modularui.api.UpOrDown;
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.IWidget;
@@ -346,6 +347,20 @@ public class FlowchartScreen extends ModularScreen {
             }
         }
         return super.onMousePressed(mouseButton);
+    }
+
+    @Override
+    public boolean onMouseScroll(final UpOrDown direction, final int amount) {
+        // ModularPanel gives a focused widget the first chance at the wheel. Refresh the live hover
+        // path first, then let a hovered item choice win over a previously focused numeric field.
+        super.onFrameUpdate();
+        for (IWidget widget = getContext().getTopHovered(); widget != null; widget = widget.getParent()) {
+            if (widget instanceof ItemChoiceWidget choice && choice.hasScrollHandler()
+                && choice.onMouseScroll(direction, amount)) {
+                return true;
+            }
+        }
+        return super.onMouseScroll(direction, amount);
     }
 
     private static void stopNEIGhostDrag(final ItemStack ghost) {

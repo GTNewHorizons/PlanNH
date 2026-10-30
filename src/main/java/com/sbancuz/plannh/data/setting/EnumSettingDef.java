@@ -1,7 +1,10 @@
 package com.sbancuz.plannh.data.setting;
 
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.function.Consumer;
+
+import net.minecraft.util.StatCollector;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.IWidget;
@@ -25,12 +28,20 @@ public class EnumSettingDef<E extends Enum<E>> extends SettingDef<E> {
 
     private int getMaxWidth() {
         return Arrays.stream(type.getEnumConstants())
-            .map(Enum::toString)
+            .map(this::displayValue)
             .mapToInt(
                 s -> TextRenderer.getFontRenderer()
                     .getStringWidth(s))
             .max()
             .orElseThrow() + 10;
+    }
+
+    String displayValue(final E constant) {
+        final String name = constant.name()
+            .toLowerCase(Locale.ROOT);
+        final String translationKey = "plannh.settings." + getKey() + "." + name;
+        return StatCollector.canTranslate(translationKey) ? StatCollector.translateToLocal(translationKey)
+            : constant.name();
     }
 
     @Override
@@ -43,7 +54,7 @@ public class EnumSettingDef<E extends Enum<E>> extends SettingDef<E> {
             }, val -> edit.accept(() -> cfg.set(this, val))))
             .width(getMaxWidth());
         for (final E constant : type.getEnumConstants()) {
-            button.stateOverlay(constant, IKey.str(constant.name()));
+            button.stateOverlay(constant, IKey.dynamic(() -> displayValue(constant)));
         }
         return button;
     }
