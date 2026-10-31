@@ -47,10 +47,8 @@ import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.effect.steps.CoFHCompat;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.setting.ChoiceSettingDef;
-import com.sbancuz.plannh.data.setting.IntegerSettingDef;
 import com.sbancuz.plannh.data.setting.SettingDef;
 import com.sbancuz.plannh.data.setting.Settings;
-import com.sbancuz.plannh.gui.setting.GendustryUpgradesWidget;
 
 import codechicken.nei.ItemList;
 import codechicken.nei.recipe.IRecipeHandler;
@@ -62,6 +60,7 @@ import forestry.plugins.PluginApiculture;
 
 public final class GendustryProvider extends BeeProvider {
 
+    private static final int MAX_UPGRADE_COUNT = 8;
     private static final String PROFILE_ID = "gendustry:basic";
     private static final String INDUSTRIAL_APIARY_ID = "gendustry:industrial_apiary";
     private static final Map<Class<?>, String> ICONS = Map.of(
@@ -82,15 +81,10 @@ public final class GendustryProvider extends BeeProvider {
         TransposerHandler.class,
         "Transposer");
     private static final List<ChoiceSettingDef<ItemStack>> UPGRADES = List.of(
-        upgrade("gendustry_apiary_upgrade_1"),
-        upgrade("gendustry_apiary_upgrade_2"),
-        upgrade("gendustry_apiary_upgrade_3"),
-        upgrade("gendustry_apiary_upgrade_4"));
-    private static final List<IntegerSettingDef> UPGRADE_COUNTS = List.of(
-        new IntegerSettingDef("gendustry_apiary_upgrade_1_count", 1, 1, 8),
-        new IntegerSettingDef("gendustry_apiary_upgrade_2_count", 1, 1, 8),
-        new IntegerSettingDef("gendustry_apiary_upgrade_3_count", 1, 1, 8),
-        new IntegerSettingDef("gendustry_apiary_upgrade_4_count", 1, 1, 8));
+        upgrade(0, "gendustry_apiary_upgrade_1"),
+        upgrade(1, "gendustry_apiary_upgrade_2"),
+        upgrade(2, "gendustry_apiary_upgrade_3"),
+        upgrade(3, "gendustry_apiary_upgrade_4"));
 
     private final MachineProfile PROFILE = MachineProfile.builder(PROFILE_ID)
         .setting(Settings.MACHINES)
@@ -216,7 +210,7 @@ public final class GendustryProvider extends BeeProvider {
         recipe.property(CoFHCompat.RF_COST, (long) (mj * rfMjRatio));
     }
 
-    private static ChoiceSettingDef<ItemStack> upgrade(final String key) {
+    private static ChoiceSettingDef<ItemStack> upgrade(final int slot, final String key) {
         return new ChoiceSettingDef<>(
             key,
             null,
@@ -225,9 +219,14 @@ public final class GendustryProvider extends BeeProvider {
             stack -> stack == null ? "-" : stack.getDisplayName()) {
 
             @Override
+            public int maximumCount(final MachineConfig cfg, final RecipeContext ctx) {
+                return maximumUpgradeCount(slot, cfg, ctx, cfg.value(this, ctx));
+            }
+
+            @Override
             public IWidget settingsWidget(final MachineConfig cfg, final RecipeContext ctx,
                 final Consumer<Runnable> edit) {
-                return new GendustryUpgradesWidget(cfg, ctx, edit, UPGRADES, UPGRADE_COUNTS);
+                return new GendustryUpgradesWidget(cfg, ctx, edit, UPGRADES);
             }
 
             @Override
@@ -242,11 +241,9 @@ public final class GendustryProvider extends BeeProvider {
 
             @Override
             public List<? extends SettingDef<?>> editedSettings() {
-                final List<SettingDef<?>> edited = new ArrayList<>(UPGRADES);
-                edited.addAll(UPGRADE_COUNTS);
-                return edited;
+                return UPGRADES;
             }
-        };
+        }.counts(1, MAX_UPGRADE_COUNT);
     }
 
     public static List<ItemStack> upgradeChoices() {
@@ -284,28 +281,26 @@ public final class GendustryProvider extends BeeProvider {
 
     public static int maximumUpgradeCount(final int slot, final MachineConfig cfg, final RecipeContext ctx,
         final ItemStack candidate) {
-        if (candidate == null || !(candidate.getItem() instanceof IApiaryUpgrade)) return 8;
+        if (candidate == null || !(candidate.getItem() instanceof IApiaryUpgrade)) return MAX_UPGRADE_COUNT;
         final List<ItemStack> installed = new ArrayList<>();
         for (int index = 0; index < UPGRADES.size(); index++) {
             if (index == slot) continue;
             final ItemStack selected = cfg.value(UPGRADES.get(index), ctx);
             if (selected == null || !(selected.getItem() instanceof IApiaryUpgrade)) continue;
-            final ItemStack copy = selected.copy();
-            copy.stackSize = configuredCount(cfg, ctx, index);
-            installed.add(copy);
+            installed.add(selected.copy());
         }
         return maximumUpgradeCount(candidate, installed);
     }
 
     private static int maximumUpgradeCount(final ItemStack candidate, final List<ItemStack> installed) {
-        if (candidate == null || !(candidate.getItem() instanceof IApiaryUpgrade upgrade)) return 0;
-        int maximum = Math.min(8, candidate.getMaxStackSize());
+        final IApiaryUpgrade upgrade = (IApiaryUpgrade) candidate.getItem();
+        int maximum = Math.min(MAX_UPGRADE_COUNT, candidate.getMaxStackSize());
         final int nativeMaximum = upgrade.getMaxNumber(candidate);
         if (nativeMaximum <= 0) return 0;
         int sameTotal = 0;
         for (final ItemStack other : installed) {
-            if (other == null || !(other.getItem() instanceof IApiaryUpgrade otherUpgrade)
-                || otherUpgrade.getStackingId(other) != upgrade.getStackingId(candidate)) continue;
+            final IApiaryUpgrade otherUpgrade = (IApiaryUpgrade) other.getItem();
+            if (otherUpgrade.getStackingId(other) != upgrade.getStackingId(candidate)) continue;
             sameTotal += other.stackSize;
             maximum = Math.min(maximum, otherUpgrade.getMaxNumber(other) - sameTotal);
         }
@@ -314,38 +309,15 @@ public final class GendustryProvider extends BeeProvider {
 
     public static void selectUpgrade(final int slot, final MachineConfig cfg, final RecipeContext ctx,
         final ItemStack selected) {
+        if (!acceptsUpgrade(slot, cfg, ctx, selected)) return;
         final ItemStack copy = selected.copy();
-        copy.stackSize = 1;
         final int maximum = maximumUpgradeCount(slot, cfg, ctx, copy);
-        if (maximum < 1) return;
+        copy.stackSize = Math.clamp(copy.stackSize, 1, maximum);
         cfg.set(UPGRADES.get(slot), copy);
-        cfg.set(UPGRADE_COUNTS.get(slot), Math.clamp(configuredCount(cfg, ctx, slot), 1, maximum));
     }
 
     public static void resetUpgrade(final int slot, final MachineConfig cfg) {
         cfg.reset(UPGRADES.get(slot));
-        cfg.reset(UPGRADE_COUNTS.get(slot));
-    }
-
-    public static int configuredUpgradeCount(final int slot, final MachineConfig cfg, final RecipeContext ctx) {
-        final int configured = configuredCount(cfg, ctx, slot);
-        final int maximum = maximumUpgradeCount(slot, cfg, ctx);
-        return maximum < 1 ? configured : Math.clamp(configured, 1, maximum);
-    }
-
-    public static int nextUpgradeCount(final int slot, final MachineConfig cfg, final RecipeContext ctx,
-        final int direction) {
-        final ItemStack selected = cfg.value(UPGRADES.get(slot), ctx);
-        if (selected == null || !(selected.getItem() instanceof IApiaryUpgrade))
-            return configuredUpgradeCount(slot, cfg, ctx);
-        final int maximum = maximumUpgradeCount(slot, cfg, ctx);
-        if (maximum < 1) return configuredUpgradeCount(slot, cfg, ctx);
-        final int current = configuredUpgradeCount(slot, cfg, ctx);
-        return Math.clamp(current + Integer.signum(direction), 1, maximum);
-    }
-
-    private static int configuredCount(final MachineConfig cfg, final RecipeContext ctx, final int slot) {
-        return Math.clamp(cfg.value(UPGRADE_COUNTS.get(slot), ctx), 1, 8);
     }
 
     private static HousingExtras resolveUpgrades(final MachineConfig cfg, final RecipeContext ctx) {
@@ -370,7 +342,7 @@ public final class GendustryProvider extends BeeProvider {
             final ItemStack stack = selectedStack.copy();
             final int maximum = maximumUpgradeCount(stack, selected);
             if (maximum < 1) continue;
-            stack.stackSize = Math.clamp(configuredCount(cfg, ctx, index), 1, maximum);
+            stack.stackSize = Math.clamp(stack.stackSize, 1, maximum);
             selected.add(stack);
         }
         validateUpgradeStacks(selected);

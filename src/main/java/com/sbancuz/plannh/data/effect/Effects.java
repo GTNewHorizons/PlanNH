@@ -8,6 +8,7 @@ import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.setting.IntegerSettingDef;
+import com.sbancuz.plannh.data.setting.Settings;
 
 public final class Effects {
 
@@ -18,54 +19,44 @@ public final class Effects {
     }
 
     public static EffectComputer durationFromHandler() {
-        return (cfg, ctx) -> {
-            final int duration = (int) (Integer) ctx.getOrDefault(RecipePropertyAPI.DURATION_TICKS, 0);
-            return new EffectResult(duration, 0, 1);
-        };
+        return duration((cfg, ctx) -> ctx.get(RecipePropertyAPI.DURATION_TICKS));
+    }
+
+    /** Sets duration directly, without preferring an unrelated handler duration. */
+    public static EffectComputer duration(final ToIntBiFunction<MachineConfig, RecipeContext> formula) {
+        return (cfg, ctx) -> new EffectResult(formula.applyAsInt(cfg, ctx), 0, 1);
+    }
+
+    public static EffectComputer durationFromSetting(final IntegerSettingDef setting) {
+        return duration((cfg, ctx) -> cfg.value(setting, ctx));
+    }
+
+    public static EffectComputer durationFromConfigOrProperty() {
+        return firstOf(durationFromSetting(Settings.DURATION_TICKS), durationFromHandler());
     }
 
     public static EffectComputer durationFromTotal(final RecipeProperty<? extends Number> prop,
-                                                   final IntegerSettingDef rateKey) {
-        return (cfg, ctx) -> {
-            final Object dur = ctx.properties().get(RecipePropertyAPI.DURATION_TICKS);
-            int duration = dur instanceof final Number n ? n.intValue() : 0;
-            if (duration <= 0) {
-                final int rate = cfg.getProfile().value(rateKey, cfg, ctx);
-                final Number total = ctx.getOrDefault(prop, null);
-                if (rate > 0 && total != null && total.longValue() > 0) {
-                    duration = Math.max(1, (int) (total.longValue() / rate));
-                }
-            }
-            return new EffectResult(duration, 0, 1);
-        };
+        final IntegerSettingDef rateKey) {
+        return firstOf(durationFromHandler(), duration((cfg, ctx) -> {
+            final int rate = cfg.value(rateKey, ctx);
+            final Number total = ctx.getOrDefault(prop, null);
+            return rate > 0 && total != null && total.longValue() > 0 ? Math.max(1, (int) (total.longValue() / rate))
+                : 0;
+        }));
     }
 
     public static EffectComputer durationFromFormula(final ToIntBiFunction<MachineConfig, RecipeContext> formula) {
-        return (cfg, ctx) -> {
-            final Object dur = ctx.properties().get(RecipePropertyAPI.DURATION_TICKS);
-            int duration = dur instanceof final Number n ? n.intValue() : 0;
-            if (duration <= 0) {
-                duration = Math.max(1, formula.applyAsInt(cfg, ctx));
-            }
-            return new EffectResult(duration, 0, 1);
-        };
+        return firstOf(durationFromHandler(), duration((cfg, ctx) -> Math.max(1, formula.applyAsInt(cfg, ctx))));
     }
 
     public static EffectComputer onlyIf(final BiPredicate<MachineConfig, RecipeContext> condition,
         final EffectComputer delegate) {
-        return (cfg, ctx) -> {
-            if (condition.test(cfg, ctx)) return delegate.compute(cfg, ctx);
-            final Object dur = ctx.properties().get(RecipePropertyAPI.DURATION_TICKS);
-            return new EffectResult(dur instanceof final Number n ? n.intValue() : 0, 0, 1);
-        };
+        final EffectComputer fallback = durationFromHandler();
+        return (cfg, ctx) -> condition.test(cfg, ctx) ? delegate.compute(cfg, ctx) : fallback.compute(cfg, ctx);
     }
 
     public static EffectComputer clearCost() {
-        return (cfg, ctx) -> {
-            final Object dur = ctx.properties().get(RecipePropertyAPI.DURATION_TICKS);
-            final int d = dur instanceof final Number n ? n.intValue() : 0;
-            return new EffectResult(d, 0, 1);
-        };
+        return durationFromHandler();
     }
 
     public static EffectComputer firstOf(final EffectComputer... alternatives) {

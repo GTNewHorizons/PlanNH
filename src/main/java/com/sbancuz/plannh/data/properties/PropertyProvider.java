@@ -2,7 +2,6 @@ package com.sbancuz.plannh.data.properties;
 
 import java.util.List;
 
-import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
@@ -12,7 +11,6 @@ import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.FurnaceRecipeHandler;
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.RecipeHandlerRef;
-import gregtech.nei.GTNEIDefaultHandler;
 
 public interface PropertyProvider {
 
@@ -42,9 +40,7 @@ public interface PropertyProvider {
         final PositionedStack result = handler.getResultStack(recipeIndex);
         if (result != null && result.item != null) {
             recipe.output(Port.fromStack(result));
-            // warn if we find any handlers outside gt that have multiple output permutations
-            if (result.items.length > 1 && (!Compat.GREGTECH.isLoaded || !(handler instanceof GTNEIDefaultHandler)))
-                PlanNH.LOG.warn("output found with permutations");
+            if (result.items.length > 1) PlanNH.LOG.warn("output found with permutations");
         }
 
         final List<PositionedStack> others = handler.getOtherStacks(recipeIndex);

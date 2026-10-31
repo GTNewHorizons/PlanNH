@@ -27,6 +27,9 @@ public class ChoiceSettingDef<T> extends SettingDef<T> {
     private final Supplier<List<T>> choices;
     private final Function<T, String> display;
     private final BiPredicate<T, T> equality;
+    private int minCount;
+    private int maxCount;
+    private boolean counted;
 
     public ChoiceSettingDef(final String key, final T defaultValue, final Class<T> type,
         final Supplier<List<T>> choices, final Function<T, String> display) {
@@ -42,6 +45,74 @@ public class ChoiceSettingDef<T> extends SettingDef<T> {
         this.equality = equality;
     }
 
+    public ChoiceSettingDef<T> counts(final int min, final int max) {
+        if (type != ItemStack.class) throw new IllegalArgumentException("Only item choices have stack counts");
+        if (min < 0 || min > max) throw new IllegalArgumentException("Invalid choice count bounds");
+        this.minCount = min;
+        this.maxCount = max;
+        this.counted = true;
+        return this;
+    }
+
+    public int getMinCount() {
+        return minCount;
+    }
+
+    public int getMaxCount() {
+        return maxCount;
+    }
+
+    public boolean isCounted() {
+        return counted;
+    }
+
+    public int minimumCount(final MachineConfig cfg, final RecipeContext ctx) {
+        return cfg.getProfile()
+            .minimum(this);
+    }
+
+    public int maximumCount(final MachineConfig cfg, final RecipeContext ctx) {
+        return cfg.getProfile()
+            .maximum(this);
+    }
+
+    public int count(final MachineConfig cfg, final RecipeContext ctx) {
+        final T value = cfg.value(this, ctx);
+        if (!(value instanceof ItemStack stack)) return 0;
+        final int maximum = maximumCount(cfg, ctx);
+        return maximum < 1 ? 0 : Math.clamp(stack.stackSize, minimumCount(cfg, ctx), maximum);
+    }
+
+    public void setCount(final MachineConfig cfg, final RecipeContext ctx, final int count) {
+        if (count <= 0 && minimumCount(cfg, ctx) == 0) {
+            cfg.set(this, null);
+            return;
+        }
+        final int maximum = maximumCount(cfg, ctx);
+        if (maximum < 1) {
+            cfg.set(this, null);
+            return;
+        }
+        final int minimum = Math.max(1, minimumCount(cfg, ctx));
+        final int bounded = Math.clamp(count, minimum, maximum);
+        final T current = cfg.value(this, ctx);
+        final ItemStack selected = current instanceof ItemStack item ? item.copy()
+            : choices.get()
+                .stream()
+                .filter(ItemStack.class::isInstance)
+                .map(ItemStack.class::cast)
+                .filter(item -> item.getItem() != null)
+                .findFirst()
+                .map(ItemStack::copy)
+                .orElse(null);
+        if (selected == null) {
+            cfg.set(this, null);
+            return;
+        }
+        selected.stackSize = bounded;
+        cfg.set(this, type.cast(selected));
+    }
+
     @Override
     public Consumer<TooltipBuilder> tooltip(final T value) {
         if (value instanceof ItemStack item) return out -> {
@@ -55,7 +126,7 @@ public class ChoiceSettingDef<T> extends SettingDef<T> {
     @Override
     public IWidget settingsWidget(final MachineConfig cfg, final RecipeContext ctx, final Consumer<Runnable> edit) {
         if (type == ItemStack.class) {
-            return new ItemChoiceWidget(
+            final ItemChoiceWidget widget = new ItemChoiceWidget(
                 this,
                 cfg,
                 ctx,
@@ -66,6 +137,16 @@ public class ChoiceSettingDef<T> extends SettingDef<T> {
                     .toList(),
                 value -> (ItemStack) value,
                 stack -> acceptsItem(stack) ? type.cast(stack) : null);
+            if (counted) widget.scrollHandler(direction -> {
+                final int current = count(cfg, ctx);
+                final int next = Math.clamp(current + direction, minimumCount(cfg, ctx), maximumCount(cfg, ctx));
+                if (next != current) edit.accept(() -> setCount(cfg, ctx, next));
+            })
+                .tooltipBuilder(
+                    tooltip -> TooltipBuilder.create(tooltip)
+                        .langRow("plannh.settings.item_count_scroll")
+                        .flush());
+            return widget;
         }
         final List<T> values = choices.get();
         final int width = Math.max(

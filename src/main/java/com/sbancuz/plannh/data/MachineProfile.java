@@ -17,15 +17,17 @@ import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
+import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.cleanroommc.modularui.screen.RichTooltip;
-import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.effect.EffectComputer;
 import com.sbancuz.plannh.data.effect.EffectFunction;
 import com.sbancuz.plannh.data.effect.EffectResult;
+import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
+import com.sbancuz.plannh.data.setting.ChoiceSettingDef;
 import com.sbancuz.plannh.data.setting.IntegerSettingDef;
 import com.sbancuz.plannh.data.setting.SettingDef;
 import com.sbancuz.plannh.data.setting.Settings;
@@ -67,7 +69,7 @@ public final class MachineProfile {
     private final List<Entry> settings;
     private final EffectComputer effectComputer;
     private final Map<SettingDef<?>, Default<?>> defaults;
-    private final Map<IntegerSettingDef, int[]> integerBounds;
+    private final Map<SettingDef<?>, int[]> settingBounds;
     private final PortMultiplier inputMultiplier;
     private final PortMultiplier outputMultiplier;
 
@@ -79,7 +81,7 @@ public final class MachineProfile {
         this.settings = List.copyOf(definition.settings);
         this.effectComputer = definition.effectComputer;
         this.defaults = Map.copyOf(definition.defaults);
-        this.integerBounds = Map.copyOf(definition.integerBounds);
+        this.settingBounds = Map.copyOf(definition.settingBounds);
         this.inputMultiplier = definition.inputMultiplier;
         this.outputMultiplier = definition.outputMultiplier;
     }
@@ -102,7 +104,7 @@ public final class MachineProfile {
             final Default<T> rule = defaultRule(def);
             return rule == null ? def.getDefaultValue() : rule.apply(cfg, ctx);
         });
-        if (def instanceof IntegerSettingDef integerDef && integerBounds.containsKey(integerDef)) {
+        if (def instanceof IntegerSettingDef integerDef && settingBounds.containsKey(integerDef)) {
             @SuppressWarnings("unchecked")
             final T bounded = (T) Integer
                 .valueOf(Math.clamp((Integer) value, minimum(integerDef), maximum(integerDef)));
@@ -112,13 +114,23 @@ public final class MachineProfile {
     }
 
     public int minimum(final IntegerSettingDef def) {
-        final int[] bounds = integerBounds.get(def);
+        final int[] bounds = settingBounds.get(def);
         return bounds == null ? def.getMin() : bounds[0];
     }
 
     public int maximum(final IntegerSettingDef def) {
-        final int[] bounds = integerBounds.get(def);
+        final int[] bounds = settingBounds.get(def);
         return bounds == null ? def.getMax() : bounds[1];
+    }
+
+    public int minimum(final ChoiceSettingDef<?> def) {
+        final int[] bounds = settingBounds.get(def);
+        return bounds == null ? def.getMinCount() : bounds[0];
+    }
+
+    public int maximum(final ChoiceSettingDef<?> def) {
+        final int[] bounds = settingBounds.get(def);
+        return bounds == null ? def.getMaxCount() : bounds[1];
     }
 
     /** Evaluates a single-port query; consumers reading multiple values should reuse {@link #computeEffect}. */
@@ -145,7 +157,7 @@ public final class MachineProfile {
         if (tickModifier > 0 && tickModifier != 100) {
             final double factor = 100.0 / tickModifier;
             final double ticks = result.durationTicks() * factor;
-            if (!Double.isFinite(ticks) || ticks < 0 || ticks > Integer.MAX_VALUE) {
+            if (ticks < 0 || ticks > Integer.MAX_VALUE) {
                 throw new IllegalArgumentException("Unrepresentable tick-modified duration: " + ticks);
             }
             result.durationTicks(Math.max(1, (int) Math.round(ticks)));
@@ -201,7 +213,8 @@ public final class MachineProfile {
         if (iconTooltip != null) iconTooltip.accept(tooltip);
         if (tooltip.isEmpty()) TooltipBuilder.create(tooltip)
             .flag(
-                id == null || id.isBlank() ? "Machine"
+                id == null || id.isBlank() ? IKey.lang("plannh.gui.node.machine")
+                    .get()
                     : id.replace(':', ' ')
                         .replace('_', ' ')
                         .replace('.', ' '))
@@ -228,12 +241,11 @@ public final class MachineProfile {
 
         private final List<Entry> settings = new ArrayList<>();
         private final Map<SettingDef<?>, Default<?>> defaults = new HashMap<>();
-        private final Map<IntegerSettingDef, int[]> integerBounds = new HashMap<>();
+        private final Map<SettingDef<?>, int[]> settingBounds = new HashMap<>();
         private PropertyProvider provider;
         private BiFunction<IRecipeHandler, Integer, IDrawable> icon = (_, _) -> IDrawable.EMPTY;
         private Consumer<RichTooltip> iconTooltip;
-        private EffectComputer effectComputer = (cfg,
-            ctx) -> new EffectResult(ctx.get(RecipePropertyAPI.DURATION_TICKS), 0, 1);
+        private EffectComputer effectComputer = Effects.durationFromHandler();
         private PortMultiplier inputMultiplier = (_, _, _, _) -> 1d;
         private PortMultiplier outputMultiplier = (_, _, _, _) -> 1d;
 
@@ -242,7 +254,7 @@ public final class MachineProfile {
         private Definition(final Definition<?> source) {
             settings.addAll(source.settings);
             defaults.putAll(source.defaults);
-            integerBounds.putAll(source.integerBounds);
+            settingBounds.putAll(source.settingBounds);
             provider = source.provider;
             icon = source.icon;
             iconTooltip = source.iconTooltip;
@@ -281,7 +293,15 @@ public final class MachineProfile {
         public B setting(final IntegerSettingDef def, final int min, final int max) {
             if (min > max || min < def.getMin() || max > def.getMax())
                 throw new IllegalArgumentException("Invalid integer setting bounds for " + def.getKey());
-            integerBounds.put(def, new int[] { min, max });
+            settingBounds.put(def, new int[] { min, max });
+            return setting(def);
+        }
+
+        /** Adds a counted choice with bounds specialized for this profile. */
+        public B setting(final ChoiceSettingDef<?> def, final int min, final int max) {
+            if (!def.isCounted() || min > max || min < def.getMinCount() || max > def.getMaxCount())
+                throw new IllegalArgumentException("Invalid choice count bounds for " + def.getKey());
+            settingBounds.put(def, new int[] { min, max });
             return setting(def);
         }
 
@@ -363,8 +383,7 @@ public final class MachineProfile {
 
         /** An authoritative duration calculation, unlike handler-duration fallbacks. */
         public B duration(final ToIntBiFunction<MachineConfig, RecipeContext> rule) {
-            effectComputer = (cfg, ctx) -> new EffectResult(rule.applyAsInt(cfg, ctx), 0, 1);
-            return self();
+            return effect(Effects.duration(rule));
         }
 
         public B applyParallelism() {

@@ -11,10 +11,10 @@ import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.effect.Effects;
-import com.sbancuz.plannh.data.effect.steps.GTSteamOverclockStep;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.properties.SummaryProperty;
+import com.sbancuz.plannh.data.provider.gregtech.GTSteamOverclockStep;
 import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.recipe.FurnaceRecipeHandler;

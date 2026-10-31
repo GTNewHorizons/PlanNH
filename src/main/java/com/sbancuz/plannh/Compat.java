@@ -12,7 +12,6 @@ import com.sbancuz.plannh.data.provider.AvaritiaProvider;
 import com.sbancuz.plannh.data.provider.BinnieProvider;
 import com.sbancuz.plannh.data.provider.BloodMagicProvider;
 import com.sbancuz.plannh.data.provider.BotaniaProvider;
-import com.sbancuz.plannh.data.provider.DefaultProvider;
 import com.sbancuz.plannh.data.provider.DraconicEvolutionProvider;
 import com.sbancuz.plannh.data.provider.EFRProvider;
 import com.sbancuz.plannh.data.provider.EnderIOProvider;
@@ -135,7 +134,6 @@ public enum Compat {
 
     public static void init() {
         RecipePropertyAPI.reset();
-        DefaultProvider.INSTANCE.register();
         new VanillaProvider().register();
         for (final Compat mod : values()) {
             // Extra Bees supplies the same BeeProduceHandler choices with an enriched Alveary.

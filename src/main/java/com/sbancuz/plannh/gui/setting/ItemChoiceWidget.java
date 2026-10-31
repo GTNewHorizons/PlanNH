@@ -5,6 +5,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.IntConsumer;
+import java.util.function.IntUnaryOperator;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -20,15 +21,12 @@ import com.cleanroommc.modularui.integration.recipeviewer.RecipeViewerIngredient
 import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
-import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.RecipeContext;
-import com.sbancuz.plannh.data.setting.SettingDef;
+import com.sbancuz.plannh.data.setting.ChoiceSettingDef;
 import com.sbancuz.plannh.gui.common.ItemSelectionGrid;
 import com.sbancuz.plannh.gui.common.SelectionPicker;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
-
-import gregtech.api.util.GTUtility;
 
 /** Client-only item selection: NEI drops edit the plan, never an inventory or server-side slot. */
 public final class ItemChoiceWidget extends ButtonWidget<ItemChoiceWidget>
@@ -47,16 +45,21 @@ public final class ItemChoiceWidget extends ButtonWidget<ItemChoiceWidget>
     private boolean shiftHeld;
     private BiConsumer<RichTooltip, ItemStack> pickerTooltip;
     private IntConsumer scrollHandler;
+    private IntUnaryOperator selectionCount;
 
     /** Binds native item choices to their stored value, including non-item settings. */
-    public <T> ItemChoiceWidget(final SettingDef<T> setting, final MachineConfig cfg, final RecipeContext ctx,
+    public <T> ItemChoiceWidget(final ChoiceSettingDef<T> setting, final MachineConfig cfg, final RecipeContext ctx,
         final Consumer<Runnable> edit, final Supplier<List<ItemStack>> choices, final Function<T, ItemStack> display,
         final Function<ItemStack, T> value) {
         this(
+            setting,
             () -> display.apply(cfg.value(setting, ctx)),
             stack -> value.apply(stack) != null,
             stack -> cfg.set(setting, value.apply(stack)),
             edit);
+        selectionCount = count -> setting.isCounted()
+            ? Math.clamp(count, Math.max(1, setting.minimumCount(cfg, ctx)), setting.maximumCount(cfg, ctx))
+            : 1;
         picker(choices, () -> cfg.reset(setting));
         hint("plannh.settings.item_choice_hint");
         tooltipBuilder(
@@ -65,12 +68,15 @@ public final class ItemChoiceWidget extends ButtonWidget<ItemChoiceWidget>
                 .flush());
     }
 
-    public ItemChoiceWidget(final Supplier<ItemStack> selection, final Predicate<ItemStack> accepts,
-        final Consumer<ItemStack> select, final Consumer<Runnable> edit) {
+    public ItemChoiceWidget(final ChoiceSettingDef<?> anchor, final Supplier<ItemStack> selection,
+        final Predicate<ItemStack> accepts, final Consumer<ItemStack> select, final Consumer<Runnable> edit) {
         this.selection = selection;
         this.accepts = accepts;
         this.select = select;
         this.edit = edit;
+        selectionCount = count -> anchor.isCounted()
+            ? Math.clamp(count, Math.max(1, anchor.getMinCount()), anchor.getMaxCount())
+            : 1;
         updateItemStack();
         name("settings.item_choice");
         size(18).padding(1)
@@ -115,9 +121,7 @@ public final class ItemChoiceWidget extends ButtonWidget<ItemChoiceWidget>
         final ItemStack selected = selection.get();
         if (ItemStack.areItemStacksEqual(displayedSelection, selected)) return;
         displayedSelection = selected == null ? null : selected.copy();
-        final ItemStack display = selected == null ? null : selected.copy();
-        if (Compat.GREGTECH.isLoaded) GTUtility.updateItemStack(display);
-        item.setItem(display);
+        item.setItem(selected == null ? null : selected.copy());
         markTooltipDirty();
     }
 
@@ -166,7 +170,7 @@ public final class ItemChoiceWidget extends ButtonWidget<ItemChoiceWidget>
                 resetSelection();
             } else if (accepts.test(stack)) {
                 closePicker();
-                edit.accept(() -> select.accept(stack));
+                edit.accept(() -> select.accept(selectedStack(stack)));
             }
         });
     }
@@ -198,13 +202,18 @@ public final class ItemChoiceWidget extends ButtonWidget<ItemChoiceWidget>
             || draggedStack.stackSize <= 0
             || button != 0 && button != 1
             || !accepts.test(draggedStack)) return false;
-        final ItemStack selected = draggedStack.copy();
-        selected.stackSize = 1;
+        final ItemStack selected = selectedStack(draggedStack);
         closePicker();
         edit.accept(() -> select.accept(selected));
         // This is NEI's disposable ghost stack, not the source inventory/recipe stack.
         draggedStack.stackSize = 0;
         return true;
+    }
+
+    private ItemStack selectedStack(final ItemStack source) {
+        final ItemStack selected = source.copy();
+        selected.stackSize = selectionCount.applyAsInt(source.stackSize);
+        return selected;
     }
 
     @Override

@@ -33,55 +33,16 @@ public interface EffectComputer {
         };
     }
 
-    default EffectComputer withAmortizedCost(final RecipeProperty<? extends Number> costProperty,
-        final EffectFunction<? extends Number> costFn) {
-        return (cfg, ctx) -> {
-            final EffectResult res = this.compute(cfg, ctx);
-            final Number cost = costFn.apply(res, cfg, ctx);
-            if (cost == null) throw new IllegalArgumentException("Missing total energy");
-            final double total = cost.doubleValue();
-            if (!Double.isFinite(total) || total < 0) {
-                throw new IllegalArgumentException("Invalid total energy: " + total);
-            }
-            if (res.durationTicks() <= 0) {
-                throw new IllegalArgumentException("Cannot amortize energy over a nonpositive duration");
-            }
-            final double rate = total / res.durationTicks();
-            res.energyPerT(rate);
-            res.energyRateProperty(costProperty);
-            res.properties()
-                .put(costProperty, rate);
-            return res;
-        };
-    }
-
     default EffectComputer withCostPerT(final RecipeProperty<? extends Number> costProperty,
         final EffectFunction<? extends Number> costFn) {
         return (cfg, ctx) -> {
             final EffectResult res = this.compute(cfg, ctx);
             final Number cost = costFn.apply(res, cfg, ctx);
             if (cost == null) throw new IllegalArgumentException("Missing energy rate");
-            final double value = cost.doubleValue();
-            if (!Double.isFinite(value) || value < 0) {
-                throw new IllegalArgumentException("Invalid energy rate: " + value);
-            }
-            res.energyPerT(value);
+            res.energyPerT(cost.doubleValue());
             res.energyRateProperty(costProperty);
             res.properties()
                 .put(costProperty, cost);
-            return res;
-        };
-    }
-
-    default EffectComputer computeTotal(final RecipeProperty<? extends Number> costProperty) {
-        return (cfg, ctx) -> {
-            final EffectResult res = this.compute(cfg, ctx);
-            final double total = res.energyPerT() * res.durationTicks() * res.throughputFactor();
-            if (!Double.isFinite(total) || total < 0) {
-                throw new IllegalArgumentException("Unrepresentable total energy: " + total);
-            }
-            res.properties()
-                .put(costProperty, total);
             return res;
         };
     }

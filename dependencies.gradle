@@ -148,16 +148,10 @@ dependencies {
     }
     testImplementation('com.github.GTNewHorizons:EnderIO:2.10.49:dev') { transitive = false }
     testImplementation('com.github.GTNewHorizons:Applied-Energistics-2-Unofficial:rv3-beta-999-GTNH:dev') { transitive = false }
-    testImplementation('com.github.GTNewHorizons:NEI-Integration:1.5.3:dev') { transitive = false }
-    testImplementation('com.github.GTNewHorizons:Galacticraft:3.4.34-GTNH:dev') { transitive = false }
     testImplementation(rfg.deobf('thaumcraft:Thaumcraft:1.7.10-4.2.3.5:dev')) { transitive = false }
     testImplementation('com.github.GTNewHorizons:AspectRecipeIndex:1.1.5:dev') { transitive = false }
     testImplementation('net.glease:tc4recipelib:1.5.37:dev') { transitive = false }
-    testImplementation('com.github.GTNewHorizons:BloodMagic:1.9.14:dev') { transitive = false }
-    testImplementation('com.github.GTNewHorizons:WitchingGadgets:1.8.52-GTNH:dev') { transitive = false }
-    testImplementation('com.github.GTNewHorizons:twilightforest:2.7.44:dev') { transitive = false }
     testImplementation('com.github.GTNewHorizons:gendustry:1.9.13-GTNH:dev') { transitive = false }
-    testImplementation('com.github.GTNewHorizons:Binnie:2.6.48:dev') { transitive = false }
     testImplementation('com.github.GTNewHorizons:ForestryMC:4.11.39:dev') { transitive = false }
     testImplementation('com.github.GTNewHorizons:MagicBees:2.10.7-GTNH:dev') { transitive = false }
     testImplementation('com.github.GTNewHorizons:ProjectRed:4.12.47-GTNH:dev') { transitive = false }

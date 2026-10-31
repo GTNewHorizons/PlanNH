@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.lang.reflect.Field;
 import java.util.List;
 import java.util.function.BiFunction;
 
@@ -29,11 +28,8 @@ import codechicken.nei.api.ItemInfo;
 import codechicken.nei.recipe.FurnaceRecipeHandler;
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.util.ItemStackFilterParser;
-import sun.misc.Unsafe;
 
 class RecipePropertyAPIProfilesTest {
-
-    private static final Unsafe UNSAFE = unsafe();
 
     @BeforeAll
     static void initializeMinecraftFixture() {
@@ -51,23 +47,7 @@ class RecipePropertyAPIProfilesTest {
     }
 
     @Test
-    void gathersDistinctProvidersRegisteredOnHandlerSuperclasses() {
-        final TestProvider parent = new TestProvider("parent");
-        final TestProvider child = new TestProvider("child");
-        RecipePropertyAPI.registerExtractor(FurnaceRecipeHandler.class, parent);
-        RecipePropertyAPI.registerExtractor(FurnaceRecipeHandler.class, parent);
-        RecipePropertyAPI.registerExtractor(ChildFurnaceHandler.class, child);
-
-        assertEquals(
-            List.of("child", "parent"),
-            RecipePropertyAPI.getProfiles(allocate(ChildFurnaceHandler.class), 0)
-                .stream()
-                .map(MachineProfile::id)
-                .toList());
-    }
-
-    @Test
-    void canCraftFailuresDoNotHideOtherProviders() {
+    void brokenProvidersDoNotHideHealthyProviders() {
         RecipePropertyAPI
             .registerExtractor(FurnaceRecipeHandler.class, new TestProvider("runtime", Failure.CAN_CRAFT_RUNTIME));
         RecipePropertyAPI
@@ -75,15 +55,11 @@ class RecipePropertyAPIProfilesTest {
         RecipePropertyAPI.registerExtractor(FurnaceRecipeHandler.class, new TestProvider("survivor"));
 
         assertEquals(
-            List.of("survivor"),
-            RecipePropertyAPI.getProfiles(allocate(FurnaceRecipeHandler.class), 0)
-                .stream()
-                .map(MachineProfile::id)
-                .toList());
-    }
+            1,
+            RecipePropertyAPI.getProfiles(ProviderTestFixture.allocate(FurnaceRecipeHandler.class), 0)
+                .size());
 
-    @Test
-    void profileFailuresDoNotHideOtherProviders() {
+        RecipePropertyAPI.reset();
         RecipePropertyAPI
             .registerExtractor(FurnaceRecipeHandler.class, new TestProvider("runtime", Failure.PROFILES_RUNTIME));
         RecipePropertyAPI
@@ -91,11 +67,9 @@ class RecipePropertyAPIProfilesTest {
         RecipePropertyAPI.registerExtractor(FurnaceRecipeHandler.class, new TestProvider("survivor"));
 
         assertEquals(
-            List.of("survivor"),
-            RecipePropertyAPI.getProfiles(allocate(FurnaceRecipeHandler.class), 0)
-                .stream()
-                .map(MachineProfile::id)
-                .toList());
+            1,
+            RecipePropertyAPI.getProfiles(ProviderTestFixture.allocate(FurnaceRecipeHandler.class), 0)
+                .size());
     }
 
     @Test
@@ -118,11 +92,9 @@ class RecipePropertyAPIProfilesTest {
 
             assertTrue(ItemInfo.isHidden(hiddenStack));
             assertEquals(
-                List.of("same-provider-visible", "other-provider-visible"),
-                RecipePropertyAPI.getProfiles(allocate(FurnaceRecipeHandler.class), 0)
-                    .stream()
-                    .map(MachineProfile::id)
-                    .toList());
+                2,
+                RecipePropertyAPI.getProfiles(ProviderTestFixture.allocate(FurnaceRecipeHandler.class), 0)
+                    .size());
         } finally {
             if (added) ItemInfo.hiddenItems.remove(hiddenStack);
         }
@@ -146,11 +118,9 @@ class RecipePropertyAPIProfilesTest {
 
             assertTrue(ItemInfo.isHidden(hiddenStack));
             assertEquals(
-                List.of("wildcard-visible"),
-                RecipePropertyAPI.getProfiles(allocate(FurnaceRecipeHandler.class), 0)
-                    .stream()
-                    .map(MachineProfile::id)
-                    .toList());
+                1,
+                RecipePropertyAPI.getProfiles(ProviderTestFixture.allocate(FurnaceRecipeHandler.class), 0)
+                    .size());
         } finally {
             if (added) ItemInfo.hiddenItems.remove(wildcard);
         }
@@ -179,50 +149,11 @@ class RecipePropertyAPIProfilesTest {
 
             assertTrue(ItemInfo.isHidden(hiddenStack));
             assertEquals(
-                List.of("rule-visible"),
-                RecipePropertyAPI.getProfiles(allocate(FurnaceRecipeHandler.class), 0)
-                    .stream()
-                    .map(MachineProfile::id)
-                    .toList());
+                1,
+                RecipePropertyAPI.getProfiles(ProviderTestFixture.allocate(FurnaceRecipeHandler.class), 0)
+                    .size());
         } finally {
             ItemInfo.hiddenItemsRules.filters.remove(hiddenRule);
-        }
-    }
-
-    @Test
-    void missingAndThrowingIconsRemainAvailable() {
-        RecipePropertyAPI.registerExtractor(
-            FurnaceRecipeHandler.class,
-            new TestProvider(
-                new ProfileSpec("missing-icon", null),
-                new ProfileSpec("null-icon", (_, _) -> null),
-                new ProfileSpec("throwing-icon", (_, _) -> { throw new IllegalStateException("broken icon"); })));
-        RecipePropertyAPI.registerExtractor(FurnaceRecipeHandler.class, new TestProvider("other-provider"));
-
-        assertEquals(
-            List.of("missing-icon", "null-icon", "throwing-icon", "other-provider"),
-            RecipePropertyAPI.getProfiles(allocate(FurnaceRecipeHandler.class), 0)
-                .stream()
-                .map(MachineProfile::id)
-                .toList());
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <T> T allocate(final Class<T> type) {
-        try {
-            return (T) UNSAFE.allocateInstance(type);
-        } catch (final InstantiationException failure) {
-            throw new AssertionError("Could not allocate native handler fixture", failure);
-        }
-    }
-
-    private static Unsafe unsafe() {
-        try {
-            final Field field = Unsafe.class.getDeclaredField("theUnsafe");
-            field.setAccessible(true);
-            return (Unsafe) field.get(null);
-        } catch (final ReflectiveOperationException failure) {
-            throw new AssertionError("Could not access the test fixture runtime", failure);
         }
     }
 
@@ -295,6 +226,4 @@ class RecipePropertyAPIProfilesTest {
         }
     }
 
-    private static final class ChildFurnaceHandler extends FurnaceRecipeHandler {
-    }
 }

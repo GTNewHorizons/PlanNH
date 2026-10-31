@@ -1,7 +1,6 @@
 package com.sbancuz.plannh.data.provider;
 
 import java.util.List;
-import java.util.function.Consumer;
 
 import javax.annotation.Nonnull;
 
@@ -9,16 +8,14 @@ import net.minecraft.item.ItemStack;
 import net.minecraftforge.oredict.OreDictionary;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
-import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
-import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.flowchart.resource.LongItemStack;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
-import com.sbancuz.plannh.data.setting.IntegerSettingDef;
+import com.sbancuz.plannh.data.setting.ChoiceSettingDef;
 import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.recipe.FurnaceRecipeHandler;
@@ -34,30 +31,21 @@ public final class TwilightForestProvider implements PropertyProvider {
     private static final int SPEED_LOG_FACTOR = 2;
     private static final int OUTPUT_LOG_FACTOR = 10;
 
-    static final IntegerSettingDef CINDER_LOG_COUNT = new IntegerSettingDef(
+    static final ChoiceSettingDef<ItemStack> CINDER_LOG_COUNT = new ChoiceSettingDef<>(
         "twilightforest.cinder_log_count",
-        0,
-        0,
-        NEARBY_BLOCKS) {
-
-        @Override
-        public IWidget settingsWidget(final MachineConfig cfg, final RecipeContext ctx, final Consumer<Runnable> edit) {
-            return itemCountWidget(
-                cfg,
-                ctx,
-                edit,
-                () -> TFBlocks.cinderLog == null ? null : new ItemStack(TFBlocks.cinderLog));
-        }
-    };
+        null,
+        ItemStack.class,
+        () -> TFBlocks.cinderLog == null ? List.of() : List.of(new ItemStack(TFBlocks.cinderLog)),
+        stack -> stack == null ? "-" : stack.getDisplayName()).counts(0, NEARBY_BLOCKS);
 
     private final MachineProfile profile = MachineProfile.builder("twilightforest:cinder_furnace")
         .setting(Settings.MACHINES)
         .setting(CINDER_LOG_COUNT, 0, NEARBY_BLOCKS)
         .setting(Settings.TICK_MODIFIER)
         .outputMultiplier(
-            (_, cfg, ctx, index) -> isBonusRecipe(ctx) ? expectedOutputMultiplier(cfg.value(CINDER_LOG_COUNT, ctx))
+            (_, cfg, ctx, index) -> isBonusRecipe(ctx) ? expectedOutputMultiplier(CINDER_LOG_COUNT.count(cfg, ctx))
                 : 1d)
-        .duration((cfg, ctx) -> durationTicks(cfg.value(CINDER_LOG_COUNT, ctx)))
+        .duration((cfg, ctx) -> durationTicks(CINDER_LOG_COUNT.count(cfg, ctx)))
         .provider(this)
         .icon(this::icon)
         .build();

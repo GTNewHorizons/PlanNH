@@ -5,7 +5,6 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import javax.annotation.Nonnull;
@@ -15,7 +14,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.item.ItemStack;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
-import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.cleanroommc.modularui.drawable.UITexture;
@@ -37,12 +35,11 @@ import com.sbancuz.plannh.data.effect.EffectComputer;
 import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.flowchart.Port;
-import com.sbancuz.plannh.data.flowchart.resource.MagicResources;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.properties.ResourceProperty;
 import com.sbancuz.plannh.data.properties.SummaryProperty;
-import com.sbancuz.plannh.data.setting.BooleanSettingDef;
+import com.sbancuz.plannh.data.setting.ChoiceSettingDef;
 import com.sbancuz.plannh.data.setting.EnumSettingDef;
 import com.sbancuz.plannh.data.setting.IntegerSettingDef;
 import com.sbancuz.plannh.data.setting.Settings;
@@ -74,25 +71,18 @@ public class ThaumcraftProvider implements PropertyProvider {
     private static final int NO_FIRE_VIS_TICKS = 140;
     private static final int BELLOWS_DISCOUNT = 20;
 
-    static final IntegerSettingDef BELLOWS = new IntegerSettingDef("thaumcraft.bellows", 0, 0, 3) {
-
-        @Override
-        public IWidget settingsWidget(final MachineConfig cfg, final RecipeContext ctx, final Consumer<Runnable> edit) {
-            return itemCountWidget(
-                cfg,
-                ctx,
-                edit,
-                () -> ConfigBlocks.blockWoodenDevice == null ? null
-                    : new ItemStack(ConfigBlocks.blockWoodenDevice, 1, 0));
-        }
-    };
+    static final ChoiceSettingDef<ItemStack> BELLOWS = new ChoiceSettingDef<>(
+        "thaumcraft.bellows",
+        null,
+        ItemStack.class,
+        () -> ConfigBlocks.blockWoodenDevice == null ? List.of()
+            : List.of(new ItemStack(ConfigBlocks.blockWoodenDevice, 1, 0)),
+        stack -> stack == null ? "-" : stack.getDisplayName()).counts(0, 3);
     static final IntegerSettingDef VIS_DISCOUNT = new IntegerSettingDef("thaumcraft.vis_discount", 0, 0, 90);
     static final EnumSettingDef<FurnaceBoostSource> BOOST_SOURCE = new EnumSettingDef<>(
         "thaumcraft.furnace_boost_source",
         FurnaceBoostSource.NONE,
         FurnaceBoostSource.class);
-    // Kept only so old serialized configs can be interpreted by the derived boost default.
-    static final BooleanSettingDef FIRE_VIS = new BooleanSettingDef("thaumcraft.fire_vis", false);
 
     enum FurnaceBoostSource {
         NONE,
@@ -167,7 +157,11 @@ public class ThaumcraftProvider implements PropertyProvider {
             .applyParallelism())
         .build();
 
-    private final MachineProfile CRUCIBLE = BASE_FACTORY.builder("thaumcraft:crucible", DefaultProvider::noopEffect)
+    private final MachineProfile CRUCIBLE = BASE_FACTORY
+        .builder(
+            "thaumcraft:crucible",
+            Effects.durationFromConfigOrProperty()
+                .applyParallelism())
         .setting(Settings.DURATION_TICKS)
         .icon(
             (_, _) -> ConfigBlocks.blockMetalDevice == null ? GuiTextures.BUBBLE
@@ -186,20 +180,13 @@ public class ThaumcraftProvider implements PropertyProvider {
                 .flush())
         .build();
 
-    private final MachineProfile INFERNAL_FURNACE = BASE_FACTORY
-        .builder(
-            "thaumcraft:infernal_furnace",
-            Effects.durationFromFormula(
-                (cfg, ctx) -> cycleDurationTicks(
-                    cfg.getProfile()
-                        .value(BELLOWS, cfg, ctx),
-                    boostSource(cfg, ctx) != FurnaceBoostSource.NONE))
-                .applyParallelism())
+    private final MachineProfile INFERNAL_FURNACE = BASE_FACTORY.builder(
+        "thaumcraft:infernal_furnace",
+        Effects.durationFromFormula(
+            (cfg, ctx) -> cycleDurationTicks(BELLOWS.count(cfg, ctx), boostSource(cfg, ctx) != FurnaceBoostSource.NONE))
+            .applyParallelism())
         .setting(BELLOWS, 0, 3)
         .setting(BOOST_SOURCE)
-        .derive(
-            BOOST_SOURCE,
-            (cfg, ctx) -> cfg.getOrDefault(FIRE_VIS) ? FurnaceBoostSource.NETWORK_VIS : FurnaceBoostSource.NONE)
         .inputMultiplier(ThaumcraftProvider::infernalInputMultiplier)
         .outputMultiplier(this::infernalBonusMultiplier)
         .icon(
@@ -252,10 +239,7 @@ public class ThaumcraftProvider implements PropertyProvider {
         if (source == FurnaceBoostSource.NETWORK_VIS && type != MagicResources.NETWORK_VIS) return 0d;
         if (source == FurnaceBoostSource.ESSENTIA_NOZZLE && type != MagicResources.ESSENTIA) return 0d;
 
-        final int countdown = durationTicks(
-            cfg.getProfile()
-                .value(BELLOWS, cfg, ctx),
-            true);
+        final int countdown = durationTicks(BELLOWS.count(cfg, ctx), true);
         final double activeCookFraction = (double) countdown / (countdown + 1);
         final double timedCost = effect.durationTicks() * activeCookFraction;
         return source == FurnaceBoostSource.ESSENTIA_NOZZLE ? timedCost / 600d : timedCost;
@@ -292,8 +276,7 @@ public class ThaumcraftProvider implements PropertyProvider {
     private double infernalBonusMultiplier(final EffectResult eff, final MachineConfig cfg, final RecipeContext ctx,
         final int index) {
         if (index != ctx.getOrDefault(BONUS_OUTPUT_INDEX, -1)) return 1d;
-        final int bellows = cfg.getProfile()
-            .value(BELLOWS, cfg, ctx);
+        final int bellows = BELLOWS.count(cfg, ctx);
         final int displayAmount = ctx.outputs()
             .get(index)
             .getValue() instanceof com.sbancuz.plannh.data.flowchart.resource.LongItemStack item ? (int) item.amount

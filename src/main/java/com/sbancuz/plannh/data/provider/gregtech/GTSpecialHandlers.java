@@ -67,27 +67,41 @@ public final class GTSpecialHandlers {
             // The recipe trigger is rendered by NEI but is a catalyst, not a consumed input.
             builder.input(itemPort(trigger, 0L, triggerDisplay));
 
-            builder.input(fluidPort(Materials.Hydrogen.getGas(1), eoh.getHydrogenRequirement(),
-                new PositionedStack(ItemFluidDisplay.createStack(Materials.Hydrogen.mGas, eoh.getHydrogenRequirement()),
-                    triggerDisplay.relx - 2 * SLOT_PITCH, triggerDisplay.rely)));
-            builder.input(fluidPort(Materials.Helium.getGas(1), eoh.getHeliumRequirement(),
-                new PositionedStack(ItemFluidDisplay.createStack(Materials.Helium.mGas, eoh.getHeliumRequirement()),
-                    triggerDisplay.relx + 2 * SLOT_PITCH, triggerDisplay.rely)));
+            final ItemStack hydrogenDisplayStack = ItemFluidDisplay.createStack(Materials.Hydrogen.mGas,
+                eoh.getHydrogenRequirement());
+            final PositionedStack hydrogenDisplay = new PositionedStack(hydrogenDisplayStack,
+                triggerDisplay.relx - 2 * SLOT_PITCH, triggerDisplay.rely);
+            builder.input(fluidPort(Materials.Hydrogen.getGas(1), eoh.getHydrogenRequirement(), hydrogenDisplay));
+
+            final ItemStack heliumDisplayStack = ItemFluidDisplay.createStack(Materials.Helium.mGas,
+                eoh.getHeliumRequirement());
+            final PositionedStack heliumDisplay = new PositionedStack(heliumDisplayStack,
+                triggerDisplay.relx + 2 * SLOT_PITCH, triggerDisplay.rely);
+            builder.input(fluidPort(Materials.Helium.getGas(1), eoh.getHeliumRequirement(), heliumDisplay));
 
             // NEI caps its EoH item grid. Keep the remaining outputs in additional rows, not at (0,0).
-            final int overflowX = outputs.stream().mapToInt(stack -> stack.relx).min().orElseThrow();
-            final int overflowY = outputs.stream().mapToInt(stack -> stack.rely).max().orElseThrow() + SLOT_PITCH;
+            final int overflowX = outputs.stream()
+                .mapToInt(stack -> stack.relx)
+                .min()
+                .orElseThrow();
+            final int overflowY = outputs.stream()
+                .mapToInt(stack -> stack.rely)
+                .max()
+                .orElseThrow() + SLOT_PITCH;
             int overflow = 0;
 
             for (final var output : eoh.getOutputItems()) {
                 final ItemStack stack = output.itemStack.copy();
                 PositionedStack display = findItem(outputs, stack);
                 if (display == null) {
-                    display = new PositionedStack(stack.copy(), overflowX + overflow % COLUMNS * SLOT_PITCH,
-                        overflowY + overflow / COLUMNS * SLOT_PITCH);
-                    display.setBadges(List.of(new Badge(GuiHelper.formatCount(output.getStackSize()),
-                        Long.toString(output.getStackSize())).setColor(0xffffff)
-                        .setAlignment(NEIClientUtils.Alignment.BottomRight)));
+                    final int displayX = overflowX + overflow % COLUMNS * SLOT_PITCH;
+                    final int displayY = overflowY + overflow / COLUMNS * SLOT_PITCH;
+                    display = new PositionedStack(stack.copy(), displayX, displayY);
+                    final Badge badge = new Badge(GuiHelper.formatCount(output.getStackSize()),
+                        Long.toString(output.getStackSize()));
+                    badge.setColor(0xffffff);
+                    badge.setAlignment(NEIClientUtils.Alignment.BottomRight);
+                    display.setBadges(List.of(badge));
                     overflow++;
                 }
                 builder.output(itemPort(stack, output.getStackSize(), display));
@@ -96,8 +110,11 @@ public final class GTSpecialHandlers {
                 final FluidStack fluid = output.fluidStack.copy();
                 PositionedStack display = findFluid(outputs, fluid);
                 if (display == null) {
-                    display = new PositionedStack(ItemFluidDisplay.createStack(fluid.getFluid(), output.getFluidAmount()),
-                        overflowX + overflow % COLUMNS * SLOT_PITCH, overflowY + overflow / COLUMNS * SLOT_PITCH);
+                    final int displayX = overflowX + overflow % COLUMNS * SLOT_PITCH;
+                    final int displayY = overflowY + overflow / COLUMNS * SLOT_PITCH;
+                    final ItemStack displayStack = ItemFluidDisplay.createStack(fluid.getFluid(),
+                        output.getFluidAmount());
+                    display = new PositionedStack(displayStack, displayX, displayY);
                     overflow++;
                 }
                 builder.output(fluidPort(fluid, output.getFluidAmount(), display));

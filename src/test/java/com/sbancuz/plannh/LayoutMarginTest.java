@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test;
 
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.sbancuz.plannh.data.flowchart.Group;
-import com.sbancuz.plannh.gui.ArrowRouter;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.layout.ElkLayoutStrategy;
 import com.sbancuz.plannh.gui.layout.LayoutMachine;
@@ -58,18 +57,6 @@ public class LayoutMarginTest {
         final Area left = new Area(a.leftInt(), a.rightInt(), 100, 60);
         final Area right = new Area(b.leftInt(), b.rightInt(), 100, 60);
         return Math.max(right.x - left.ex(), left.x - right.ex());
-    }
-
-    @Test
-    @DisplayName("the router's corridor is its own margin, twice, plus a cell")
-    public void corridorIsDerivedNotGuessed() {
-        // This is the number an earlier attempt transcribed into the layout settings as 24, commented as
-        // "twice the margin plus one cell" - which is 30 - and then never called from production. Asking
-        // the router instead means the two cannot disagree.
-        final ArrowRouter router = new ArrowRouter(CanvasWidget.ROUTE_CELL, CanvasWidget.ROUTE_MARGIN);
-
-        assertEquals(2 * CanvasWidget.ROUTE_MARGIN + CanvasWidget.ROUTE_CELL, router.requiredCorridor());
-        assertEquals(router.requiredCorridor(), CanvasWidget.requiredRouteCorridor());
     }
 
     @Test

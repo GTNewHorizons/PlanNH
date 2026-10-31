@@ -1,4 +1,4 @@
-package com.sbancuz.plannh.gui.setting;
+package com.sbancuz.plannh.data.provider.bee;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -15,10 +15,9 @@ import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.RecipeContext;
-import com.sbancuz.plannh.data.provider.bee.AlvearyStimulators;
 import com.sbancuz.plannh.data.setting.ChoiceSettingDef;
-import com.sbancuz.plannh.data.setting.EnumSettingDef;
 import com.sbancuz.plannh.gui.GuiHelper;
+import com.sbancuz.plannh.gui.setting.ItemChoiceWidget;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
@@ -35,7 +34,7 @@ public final class AlvearyStimulatorWidget extends Flow {
     private final RecipeContext ctx;
     private final int group;
     private final Consumer<Runnable> edit;
-    private final EnumSettingDef<EnumCircuitBoardType> boardDef;
+    private final ChoiceSettingDef<EnumCircuitBoardType> boardDef;
     private Map<String, ItemStack> tubes;
     private final String[] previewCircuits = new String[EnumCircuitBoardType.INTRICATE.getSockets()];
     private EnumCircuitBoardType previewType;
@@ -56,17 +55,18 @@ public final class AlvearyStimulatorWidget extends Flow {
             .coverChildrenHeight()
             .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN);
         child(
-            new ItemChoiceWidget(this::preview, this::acceptsBoardOrTube, this::selectBoardOrTube, edit).picker(
-                () -> Arrays.stream(EnumCircuitBoardType.VALUES)
-                    .filter(this::boardFits)
-                    .map(type -> {
-                        final MachineConfig candidate = new MachineConfig(cfg);
-                        candidate.set(boardDef, type);
-                        return AlvearyStimulators.boardStack(candidate, ctx, group);
-                    })
-                    .filter(Objects::nonNull)
-                    .toList(),
-                () -> AlvearyStimulators.resetBoard(cfg, group))
+            new ItemChoiceWidget(boardDef, this::preview, this::acceptsBoardOrTube, this::selectBoardOrTube, edit)
+                .picker(
+                    () -> Arrays.stream(EnumCircuitBoardType.VALUES)
+                        .filter(this::boardFits)
+                        .map(type -> {
+                            final MachineConfig candidate = new MachineConfig(cfg);
+                            candidate.set(boardDef, type);
+                            return AlvearyStimulators.boardStack(candidate, ctx, group);
+                        })
+                        .filter(Objects::nonNull)
+                        .toList(),
+                    () -> AlvearyStimulators.resetBoard(cfg, group))
                 .name("alveary.stimulator.board")
                 .size(SLOT)
                 .hint("plannh.gui.bees.board_hint")
@@ -112,6 +112,7 @@ public final class AlvearyStimulatorWidget extends Flow {
         final ChoiceSettingDef<String> circuitDef = AlvearyStimulators.CIRCUITS.get(group)
             .get(socket);
         return new ItemChoiceWidget(
+            circuitDef,
             () -> tubes.get(cfg.value(circuitDef, ctx)),
             stack -> AlvearyStimulators.canSetTube(cfg, ctx, group, socket, stack),
             stack -> AlvearyStimulators.setTube(cfg, ctx, group, socket, stack),

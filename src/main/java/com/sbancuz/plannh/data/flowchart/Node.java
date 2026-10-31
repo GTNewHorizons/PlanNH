@@ -136,20 +136,6 @@ public class Node extends GraphData {
         return context.properties();
     }
 
-    public double inputMultiplier(final int index) {
-        if (!isAvailable() || machineConfig.getProfile() == null)
-            throw new IllegalStateException("Machine profile is unavailable");
-        return machineConfig.getProfile()
-            .inputMultiplier(machineConfig, recipeContext(), index);
-    }
-
-    public double outputMultiplier(final int index) {
-        if (!isAvailable() || machineConfig.getProfile() == null)
-            throw new IllegalStateException("Machine profile is unavailable");
-        return machineConfig.getProfile()
-            .outputMultiplier(machineConfig, recipeContext(), index);
-    }
-
     // TODO: SEe this
     public Map<RecipeProperty<?>, Object> displayProperties() {
         return isAvailable() ? displayProperties(computeEffect()) : getProperties();
@@ -172,11 +158,6 @@ public class Node extends GraphData {
     public EffectResult computeEffect() {
         if (!isAvailable()) throw new IllegalStateException("Machine profile is unavailable");
         return machineConfig.computeEffect(recipeContext());
-    }
-
-    // TODO
-    public String getPresetName() {
-        return machineName;
     }
 
     @SuppressWarnings("unchecked")

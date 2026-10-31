@@ -1,18 +1,15 @@
 package com.sbancuz.plannh.data.provider;
 
 import java.util.List;
-import java.util.function.Consumer;
 
 import javax.annotation.Nonnull;
 
 import net.minecraft.item.ItemStack;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
-import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
-import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.effect.EffectComputer;
@@ -20,7 +17,7 @@ import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
-import com.sbancuz.plannh.data.setting.IntegerSettingDef;
+import com.sbancuz.plannh.data.setting.ChoiceSettingDef;
 import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.PositionedStack;
@@ -46,18 +43,13 @@ public final class WitchingGadgetsProvider implements PropertyProvider {
         .<Integer>builder("witchinggadgets.fire_essentia_per_fuel", 1)
         .build();
 
-    static final IntegerSettingDef BELLOWS = new IntegerSettingDef("witchinggadgets.bellows", 0, 0, 4) {
-
-        @Override
-        public IWidget settingsWidget(final MachineConfig cfg, final RecipeContext ctx, final Consumer<Runnable> edit) {
-            return itemCountWidget(
-                cfg,
-                ctx,
-                edit,
-                () -> ConfigBlocks.blockWoodenDevice == null ? null
-                    : new ItemStack(ConfigBlocks.blockWoodenDevice, 1, 0));
-        }
-    };
+    static final ChoiceSettingDef<ItemStack> BELLOWS = new ChoiceSettingDef<>(
+        "witchinggadgets.bellows",
+        null,
+        ItemStack.class,
+        () -> ConfigBlocks.blockWoodenDevice == null ? List.of()
+            : List.of(new ItemStack(ConfigBlocks.blockWoodenDevice, 1, 0)),
+        stack -> stack == null ? "-" : stack.getDisplayName()).counts(0, 4);
 
     private final MachineProfile SPINNING_WHEEL = MachineProfile.builder("witchinggadgets:spinning_wheel")
         .setting(Settings.MACHINES)
@@ -76,10 +68,8 @@ public final class WitchingGadgetsProvider implements PropertyProvider {
         .setting(BELLOWS, 0, 4)
         .effect(blastEffect().applyParallelism())
         .outputMultiplier(
-            (_, cfg, ctx, index) -> index == ctx.getOrDefault(BONUS_OUTPUT_INDEX, -1) ? bonusChance(
-                cfg.getProfile()
-                    .value(BELLOWS, cfg, ctx))
-                : 1d)
+            (_, cfg, ctx,
+                index) -> index == ctx.getOrDefault(BONUS_OUTPUT_INDEX, -1) ? bonusChance(BELLOWS.count(cfg, ctx)) : 1d)
         .provider(this)
         .icon(this::icon)
         .build();
@@ -147,10 +137,7 @@ public final class WitchingGadgetsProvider implements PropertyProvider {
 
     private static EffectComputer blastEffect() {
         return (cfg, ctx) -> new EffectResult(
-            durationTicks(
-                ctx.getOrDefault(RecipePropertyAPI.DURATION_TICKS, 0),
-                cfg.getProfile()
-                    .value(BELLOWS, cfg, ctx)),
+            durationTicks(ctx.getOrDefault(RecipePropertyAPI.DURATION_TICKS, 0), BELLOWS.count(cfg, ctx)),
             0,
             1);
     }

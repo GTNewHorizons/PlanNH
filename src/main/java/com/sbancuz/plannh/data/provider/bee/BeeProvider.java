@@ -256,6 +256,27 @@ public class BeeProvider implements PropertyProvider {
         return BeeManager.beeRoot.getBeekeepingMode(PluginApiculture.beekeepingMode);
     }
 
+    static IBeeModifier combinedModifier(final List<? extends IBeeModifier> modifiers) {
+        final List<IBeeModifier> snapshot = List.copyOf(modifiers);
+        // Forestry's combiner only needs the modifier list, not a live housing or world.
+        final IBeeHousing modifierHousing = (IBeeHousing) Proxy.newProxyInstance(
+            IBeeHousing.class.getClassLoader(),
+            new Class<?>[] { IBeeHousing.class },
+            (proxy, method, args) -> {
+                if (method.getDeclaringClass() == Object.class) {
+                    return switch (method.getName()) {
+                        case "equals" -> proxy == (args == null ? null : args[0]);
+                        case "hashCode" -> System.identityHashCode(proxy);
+                        case "toString" -> "BeeModifiers housing proxy";
+                        default -> throw new UnsupportedOperationException(method.toString());
+                    };
+                }
+                if ("getBeeModifiers".equals(method.getName())) return snapshot;
+                throw new UnsupportedOperationException("No world or inventory in a bee modifier combiner");
+            });
+        return BeeManager.beeRoot.createBeeHousingModifier(modifierHousing);
+    }
+
     private EffectResult calculate(final Housing description, final MachineConfig cfg, final RecipeContext ctx) {
         // Preserve frame and board order: capped bonuses depend on the preceding modifiers.
         final List<IBeeModifier> modifiers = new ArrayList<>();
@@ -286,24 +307,7 @@ public class BeeProvider implements PropertyProvider {
         }
 
         final IBeeGenome genome = BeeManager.beeRoot.templateAsGenome(alleles, alleles);
-        final List<IBeeModifier> modifierSnapshot = List.copyOf(modifiers);
-        // Forestry's combiner only needs the modifier list, not a live housing or world.
-        final IBeeHousing modifierHousing = (IBeeHousing) Proxy.newProxyInstance(
-            IBeeHousing.class.getClassLoader(),
-            new Class<?>[] { IBeeHousing.class },
-            (proxy, method, args) -> {
-                if (method.getDeclaringClass() == Object.class) {
-                    return switch (method.getName()) {
-                        case "equals" -> proxy == (args == null ? null : args[0]);
-                        case "hashCode" -> System.identityHashCode(proxy);
-                        case "toString" -> "BeeModifiers housing proxy";
-                        default -> throw new UnsupportedOperationException(method.toString());
-                    };
-                }
-                if ("getBeeModifiers".equals(method.getName())) return modifierSnapshot;
-                throw new UnsupportedOperationException("No world or inventory in a bee modifier combiner");
-            });
-        final IBeeModifier housing = BeeManager.beeRoot.createBeeHousingModifier(modifierHousing);
+        final IBeeModifier housing = combinedModifier(modifiers);
         final IBeekeepingMode selectedMode = modeSupplier.get();
         if (selectedMode == null) throw new IllegalStateException("Forestry beekeeping mode is unavailable");
         final IBeeModifier mode = selectedMode.getBeeModifier();

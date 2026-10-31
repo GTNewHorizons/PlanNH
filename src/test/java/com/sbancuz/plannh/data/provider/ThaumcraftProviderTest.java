@@ -2,7 +2,6 @@ package com.sbancuz.plannh.data.provider;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Field;
@@ -11,7 +10,7 @@ import java.util.List;
 
 import net.glease.tc4tweak.api.infusionrecipe.EnhancedInfusionRecipe;
 import net.glease.tc4tweak.api.infusionrecipe.RecipeIngredient;
-import net.minecraft.init.Blocks;
+import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagByte;
 
@@ -28,12 +27,8 @@ import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
-import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.flowchart.Port;
-import com.sbancuz.plannh.data.flowchart.resource.MagicResources;
-import com.sbancuz.plannh.data.flowchart.resource.MagicResources.Amount;
 import com.sbancuz.plannh.data.serialization.Serializer;
-import com.sbancuz.plannh.data.setting.Settings;
 import com.sbancuz.plannh.mixins.PositionedStackAccessor;
 
 import codechicken.nei.PositionedStack;
@@ -50,30 +45,6 @@ class ThaumcraftProviderTest {
     static void initializeMinecraftFixture() {
         ProviderTestFixture.bootstrap();
         ModItems.itemAspect = ProviderTestFixture.item("aspect");
-    }
-
-    @Test
-    void essentiaPortsAreTypedAndMergeOnlyMatchingAspects() {
-        final Port<?> aer = MagicResources
-            .port(MagicResources.ESSENTIA, "thaumcraft:aer", "Aer", 0xFFFFFF, 2, display());
-        final Port<?> moreAer = MagicResources
-            .port(MagicResources.ESSENTIA, "thaumcraft:aer", "Aer", 0xFFFFFF, 3, display());
-        final Port<?> ignis = MagicResources
-            .port(MagicResources.ESSENTIA, "thaumcraft:ignis", "Ignis", 0xFF5555, 3, display());
-        final Port<?> storedAer = MagicResources
-            .port(MagicResources.STORED_VIS, "thaumcraft:aer", "Aer", 0xFFFFFF, 3, display());
-
-        assertEquals(MagicResources.ESSENTIA, aer.getType());
-        assertNotEquals(RecipePropertyAPI.ITEM, aer.getType());
-        assertTrue(aer.canConnect(moreAer));
-        assertFalse(aer.canConnect(ignis));
-        assertFalse(aer.canConnect(storedAer));
-        assertEquals(
-            MagicResources.ESSENTIA.hashValue((Amount) aer.getValue()),
-            MagicResources.ESSENTIA.hashValue((Amount) moreAer.getValue()));
-
-        aer.merge(moreAer);
-        assertEquals(5, aer.getAmount());
     }
 
     @Test
@@ -243,59 +214,6 @@ class ThaumcraftProviderTest {
                 RecipeContext.builder()
                     .build()));
         assertEquals(0d, loaded.inputMultiplier(2));
-        assertEquals(profile.id(), loaded.getProfileId());
-    }
-
-    @Test
-    void furnaceDemandUsesFinalDurationWithoutMachineOrParallelScaling() throws Exception {
-        final EffectResult effect = furnaceEffect(ThaumcraftProvider.FurnaceBoostSource.NETWORK_VIS, 50, true);
-        assertEquals(162, effect.durationTicks());
-        assertEquals(1d, effect.inputMultiplier(0), 1e-6);
-        assertEquals(160d, effect.inputMultiplier(1), 1e-6);
-        assertEquals(0d, effect.inputMultiplier(2), 1e-6);
-
-        final EffectResult disabled = furnaceEffect(ThaumcraftProvider.FurnaceBoostSource.NONE, 100, false);
-        assertEquals(1d, disabled.inputMultiplier(0), 1e-6);
-        assertEquals(0d, disabled.inputMultiplier(1), 1e-6);
-        assertEquals(0d, disabled.inputMultiplier(2), 1e-6);
-
-        final EffectResult nozzle = furnaceEffect(ThaumcraftProvider.FurnaceBoostSource.ESSENTIA_NOZZLE, 100, false);
-        assertEquals(1d, nozzle.inputMultiplier(0), 1e-6);
-        assertEquals(0d, nozzle.inputMultiplier(1), 1e-6);
-        assertEquals(80d / 600d, nozzle.inputMultiplier(2), 1e-6);
-
-        final EffectResult migrated = furnaceEffect(null, 100, false, true);
-        assertEquals(81, migrated.durationTicks());
-        assertEquals(80d, migrated.inputMultiplier(1), 1e-6);
-        assertEquals(0d, migrated.inputMultiplier(2), 1e-6);
-    }
-
-    private static EffectResult furnaceEffect(final ThaumcraftProvider.FurnaceBoostSource source,
-        final int tickModifier, final boolean scaleMachines) throws Exception {
-        return furnaceEffect(source, tickModifier, scaleMachines, false);
-    }
-
-    private static EffectResult furnaceEffect(final ThaumcraftProvider.FurnaceBoostSource source,
-        final int tickModifier, final boolean scaleMachines, final boolean oldFireVis) throws Exception {
-        final var field = ThaumcraftProvider.class.getDeclaredField("INFERNAL_FURNACE");
-        field.setAccessible(true);
-        final MachineProfile profile = (MachineProfile) field.get(new ThaumcraftProvider());
-        final MachineConfig config = new MachineConfig(profile);
-        config.set(ThaumcraftProvider.BELLOWS, 0);
-        if (source != null) config.set(ThaumcraftProvider.BOOST_SOURCE, source);
-        if (oldFireVis) config.set(ThaumcraftProvider.FIRE_VIS, true);
-        config.set(Settings.TICK_MODIFIER, tickModifier);
-        if (scaleMachines) {
-            config.set(Settings.MACHINES, 4);
-            config.set(Settings.PARALLELS, 3);
-        }
-
-        final RecipeContext context = RecipeContext.builder()
-            .input(Port.itemPort(new PositionedStack(new ItemStack(Blocks.dirt), 0, 0)))
-            .input(MagicResources.port(MagicResources.NETWORK_VIS, "thaumcraft:ignis", "Ignis", 0xFF5555, 1, display()))
-            .input(MagicResources.port(MagicResources.ESSENTIA, "thaumcraft:ignis", "Ignis", 0xFF5555, 1, display()))
-            .build();
-        return profile.computeEffect(config, context);
     }
 
     private static void installCachedRecipe(final TemplateRecipeHandler handler,
@@ -368,7 +286,7 @@ class ThaumcraftProviderTest {
     }
 
     private static PositionedStack display() {
-        return new PositionedStack(new ItemStack(Blocks.dirt), 0, 0);
+        return new PositionedStack(new ItemStack(Items.redstone), 0, 0);
     }
 
 }

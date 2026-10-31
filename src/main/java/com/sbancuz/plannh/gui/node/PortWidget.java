@@ -35,7 +35,6 @@ import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
 import com.sbancuz.plannh.data.flowchart.resource.LongFluidStack;
 import com.sbancuz.plannh.data.flowchart.resource.LongItemStack;
-import com.sbancuz.plannh.data.flowchart.resource.MagicResources;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.GuiHelper.RateUnit;
@@ -242,10 +241,9 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
 
         final Balancer.NodeBalance balance = parent.balance();
         writeThroughput(out, balance, tooltipEffect);
-        if (port.getType() == MagicResources.AURA_CHARGE) out.langRow("plannh.bees.aura_port", port.getDisplayName());
         out.flush();
-        final String unit = MagicResources.unitKey(port.getType());
-        if (unit != null) tooltip.addLine(IKey.lang(unit));
+        port.getType()
+            .addTooltip(tooltip, port.getValue());
     }
 
     private void writeThroughput(final TooltipBuilder out, final @Nullable Balancer.NodeBalance balance,

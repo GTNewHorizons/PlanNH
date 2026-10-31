@@ -12,10 +12,7 @@ import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
-import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
-
-import gregtech.api.util.GTUtility;
 
 /** Item choices edit the plan, never the source inventory or NEI's stacks. */
 public final class ItemSelectionGrid extends SelectionGrid {
@@ -54,7 +51,6 @@ public final class ItemSelectionGrid extends SelectionGrid {
             final ItemStack choice = stack.copy();
             choice.stackSize = 1;
             final ItemStack display = choice.copy();
-            if (Compat.GREGTECH.isLoaded) GTUtility.updateItemStack(display);
             buttons.add(
                 new ButtonWidget<>().name("item.selection.item")
                     .size(SLOT)

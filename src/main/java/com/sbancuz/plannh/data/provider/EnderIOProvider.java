@@ -4,7 +4,9 @@ import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.stream.IntStream;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -13,17 +15,20 @@ import net.minecraft.block.Block;
 import net.minecraft.item.ItemStack;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
+import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
+import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
-import com.sbancuz.plannh.data.effect.EffectComputer;
-import com.sbancuz.plannh.data.effect.EffectResult;
+import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.effect.steps.CoFHCompat;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
+import com.sbancuz.plannh.data.setting.ChoiceSettingDef;
 import com.sbancuz.plannh.data.setting.Settings;
+import com.sbancuz.plannh.gui.setting.ItemChoiceWidget;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.FurnaceRecipeHandler;
@@ -48,6 +53,43 @@ import crazypants.enderio.nei.VatRecipeHandler.InnerVatRecipe;
 import crazypants.enderio.power.Capacitors;
 
 public class EnderIOProvider implements PropertyProvider {
+
+    private static final int MAX_CAPACITOR_TIER = 6;
+
+    public static final ChoiceSettingDef<Integer> CAPACITOR = new ChoiceSettingDef<>(
+        "eio_capacitor",
+        0,
+        Integer.class,
+        () -> IntStream.rangeClosed(0, MAX_CAPACITOR_TIER)
+            .boxed()
+            .toList(),
+        tier -> Integer.toString(tier)) {
+
+        @Override
+        public IWidget settingsWidget(final MachineConfig cfg, final RecipeContext ctx, final Consumer<Runnable> edit) {
+            return new ItemChoiceWidget(
+                this,
+                cfg,
+                ctx,
+                edit,
+                () -> EnderIO.itemBasicCapacitor == null ? List.of()
+                    : Arrays.stream(Capacitors.VALUES, 0, MAX_CAPACITOR_TIER + 1)
+                        .map(Capacitors::getItemStack)
+                        .toList(),
+                tier -> EnderIO.itemBasicCapacitor == null ? null
+                    : Capacitors.VALUES[Math.clamp(tier, 0, MAX_CAPACITOR_TIER)].getItemStack(),
+                stack -> {
+                    if (stack == null || stack.getItem() == null || stack.getItem() != EnderIO.itemBasicCapacitor)
+                        return null;
+                    final int metadata = stack.getItemDamage();
+                    if (metadata >= 0 && metadata <= MAX_CAPACITOR_TIER) return metadata;
+                    return switch (metadata) {
+                        case 7, 8, 9 -> metadata - 7;
+                        default -> null;
+                    };
+                });
+        }
+    };
 
     private static final Map<Class<?>, Supplier<Block>> ICONS = Map.of(
         AlloySmelterRecipeHandler.class,
@@ -83,7 +125,7 @@ public class EnderIOProvider implements PropertyProvider {
 
     private static final String PROFILE_ID = "enderio";
     private static final int[] CAPACITOR_RF_PER_T = Arrays.stream(Capacitors.VALUES)
-        .limit(Settings.EIO_CAPACITOR.getMax() + 1L)
+        .limit(MAX_CAPACITOR_TIER + 1L)
         .mapToInt(capacitor -> capacitor.capacitor.getMaxEnergyExtracted())
         .toArray();
 
@@ -105,15 +147,13 @@ public class EnderIOProvider implements PropertyProvider {
     private final MachineProfile profile = MachineProfile.builder(PROFILE_ID)
         .setting(Settings.MACHINES)
         .setting(Settings.TICK_MODIFIER)
-        .setting(
-            Settings.EIO_CAPACITOR,
-            (cfg, ctx) -> energy(ctx) > 0 && ctx.getOrDefault(FIXED_RF_PER_TICK, null) == null)
+        .setting(CAPACITOR, (cfg, ctx) -> energy(ctx) > 0 && ctx.getOrDefault(FIXED_RF_PER_TICK, null) == null)
         .setting(Settings.RF_PER_TICK, (cfg, ctx) -> energy(ctx) > 0)
         .setting(Settings.DURATION_TICKS, (cfg, ctx) -> energy(ctx) > 0)
         .derive(Settings.RF_PER_TICK, (cfg, ctx) -> {
             final Integer fixed = ctx.getOrDefault(FIXED_RF_PER_TICK, null);
             if (fixed != null) return fixed;
-            final int capacitor = cfg.getOrDefault(Settings.EIO_CAPACITOR);
+            final int capacitor = cfg.getOrDefault(CAPACITOR);
             final int index = Math.clamp(capacitor, 0, CAPACITOR_RF_PER_T.length - 1);
             return CAPACITOR_RF_PER_T[index];
         })
@@ -125,15 +165,12 @@ public class EnderIOProvider implements PropertyProvider {
             return (int) Math.min(Integer.MAX_VALUE, (cost - 1) / rate + 1);
         })
         .effect(
-            ((EffectComputer) (cfg, ctx) -> new EffectResult(
-                cfg.getProfile()
-                    .value(Settings.DURATION_TICKS, cfg, ctx),
-                0,
-                1)).withCostPerT(
+            Effects.durationFromSetting(Settings.DURATION_TICKS)
+                .withCostPerT(
                     CoFHCompat.RF_PER_T,
                     (current, cfg, ctx) -> energy(ctx) > 0 ? (long) cfg.getProfile()
                         .value(Settings.RF_PER_TICK, cfg, ctx) : 0L)
-                    .applyParallelism())
+                .applyParallelism())
         .icon(this::icon)
         .provider(this)
         .build();
@@ -141,19 +178,19 @@ public class EnderIOProvider implements PropertyProvider {
     private final MachineProfile crafterProfile = MachineProfile.builder("enderio:crafter")
         .setting(Settings.MACHINES)
         .setting(Settings.TICK_MODIFIER)
-        .setting(Settings.EIO_CAPACITOR)
+        .setting(CAPACITOR)
         // TODO: Open an upstream PR to expose TileCrafter tick intervals and completion semantics instead of copying
         // them here.
-        .effect(((EffectComputer) (cfg, ctx) -> {
-            final int capacitor = Math
-                .clamp(cfg.value(Settings.EIO_CAPACITOR, ctx), 0, Settings.EIO_CAPACITOR.getMax());
+        .effect(Effects.duration((cfg, ctx) -> {
+            final int capacitor = Math.clamp(cfg.value(CAPACITOR, ctx), 0, MAX_CAPACITOR_TIER);
             final int interval;
             if (capacitor == 0) interval = 20;
             else if (capacitor == 1) interval = 10;
             else interval = 2;
             // TileCrafter checks ticksSinceLastCraft <= ticksPerCraft, so completion is one tick later.
-            return new EffectResult(interval + 1, 0, 1);
-        }).withTotalCost(CoFHCompat.RF_COST, (current, cfg, ctx) -> Config.crafterRfPerCraft)
+            return interval + 1;
+        })
+            .withTotalCost(CoFHCompat.RF_COST, (current, cfg, ctx) -> Config.crafterRfPerCraft)
             .withCostPerT(CoFHCompat.RF_PER_T, (current, cfg, ctx) -> current.energyPerT())
             .applyParallelism())
         .icon(

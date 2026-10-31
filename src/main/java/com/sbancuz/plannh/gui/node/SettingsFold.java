@@ -82,8 +82,8 @@ public class SettingsFold extends NodeFold {
                 final TooltipBuilder out = TooltipBuilder.create(tooltip);
                 if (!def.isFullWidthEditor()) def.tooltip(cfg.value(def, ctx))
                     .accept(out);
-                out.langRow(explicit ? "plannh.gui.node.settings.manual" : "plannh.gui.node.settings.automatic")
-                    .langRow("plannh.gui.node.settings.reset_hint")
+                out.langRow(explicit ? "plannh.settings.choice_manual" : "plannh.settings.choice_auto")
+                    .langRow("plannh.settings.middle_reset_hint")
                     .flush();
             })
             .tooltipAutoUpdate(true);

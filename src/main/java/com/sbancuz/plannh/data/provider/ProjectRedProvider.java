@@ -107,10 +107,12 @@ public final class ProjectRedProvider implements PropertyProvider {
             if (recipe == null || !ItemStack.areItemStacksEqual(recipe.createOutput(), output.item)) return null;
             if (selected == null) {
                 selected = recipe;
-            } else if (selected.burnTime() != recipe.burnTime()
+                continue;
+            }
+            if (selected.burnTime() != recipe.burnTime()
                 || !ItemStack.areItemStacksEqual(selected.createOutput(), recipe.createOutput())) {
-                    return null;
-                }
+                return null;
+            }
         }
         return selected;
     }

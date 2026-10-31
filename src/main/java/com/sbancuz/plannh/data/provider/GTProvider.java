@@ -15,14 +15,15 @@ import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.effect.Effects;
-import com.sbancuz.plannh.data.effect.steps.GTOverclockStep;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.flowchart.resource.LongItemStack;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.properties.SummaryProperty;
+import com.sbancuz.plannh.data.provider.gregtech.GTOverclockStep;
 import com.sbancuz.plannh.data.provider.gregtech.GTSpecialHandlers;
 import com.sbancuz.plannh.data.setting.Settings;
+import com.sbancuz.plannh.mixins.PositionedStackAccessor;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.FurnaceRecipeHandler;
@@ -315,6 +316,18 @@ public class GTProvider implements PropertyProvider {
         final GTSpecialHandlers.GTSpecialHandler special = GTSpecialHandlers.get(gthMap);
         if (special != null) special.populate(r, recipe, inputStacks, outputStacks);
         else buildGenericPorts(inputStacks, outputStacks, recipe);
+
+        // Special handlers build ports directly, so normalize their copied GT displays here too.
+        for (final Port<?> output : recipe.outputs()) {
+            if (!(output.getValue() instanceof LongItemStack)) continue;
+            for (final PositionedStack stack : output.getAllStacks()) {
+                if (stack instanceof GTNEIDefaultHandler.FixedPositionedStack fixed
+                    && !fixed.isInput()
+                    && stack.items.length > 1) {
+                    ((PositionedStackAccessor) stack).setPermutated(false);
+                }
+            }
+        }
     }
 
     private static void buildGenericPorts(final List<PositionedStack> inputStacks,
@@ -338,4 +351,5 @@ public class GTProvider implements PropertyProvider {
         }
         return port;
     }
+
 }

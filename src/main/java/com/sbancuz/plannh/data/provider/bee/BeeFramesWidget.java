@@ -1,4 +1,4 @@
-package com.sbancuz.plannh.gui.setting;
+package com.sbancuz.plannh.data.provider.bee;
 
 import java.util.function.Consumer;
 
@@ -9,9 +9,9 @@ import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.RecipeContext;
-import com.sbancuz.plannh.data.provider.bee.BeeSettings;
 import com.sbancuz.plannh.data.setting.ChoiceSettingDef;
 import com.sbancuz.plannh.gui.GuiHelper;
+import com.sbancuz.plannh.gui.setting.ItemChoiceWidget;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
@@ -31,6 +31,7 @@ public final class BeeFramesWidget extends Flow {
         children(BeeSettings.FRAMES.size(), index -> {
             final ChoiceSettingDef<ItemStack> frameDef = BeeSettings.FRAMES.get(index);
             return new ItemChoiceWidget(
+                frameDef,
                 () -> cfg.value(frameDef, ctx),
                 stack -> stack != null && stack.getItem() instanceof IHiveFrame,
                 stack -> cfg.set(frameDef, stack),

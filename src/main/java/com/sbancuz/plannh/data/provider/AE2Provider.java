@@ -20,6 +20,7 @@ import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.effect.steps.CoFHCompat;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
+import com.sbancuz.plannh.data.setting.ChoiceSettingDef;
 import com.sbancuz.plannh.data.setting.Settings;
 
 import appeng.api.AEApi;
@@ -38,6 +39,21 @@ import codechicken.nei.recipe.ShapedRecipeHandler;
 
 @Versioned.Mod(modId = Compat.IDs.AE2, sinceVersion = "rv3-beta-1017-GTNH")
 public final class AE2Provider implements PropertyProvider {
+
+    public static final ChoiceSettingDef<ItemStack> ACCELERATION_CARDS = new ChoiceSettingDef<>(
+        "catalyst_accel_card",
+        null,
+        ItemStack.class,
+        () -> {
+            final ItemStack card = AEApi.instance()
+                .definitions()
+                .materials()
+                .cardSpeed()
+                .maybeStack(1)
+                .orNull();
+            return card == null ? List.of() : List.of(card);
+        },
+        stack -> stack == null ? "-" : stack.getDisplayName()).counts(0, 5);
 
     private static final Map<String, Function<IBlocks, IBlockDefinition>> ICONS = Map.of(
         "ae2:quartz_grinder",
@@ -60,7 +76,9 @@ public final class AE2Provider implements PropertyProvider {
         .setting(Settings.MACHINES)
         .setting(Settings.TICK_MODIFIER)
         .setting(Settings.DURATION_TICKS)
-        .effect(DefaultProvider::noopEffect)
+        .effect(
+            Effects.durationFromConfigOrProperty()
+                .applyParallelism())
         .provider(this)
         .icon((_, _) -> icon("ae2:quartz_grinder"))
         .build();
@@ -70,9 +88,9 @@ public final class AE2Provider implements PropertyProvider {
         .setting(Settings.TICK_MODIFIER)
         .provider(this)
         .asFactory(
-            (builder, model) -> builder.setting(Settings.CATALYST_ACCEL_CARD, 0, model.maxCards())
-                .effect(Effects.durationFromFormula((cfg, ctx) -> {
-                    final int cards = cfg.value(Settings.CATALYST_ACCEL_CARD, ctx);
+            (builder, model) -> builder.setting(ACCELERATION_CARDS, 0, model.maxCards())
+                .effect(Effects.duration((cfg, ctx) -> {
+                    final int cards = ACCELERATION_CARDS.count(cfg, ctx);
                     final int speed = model.baseSpeed() + cards;
                     final int processingTicks = model.animationTicks() == 0
                         ? (model.maxProcessingTime() + speed - 1) / speed
@@ -80,11 +98,9 @@ public final class AE2Provider implements PropertyProvider {
                     return processingTicks + model.animationTicks();
                 })
                     .withTotalCost(CoFHCompat.RF_COST, (current, cfg, ctx) -> {
-                        final int cards = cfg.value(Settings.CATALYST_ACCEL_CARD, ctx);
+                        final int cards = ACCELERATION_CARDS.count(cfg, ctx);
                         final int speed = model.baseSpeed() + cards;
-                        final int processingTicks = model.animationTicks() == 0
-                            ? (model.maxProcessingTime() + speed - 1) / speed
-                            : model.maxProcessingTime() / speed + 1;
+                        final int processingTicks = current.durationTicks() - model.animationTicks();
                         return rfFromAe((long) model.basePowerPerTick() * speed * processingTicks);
                     })
                     .withCostPerT(CoFHCompat.RF_PER_T, (current, cfg, ctx) -> current.energyPerT())
@@ -100,7 +116,7 @@ public final class AE2Provider implements PropertyProvider {
                 TileInscriber.MAX_PROCESSING_TIME,
                 TileInscriber.BASE_POWER_PER_TICK,
                 TileInscriber.BASE_SPEED,
-                TileInscriber.SMASH_ANIMATION_TICKS))
+                16)) // TileInscriber performs its smash animation over 16 ticks.
         .build();
 
     private final MachineProfile ADVANCED_INSCRIBER = INSCRIBER_FACTORY
@@ -117,14 +133,15 @@ public final class AE2Provider implements PropertyProvider {
     private final MachineProfile MOLECULAR_ASSEMBLER = MachineProfile.builder("ae2:molecular_assembler")
         .setting(Settings.MACHINES)
         .setting(Settings.TICK_MODIFIER)
-        .setting(Settings.CATALYST_ACCEL_CARD, 0, 5)
-        .effect(Effects.durationFromFormula((cfg, ctx) -> {
-            final int cards = cfg.value(Settings.CATALYST_ACCEL_CARD, ctx);
+        .setting(ACCELERATION_CARDS, 0, 5)
+        .effect(Effects.duration((cfg, ctx) -> {
+            final int cards = ACCELERATION_CARDS.count(cfg, ctx);
             final int speed = TileMolecularAssembler.SPEED[cards];
-            return Math.max(1, (TileMolecularAssembler.MAX_PROCESSING_TIME + speed - 1) / speed);
+            // TileMolecularAssembler completes when its progress reaches 100.
+            return Math.max(1, (100 + speed - 1) / speed);
         })
             .andThen((current, cfg, ctx) -> {
-                final int cards = cfg.value(Settings.CATALYST_ACCEL_CARD, ctx);
+                final int cards = ACCELERATION_CARDS.count(cfg, ctx);
                 final int speed = TileMolecularAssembler.SPEED[cards];
                 final double tax = TileMolecularAssembler.ACCELERATION_TAX[cards];
                 current.energyPerT(rfFromAe(speed * tax));
@@ -147,14 +164,13 @@ public final class AE2Provider implements PropertyProvider {
         return stack == null ? GuiTextures.MATERIAL : new ItemDrawable(stack);
     }
 
-    // TODO: Open an upstream AE2 PR to expose these processing, power and animation constants.
+    // TODO: Open an upstream AE2 PR to expose these processing and power constants.
     @Versioned.Class
     public static class TileInscriber {
 
         public static final int MAX_PROCESSING_TIME = 100;
         public static final int BASE_POWER_PER_TICK = 10;
         public static final int BASE_SPEED = 1;
-        public static final int SMASH_ANIMATION_TICKS = 16;
     }
 
     // TODO: Open an upstream AE2 PR to expose advanced-inscriber processing and power constants.
@@ -170,7 +186,6 @@ public final class AE2Provider implements PropertyProvider {
     @Versioned.Class
     public static class TileMolecularAssembler {
 
-        public static final int MAX_PROCESSING_TIME = 100;
         public static final int[] SPEED = { 10, 13, 17, 20, 25, 50 };
         public static final double[] ACCELERATION_TAX = { 1.0, 1.3, 1.7, 2.0, 2.5, 5.0 };
     }

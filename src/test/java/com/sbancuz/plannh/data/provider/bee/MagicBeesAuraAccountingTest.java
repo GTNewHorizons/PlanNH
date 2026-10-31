@@ -21,7 +21,7 @@ import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.flowchart.resource.LongItemStack;
-import com.sbancuz.plannh.data.flowchart.resource.MagicResources;
+import com.sbancuz.plannh.data.provider.MagicResources;
 import com.sbancuz.plannh.data.provider.ProviderTestFixture;
 import com.sbancuz.plannh.data.setting.Settings;
 

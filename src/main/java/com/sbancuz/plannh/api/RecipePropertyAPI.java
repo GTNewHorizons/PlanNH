@@ -14,7 +14,6 @@ import net.minecraftforge.fluids.FluidStack;
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.google.common.collect.ArrayListMultimap;
-import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.flowchart.Port;
@@ -33,7 +32,6 @@ import codechicken.nei.api.ItemInfo;
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.RecipeHandlerRef;
 import codechicken.nei.recipe.StackInfo;
-import gregtech.nei.GTNEIDefaultHandler;
 
 public final class RecipePropertyAPI {
 
@@ -87,13 +85,6 @@ public final class RecipePropertyAPI {
 
         ItemStack[] as = ((PositionedStackAccessor) psa).getPermutated() ? psa.items : new ItemStack[] { psa.item };
         ItemStack[] bs = ((PositionedStackAccessor) psb).getPermutated() ? psb.items : new ItemStack[] { psb.item };
-
-        if (Compat.GREGTECH.isLoaded) {
-            if (psa instanceof GTNEIDefaultHandler.FixedPositionedStack fpsa && !fpsa.isInput() && as.length > 1)
-                as = new ItemStack[] { psa.item };
-            if (psb instanceof GTNEIDefaultHandler.FixedPositionedStack fpsb && !fpsb.isInput() && bs.length > 1)
-                bs = new ItemStack[] { psb.item };
-        }
 
         for (ItemStack a : as) {
             for (ItemStack b : bs) {

@@ -1,6 +1,5 @@
 package com.sbancuz.plannh.data.provider.bee;
 
-import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -19,19 +18,15 @@ import com.cleanroommc.modularui.api.widget.IWidget;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.setting.ChoiceSettingDef;
-import com.sbancuz.plannh.data.setting.EnumSettingDef;
 import com.sbancuz.plannh.data.setting.SettingDef;
 import com.sbancuz.plannh.gui.GuiHelper;
-import com.sbancuz.plannh.gui.setting.AlvearyStimulatorWidget;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
 import binnie.core.machines.power.PowerSystem;
 import binnie.extrabees.apiary.machine.stimulator.StimulatorCircuit;
-import forestry.api.apiculture.BeeManager;
 import forestry.api.apiculture.DefaultBeeModifier;
 import forestry.api.apiculture.IBeeGenome;
-import forestry.api.apiculture.IBeeHousing;
 import forestry.api.apiculture.IBeeModifier;
 import forestry.api.circuits.ChipsetManager;
 import forestry.api.circuits.ICircuit;
@@ -51,18 +46,20 @@ public final class AlvearyStimulators {
     private static final String STIMULATOR_LAYOUT = "binnie.circuitLayoutStimulator";
 
     public static final List<List<ChoiceSettingDef<String>>> CIRCUITS = List.of(sockets(0), sockets(1), sockets(2));
-    public static final List<EnumSettingDef<EnumCircuitBoardType>> BOARD_TYPES = List
+    public static final List<ChoiceSettingDef<EnumCircuitBoardType>> BOARD_TYPES = List
         .of(boardType(0), boardType(1), boardType(2));
 
     public record Resolved(List<IBeeModifier> modifiers, double rfPerWorkCycle) {}
 
     private AlvearyStimulators() {}
 
-    private static EnumSettingDef<EnumCircuitBoardType> boardType(final int index) {
-        return new EnumSettingDef<>(
+    private static ChoiceSettingDef<EnumCircuitBoardType> boardType(final int index) {
+        return new ChoiceSettingDef<>(
             "bee_alveary_stimulator_" + (index + 1) + "_board_type",
             EnumCircuitBoardType.INTRICATE,
-            EnumCircuitBoardType.class) {
+            EnumCircuitBoardType.class,
+            () -> Arrays.asList(EnumCircuitBoardType.VALUES),
+            EnumCircuitBoardType::name) {
 
             @Override
             public IWidget settingsWidget(final MachineConfig cfg, final RecipeContext ctx,
@@ -298,7 +295,7 @@ public final class AlvearyStimulators {
     private static EnumCircuitBoardType boardType(final MachineConfig cfg, final RecipeContext ctx, final int board) {
         if (cfg == null || board < 0 || board >= BOARD_TYPES.size())
             throw new IllegalArgumentException("Invalid alveary stimulator board");
-        final EnumSettingDef<EnumCircuitBoardType> def = BOARD_TYPES.get(board);
+        final ChoiceSettingDef<EnumCircuitBoardType> def = BOARD_TYPES.get(board);
         final EnumCircuitBoardType type = cfg.value(def, ctx);
         if (type == null) throw new IllegalArgumentException("Invalid alveary stimulator board type");
         return type;
@@ -411,24 +408,7 @@ public final class AlvearyStimulators {
 
     /** Start each board at production 0 and lifespan 1, regardless of preceding frames or boards. */
     static IBeeModifier boardModifier(final List<? extends IBeeModifier> circuits) {
-        final List<IBeeModifier> snapshot = List.copyOf(circuits);
-        // Forestry's combiner only needs the modifier list, not a live housing or world.
-        final IBeeHousing housing = (IBeeHousing) Proxy.newProxyInstance(
-            IBeeHousing.class.getClassLoader(),
-            new Class<?>[] { IBeeHousing.class },
-            (proxy, method, args) -> {
-                if (method.getDeclaringClass() == Object.class) {
-                    return switch (method.getName()) {
-                        case "equals" -> proxy == (args == null ? null : args[0]);
-                        case "hashCode" -> System.identityHashCode(proxy);
-                        case "toString" -> "BeeModifiers housing proxy";
-                        default -> throw new UnsupportedOperationException(method.toString());
-                    };
-                }
-                if ("getBeeModifiers".equals(method.getName())) return snapshot;
-                throw new UnsupportedOperationException("No world or inventory in a bee modifier combiner");
-            });
-        final IBeeModifier inner = BeeManager.beeRoot.createBeeHousingModifier(housing);
+        final IBeeModifier inner = BeeProvider.combinedModifier(circuits);
         return new DefaultBeeModifier() {
 
             @Override

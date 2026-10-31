@@ -13,6 +13,8 @@ import com.cleanroommc.modularui.value.EnumValue;
 import com.cleanroommc.modularui.widgets.CycleButtonWidget;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.RecipeContext;
+import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
+import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
 import lombok.Getter;
 
@@ -42,6 +44,11 @@ public class EnumSettingDef<E extends Enum<E>> extends SettingDef<E> {
         final String translationKey = "plannh.settings." + getKey() + "." + name;
         return StatCollector.canTranslate(translationKey) ? StatCollector.translateToLocal(translationKey)
             : constant.name();
+    }
+
+    @Override
+    public Consumer<TooltipBuilder> tooltip(final E value) {
+        return out -> out.entry(getLabel(), TooltipTheme.Role.TUNABLE, displayValue(value));
     }
 
     @Override

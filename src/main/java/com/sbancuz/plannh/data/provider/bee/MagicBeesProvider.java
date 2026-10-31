@@ -12,7 +12,7 @@ import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.flowchart.Port;
-import com.sbancuz.plannh.data.flowchart.resource.MagicResources;
+import com.sbancuz.plannh.data.provider.MagicResources;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.IRecipeHandler;

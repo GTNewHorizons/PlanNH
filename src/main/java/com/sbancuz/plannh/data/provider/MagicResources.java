@@ -1,6 +1,7 @@
-package com.sbancuz.plannh.data.flowchart.resource;
+package com.sbancuz.plannh.data.provider;
 
 import java.util.Objects;
+import java.util.function.BiConsumer;
 
 import javax.annotation.Nonnull;
 
@@ -8,9 +9,12 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 
+import com.cleanroommc.modularui.api.drawable.IKey;
+import com.cleanroommc.modularui.screen.RichTooltip;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.properties.ResourceProperty;
 import com.sbancuz.plannh.gui.PlannhColors;
+import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 
 import codechicken.nei.PositionedStack;
 
@@ -25,10 +29,17 @@ public final class MagicResources {
         new Amount("thaumcraft:aer", "Aer", 0xFFFFFF, 0));
     public static final ResourceProperty<Amount> NETWORK_VIS = type(
         "thaumcraft.network_vis",
-        new Amount("thaumcraft:ignis", "Ignis", 0xFF5555, 0));
+        new Amount("thaumcraft:ignis", "Ignis", 0xFF5555, 0),
+        (tooltip, _) -> tooltip.addLine(IKey.lang("plannh.resources.unit.centivis")));
     public static final ResourceProperty<Amount> AURA_CHARGE = type(
         "magicbees.aura_charge",
-        new Amount("magicbees:aura", "Aura", 0xAA55FF, 0));
+        new Amount("magicbees:aura", "Aura", 0xAA55FF, 0),
+        (tooltip, value) -> {
+            TooltipBuilder.create(tooltip)
+                .langRow("plannh.bees.aura_port", value.name)
+                .flush();
+            tooltip.addLine(IKey.lang("plannh.resources.unit.aura"));
+        });
 
     private MagicResources() {}
 
@@ -49,13 +60,12 @@ public final class MagicResources {
         return new PositionedStack(stack, x, y, false);
     }
 
-    public static String unitKey(final ResourceProperty<?> type) {
-        if (NETWORK_VIS.equals(type)) return "plannh.resources.unit.centivis";
-        if (AURA_CHARGE.equals(type)) return "plannh.resources.unit.aura";
-        return null;
+    private static ResourceProperty<Amount> type(final String key, final Amount defaultValue) {
+        return type(key, defaultValue, (_, _) -> {});
     }
 
-    private static ResourceProperty<Amount> type(final String key, final Amount defaultValue) {
+    private static ResourceProperty<Amount> type(final String key, final Amount defaultValue,
+        final BiConsumer<RichTooltip, Amount> tooltip) {
         return ResourceProperty.<Amount>builder(key, defaultValue)
             .displayFormatter(value -> value.name)
             .amountExtractor(value -> value.amount)
@@ -66,6 +76,7 @@ public final class MagicResources {
             .pinInputColor(PlannhColors.PIN_INPUT.getColor())
             .pinOutputColor(PlannhColors.PIN_OUTPUT.getColor())
             .arrowColor(PlannhColors.ARROW_ITEM.getColor())
+            .tooltip(tooltip)
             .build();
     }
 
