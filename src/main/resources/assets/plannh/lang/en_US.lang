@@ -49,7 +49,6 @@ plannh.tooltip.thaumcraft.furnace_steady_state=Assumes continuous supply; exclud
 plannh.settings.witchinggadgets.bellows=Bellows
 
 ## Settings - Furnaces
-plannh.settings.railcraft.steam_oven_batch_size=Items per Batch
 plannh.settings.galacticraft.arc_power_tier=Power Tier
 plannh.settings.twilightforest.cinder_log_count=Cinder Logs
 

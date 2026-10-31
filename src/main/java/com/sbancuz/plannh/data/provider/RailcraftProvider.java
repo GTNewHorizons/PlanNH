@@ -19,7 +19,6 @@ import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.effect.steps.CoFHCompat;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
-import com.sbancuz.plannh.data.setting.IntegerSettingDef;
 import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.PositionedStack;
@@ -40,11 +39,6 @@ public class RailcraftProvider implements PropertyProvider {
 
     private static final int STEAM_PER_BATCH = 8000;
     private static final int STEAM_OVEN_COOK_TICKS = 256;
-    static final IntegerSettingDef STEAM_OVEN_BATCH_SIZE = new IntegerSettingDef(
-        "railcraft.steam_oven_batch_size",
-        1,
-        1,
-        9);
 
     private final MachineProfile PROFILE = MachineProfile.builder("railcraft")
         .setting(Settings.MACHINES)
@@ -59,18 +53,21 @@ public class RailcraftProvider implements PropertyProvider {
 
     private final MachineProfile STEAM_OVEN_PROFILE = MachineProfile.builder("railcraft:steam_oven")
         .setting(Settings.MACHINES)
-        .setting(STEAM_OVEN_BATCH_SIZE, 1, 9)
+        .setting(Settings.PARALLELS, 1, 9)
         .setting(Settings.TICK_MODIFIER)
         .effect(
             Effects.constant(STEAM_OVEN_COOK_TICKS, 0)
                 .applyParallelism())
+        // Steam is charged once per oven batch, not once per parallel item.
         .inputMultiplier(
             (_, cfg, ctx, index) -> ctx.inputs()
                 .get(index)
-                .getType() == RecipePropertyAPI.FLUID ? 1d : cfg.value(STEAM_OVEN_BATCH_SIZE, ctx))
-        .outputMultiplier((_, cfg, ctx, index) -> cfg.value(STEAM_OVEN_BATCH_SIZE, ctx))
+                .getType() == RecipePropertyAPI.FLUID ? 1d / cfg.value(Settings.PARALLELS, ctx) : 1d)
         .provider(this)
-        .icon((_, _) -> machineIcon(EnumMachineAlpha.STEAM_OVEN.getItem()))
+        .icon((_, _) -> {
+            final ItemStack stack = EnumMachineAlpha.STEAM_OVEN.getItem();
+            return stack.getItem() == null ? GuiTextures.PROCESSOR : new ItemDrawable(stack);
+        })
         .build();
 
     @Nonnull
@@ -82,11 +79,12 @@ public class RailcraftProvider implements PropertyProvider {
             case RecipeHandlerRollingMachine _ -> EnumMachineAlpha.ROLLING_MACHINE;
             default -> null;
         };
-        return machine == null ? GuiTextures.PROCESSOR : machineIcon(machine.getItem());
-    }
-
-    private static IDrawable machineIcon(final ItemStack stack) {
-        return stack == null || stack.getItem() == null ? GuiTextures.PROCESSOR : new ItemDrawable(stack);
+        if (machine == null) {
+            return GuiTextures.PROCESSOR;
+        } else {
+            final ItemStack stack = machine.getItem();
+            return stack.getItem() == null ? GuiTextures.PROCESSOR : new ItemDrawable(stack);
+        }
     }
 
     @Override
@@ -135,7 +133,6 @@ public class RailcraftProvider implements PropertyProvider {
             }
         }
         // Rock Crusher and Rolling Machine: no time/RF in cached recipe — values would be estimates
-
     }
 
     @Override

@@ -97,7 +97,7 @@ public final class TwilightForestProvider implements PropertyProvider {
     }
 
     static boolean isBonusInput(final ItemStack input) {
-        if (input == null || input.getItem() == null) return false;
+        if (input.getItem() == null) return false;
         for (final int id : OreDictionary.getOreIDs(input)) {
             final String name = OreDictionary.getOreName(id);
             if (isBonusOreName(name)) return true;

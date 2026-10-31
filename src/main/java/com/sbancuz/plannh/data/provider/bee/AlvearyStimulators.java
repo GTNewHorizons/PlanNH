@@ -42,7 +42,7 @@ import forestry.plugins.PluginCore;
 public final class AlvearyStimulators {
 
     // TODO: Open an upstream Forestry PR to expose the circuit board socket limit.
-    private static final int SOCKETS = 4;
+    public static final int SOCKETS = 4;
     private static final String STIMULATOR_LAYOUT = "binnie.circuitLayoutStimulator";
 
     public static final List<List<ChoiceSettingDef<String>>> CIRCUITS = List.of(sockets(0), sockets(1), sockets(2));
@@ -105,7 +105,7 @@ public final class AlvearyStimulators {
             @Override
             public Consumer<TooltipBuilder> tooltip(final String uid) {
                 return out -> {
-                    if (uid == null || uid.isEmpty()) super.tooltip(uid).accept(out);
+                    if (uid.isEmpty()) super.tooltip(uid).accept(out);
                     else circuitTooltip(out, uid);
                 };
             }
@@ -127,8 +127,8 @@ public final class AlvearyStimulators {
     }
 
     public static String circuitDisplay(final String uid) {
-        if (uid == null || uid.isEmpty()) return StatCollector.translateToLocal("plannh.settings.bee_no_stimulator");
-        final ICircuit circuit = registeredCircuit(uid);
+        if (uid.isEmpty()) return StatCollector.translateToLocal("plannh.settings.bee_no_stimulator");
+        final ICircuit circuit = ChipsetManager.circuitRegistry.getCircuit(uid);
         if (circuit == null) return uid;
         final String translation = "for." + circuit.getName();
         final String label = StatCollector.translateToLocal(translation);
@@ -136,7 +136,7 @@ public final class AlvearyStimulators {
     }
 
     public static void circuitTooltip(final TooltipBuilder out, final String uid) {
-        final ICircuit circuit = registeredCircuit(uid);
+        final ICircuit circuit = ChipsetManager.circuitRegistry.getCircuit(uid);
         if (!(circuit instanceof StimulatorCircuit stimulator)) return;
 
         out.entry(IKey.lang("plannh.gui.bees.circuit"), TooltipTheme.Role.IDENTITY, circuitDisplay(uid));
@@ -154,12 +154,8 @@ public final class AlvearyStimulators {
         } else out.langRow("plannh.bees.details_hint");
     }
 
-    private static ICircuit registeredCircuit(final String uid) {
-        return ChipsetManager.circuitRegistry == null ? null : ChipsetManager.circuitRegistry.getCircuit(uid);
-    }
-
     private static StimulatorCircuit selectedCircuit(final String uid) {
-        final ICircuit circuit = registeredCircuit(uid);
+        final ICircuit circuit = ChipsetManager.circuitRegistry.getCircuit(uid);
         if (!(circuit instanceof StimulatorCircuit stimulator))
             throw new IllegalArgumentException("Invalid alveary stimulator circuit: " + uid);
         return stimulator;
@@ -168,7 +164,7 @@ public final class AlvearyStimulators {
     public static ItemStack boardStack(final MachineConfig cfg, final RecipeContext ctx, final int group) {
         if (PluginCore.items == null || PluginCore.items.circuitboards == null) return null;
         final EnumCircuitBoardType type = boardType(cfg, ctx, group);
-        final ICircuitLayout layout = stimulatorLayout();
+        final ICircuitLayout layout = ChipsetManager.circuitRegistry.getLayout(STIMULATOR_LAYOUT);
         if (layout == null) return null;
         return ItemCircuitBoard.createCircuitboard(type, layout, boardCircuitArray(cfg, ctx, group));
     }
@@ -208,29 +204,8 @@ public final class AlvearyStimulators {
         setCircuit(cfg, ctx, group, socket, circuit.getUID());
     }
 
-    public static boolean canSetBoard(final MachineConfig cfg, final int group, final ItemStack stack) {
-        try {
-            return cfg != null && group >= 0 && group < BOARD_TYPES.size() && decodeBoard(stack) != null;
-        } catch (final RuntimeException failure) {
-            return false;
-        }
-    }
-
-    public static void setBoard(final MachineConfig cfg, final int group, final ItemStack stack) {
-        final BoardSelection board;
-        try {
-            board = decodeBoard(stack);
-        } catch (final RuntimeException failure) {
-            throw new IllegalArgumentException("Invalid alveary stimulator board", failure);
-        }
-        if (cfg == null || group < 0 || group >= BOARD_TYPES.size() || board == null)
-            throw new IllegalArgumentException("Invalid alveary stimulator board");
-
-        cfg.set(BOARD_TYPES.get(group), board.type());
-        final List<ChoiceSettingDef<String>> sockets = CIRCUITS.get(group);
-        for (int socket = 0; socket < SOCKETS; socket++) {
-            cfg.set(sockets.get(socket), board.uids()[socket]);
-        }
+    public static boolean canSetBoard(final int group, final ItemStack stack) {
+        return group >= 0 && group < BOARD_TYPES.size() && decodeBoard(stack) != null;
     }
 
     public static boolean canSetCircuit(final MachineConfig cfg, final RecipeContext ctx, final int group,
@@ -249,13 +224,6 @@ public final class AlvearyStimulators {
 
         final List<ChoiceSettingDef<String>> sockets = CIRCUITS.get(group);
         cfg.set(sockets.get(socket), uid);
-    }
-
-    public static void resetBoard(final MachineConfig cfg, final int group) {
-        if (cfg == null || group < 0 || group >= BOARD_TYPES.size())
-            throw new IllegalArgumentException("Invalid alveary stimulator board");
-        cfg.reset(BOARD_TYPES.get(group));
-        for (final ChoiceSettingDef<String> setting : CIRCUITS.get(group)) cfg.reset(setting);
     }
 
     public static Resolved resolve(final MachineConfig cfg, final RecipeContext ctx) {
@@ -293,7 +261,7 @@ public final class AlvearyStimulators {
     }
 
     private static EnumCircuitBoardType boardType(final MachineConfig cfg, final RecipeContext ctx, final int board) {
-        if (cfg == null || board < 0 || board >= BOARD_TYPES.size())
+        if (board < 0 || board >= BOARD_TYPES.size())
             throw new IllegalArgumentException("Invalid alveary stimulator board");
         final ChoiceSettingDef<EnumCircuitBoardType> def = BOARD_TYPES.get(board);
         final EnumCircuitBoardType type = cfg.value(def, ctx);
@@ -326,7 +294,7 @@ public final class AlvearyStimulators {
 
     private static boolean validCircuitChange(final MachineConfig cfg, final RecipeContext ctx, final int group,
         final int socket, final String uid) {
-        if (cfg == null || group < 0 || group >= CIRCUITS.size() || socket < 0 || socket >= SOCKETS || uid == null)
+        if (group < 0 || group >= CIRCUITS.size() || socket < 0 || socket >= SOCKETS)
             return false;
         final EnumCircuitBoardType type = boardType(cfg, ctx, group);
         if (socket >= type.getSockets()) return false;
@@ -344,19 +312,15 @@ public final class AlvearyStimulators {
         return true;
     }
 
-    private static ICircuitLayout stimulatorLayout() {
-        return ChipsetManager.circuitRegistry == null ? null
-            : ChipsetManager.circuitRegistry.getLayout(STIMULATOR_LAYOUT);
-    }
-
     public static ICircuit tubeCircuit(final ItemStack tube) {
-        final ICircuitLayout layout = stimulatorLayout();
-        if (layout == null || tube == null) return null;
+        final ICircuitLayout layout = ChipsetManager.circuitRegistry.getLayout(STIMULATOR_LAYOUT);
+        if (layout == null) return null;
+
         return SolderManager.getCircuit(layout, tube);
     }
 
-    private static BoardSelection decodeBoard(final ItemStack stack) {
-        if (stack == null || ChipsetManager.circuitRegistry == null) return null;
+    public static ICircuit[] decodeBoard(final ItemStack stack) {
+        if (ChipsetManager.circuitRegistry == null) return null;
 
         final var registry = ChipsetManager.circuitRegistry;
         if (!registry.isChipset(stack)) return null;
@@ -366,22 +330,15 @@ public final class AlvearyStimulators {
         if (itemDamage < 0 || itemDamage >= EnumCircuitBoardType.VALUES.length) return null;
         final EnumCircuitBoardType itemType = EnumCircuitBoardType.VALUES[itemDamage];
 
-        final String[] uids = new String[SOCKETS];
-        Arrays.fill(uids, "");
         final var tag = stack.getTagCompound();
-        if (tag == null) return new BoardSelection(itemType, uids);
+        if (tag == null) return new ICircuit[SOCKETS];
         if (!tag.hasKey("T", 99) || !tag.hasKey("LY", 8) || !STIMULATOR_LAYOUT.equals(tag.getString("LY"))) return null;
 
         final short rawType = tag.getShort("T");
         if (rawType < 0 || rawType >= EnumCircuitBoardType.VALUES.length
             || EnumCircuitBoardType.VALUES[rawType] != itemType) return null;
 
-        final ICircuitBoard decoded;
-        try {
-            decoded = registry.getCircuitboard(stack);
-        } catch (final RuntimeException failure) {
-            return null;
-        }
+        final ICircuitBoard decoded = registry.getCircuitboard(stack);
         if (decoded == null) return null;
         final ICircuit[] circuits = decoded.getCircuits();
         if (circuits == null || circuits.length != SOCKETS) return null;
@@ -398,13 +355,10 @@ public final class AlvearyStimulators {
                 return null;
             if (socket >= itemType.getSockets()) return null;
             if (counts.merge(uid, 1, Integer::sum) > stimulator.getLimit()) return null;
-            uids[socket] = uid;
         }
 
-        return new BoardSelection(itemType, uids);
+        return circuits;
     }
-
-    private record BoardSelection(EnumCircuitBoardType type, String[] uids) {}
 
     /** Start each board at production 0 and lifespan 1, regardless of preceding frames or boards. */
     static IBeeModifier boardModifier(final List<? extends IBeeModifier> circuits) {

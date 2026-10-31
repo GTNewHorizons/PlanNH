@@ -68,7 +68,7 @@ public final class BloodMagicProvider implements PropertyProvider {
             value -> value.reagent()
                 .name())
         .amountExtractor(ReagentValue::amount)
-        .amountUpdater((value, amount) -> value.amount(amount))
+        .amountUpdater(ReagentValue::amount)
         .connectionChecker(
             (a, b) -> Objects.equals(
                 a.getValue()

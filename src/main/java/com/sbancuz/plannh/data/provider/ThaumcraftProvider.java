@@ -1,7 +1,5 @@
 package com.sbancuz.plannh.data.provider;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -44,6 +42,9 @@ import com.sbancuz.plannh.data.setting.EnumSettingDef;
 import com.sbancuz.plannh.data.setting.IntegerSettingDef;
 import com.sbancuz.plannh.data.setting.Settings;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
+import com.sbancuz.plannh.mixins.CachedThaumRecipeAccessor;
+import com.sbancuz.plannh.mixins.InfusionCachedRecipeAccessor;
+import com.sbancuz.plannh.mixins.ResearchInfoAccessor;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.FurnaceRecipeHandler;
@@ -373,10 +374,8 @@ public class ThaumcraftProvider implements PropertyProvider {
                 populateItems(recipe, cached);
                 final AspectList aspects = cachedAspects(cached);
                 addAspectInputs(recipe, aspects, cached, MagicResources.STORED_VIS);
-                if (aspects != null) {
-                    recipe.property(VIS_COST, aspectListToPrimals(aspects));
-                    recipe.property(STORED_VIS_UNITS, primalVis(aspects));
-                }
+                recipe.property(VIS_COST, aspectListToPrimals(aspects));
+                recipe.property(STORED_VIS_UNITS, primalVis(aspects));
             }
         }
 
@@ -402,7 +401,7 @@ public class ThaumcraftProvider implements PropertyProvider {
                 Aspect.FIRE.getName(),
                 Aspect.FIRE.getColor(),
                 1,
-                syntheticAspectDisplay(Aspect.FIRE, 1, 64, 66)));
+                MagicResources.aspectDisplay(ModItems.itemAspect, Aspect.FIRE.getTag(), 1, 64, 66)));
         recipe.input(
             MagicResources.port(
                 MagicResources.ESSENTIA,
@@ -410,7 +409,7 @@ public class ThaumcraftProvider implements PropertyProvider {
                 Aspect.FIRE.getName(),
                 Aspect.FIRE.getColor(),
                 1,
-                syntheticAspectDisplay(Aspect.FIRE, 1, 84, 66)));
+                MagicResources.aspectDisplay(ModItems.itemAspect, Aspect.FIRE.getTag(), 1, 84, 66)));
 
         if (source == null || source.item == null) return;
         final ItemStack bonus = ThaumcraftApi.getSmeltingBonus(source.item);
@@ -452,7 +451,7 @@ public class ThaumcraftProvider implements PropertyProvider {
         addAspectInputs(recipe, aspects, cached, MagicResources.ESSENTIA);
         final int essentiaUnits = sumVis(aspects);
         recipe.property(ESSENTIA_UNITS, essentiaUnits);
-        final int instability = infusionInstability(cached);
+        final int instability = ((InfusionCachedRecipeAccessor) cached).plannh$getInstability();
         if (instability > 0) recipe.property(INSTABILITY, instability);
         recipe.property(NUM_COMPONENTS, Math.max(0, displayed.size() - 1));
     }
@@ -463,20 +462,16 @@ public class ThaumcraftProvider implements PropertyProvider {
         recipe.output(Port.fromStack(cached.getResult()));
     }
 
-    private static int infusionInstability(final TemplateRecipeHandler.CachedRecipe cached) {
-        return invokeInt(cached, "getInstability", 0);
-    }
-
     private static void addAspectInputs(final RecipeContext.Builder recipe, final AspectList aspects,
         final TemplateRecipeHandler.CachedRecipe cached, final ResourceProperty<MagicResources.Amount> type) {
-        if (aspects == null) return;
         int row = 0;
+
         for (final Aspect aspect : aspects.getAspectsSortedAmount()) {
             if (aspect == null || type == MagicResources.STORED_VIS && !isPrimal(aspect)) continue;
             recipe.input(
                 MagicResources.port(
                     type,
-                    aspectId(aspect),
+                    "thaumcraft:" + aspect.getTag(),
                     aspect.getName(),
                     aspect.getColor(),
                     aspects.getAmount(aspect),
@@ -487,73 +482,19 @@ public class ThaumcraftProvider implements PropertyProvider {
 
     @Nullable
     private static AspectList cachedAspects(final Object cached) {
-        try {
-            final Method getter = cached.getClass()
-                .getMethod("getAspects");
-            getter.setAccessible(true);
-            return (AspectList) getter.invoke(cached);
-        } catch (final ReflectiveOperationException | ClassCastException failure) {
-            return null;
-        }
+        return cached instanceof CachedThaumRecipeAccessor recipe ? recipe.plannh$getAspects() : null;
     }
 
     private static List<String> cachedResearchKeys(final Object cached) {
-        try {
-            final Field prereqsField = findField(cached.getClass(), "prereqs");
-            if (prereqsField == null) return List.of();
-            prereqsField.setAccessible(true);
-            final Object prereqs = prereqsField.get(cached);
-            if (!(prereqs instanceof Iterable<?>entries)) return List.of();
-
-            final List<String> result = new ArrayList<>();
-            for (final Object entry : entries) {
-                final Field itemField = findField(entry.getClass(), "researchItem");
-                if (itemField == null) continue;
-                itemField.setAccessible(true);
-                final Object researchItem = itemField.get(entry);
-                if (researchItem == null) continue;
-                final Field keyField = findField(researchItem.getClass(), "key");
-                if (keyField == null) continue;
-                keyField.setAccessible(true);
-                final Object key = keyField.get(researchItem);
-                if (key instanceof String string && !string.isEmpty()) result.add(string);
+        if (!(cached instanceof CachedThaumRecipeAccessor recipe)) return List.of();
+        final List<String> result = new ArrayList<>();
+        for (final var entry : recipe.plannh$getPrereqs()) {
+            final var research = ((ResearchInfoAccessor) entry).plannh$getResearchItem();
+            if (research != null && research.key != null && !research.key.isEmpty()) {
+                result.add(research.key);
             }
-            return result;
-        } catch (final ReflectiveOperationException failure) {
-            return List.of();
         }
-    }
-
-    private static int invokeInt(final Object target, final String name, final int fallback) {
-        final Method method = findMethod(target.getClass(), name);
-        if (method == null) return fallback;
-        try {
-            method.setAccessible(true);
-            final Object value = method.invoke(target);
-            return value instanceof Number number ? number.intValue() : fallback;
-        } catch (final ReflectiveOperationException failure) {
-            return fallback;
-        }
-    }
-
-    @Nullable
-    private static Field findField(final Class<?> type, final String name) {
-        for (Class<?> current = type; current != null; current = current.getSuperclass()) {
-            try {
-                return current.getDeclaredField(name);
-            } catch (final NoSuchFieldException ignored) {}
-        }
-        return null;
-    }
-
-    @Nullable
-    private static Method findMethod(final Class<?> type, final String name) {
-        for (Class<?> current = type; current != null; current = current.getSuperclass()) {
-            try {
-                return current.getDeclaredMethod(name);
-            } catch (final NoSuchMethodException ignored) {}
-        }
-        return null;
+        return result;
     }
 
     @Nullable
@@ -635,10 +576,6 @@ public class ThaumcraftProvider implements PropertyProvider {
         return false;
     }
 
-    private static String aspectId(final Aspect aspect) {
-        return "thaumcraft:" + aspect.getTag();
-    }
-
     private static List<PositionedStack> realDisplays(final @Nullable List<PositionedStack> displayed) {
         if (displayed == null || displayed.isEmpty()) return List.of();
         final List<PositionedStack> result = new ArrayList<>();
@@ -649,7 +586,7 @@ public class ThaumcraftProvider implements PropertyProvider {
     }
 
     private static boolean isAspectDisplay(final PositionedStack stack) {
-        if (stack == null || stack.item == null) return false;
+        if (stack.item == null) return false;
         if (!(stack.item.getItem() instanceof ItemAspect)
             && stack.item.getItem() != com.gtnewhorizons.aspectrecipeindex.ModItems.itemAspect) return false;
         // An untagged ARI item is a real ingredient, not an aspect-cost display.
@@ -663,7 +600,7 @@ public class ThaumcraftProvider implements PropertyProvider {
         final List<PositionedStack> other = cached.getOtherStacks();
         final PositionedStack otherDisplay = findAspectDisplay(other, aspect);
         if (otherDisplay != null) return normalizedAspectDisplay(otherDisplay, amount);
-        return syntheticAspectDisplay(aspect, amount, x, y);
+        return MagicResources.aspectDisplay(ModItems.itemAspect, aspect.getTag(), amount, x, y);
     }
 
     private static PositionedStack normalizedAspectDisplay(final PositionedStack source, final int amount) {
@@ -671,11 +608,6 @@ public class ThaumcraftProvider implements PropertyProvider {
         stack.stackSize = Math.max(1, amount);
         stack.setItemDamage(1);
         return new PositionedStack(stack, source.relx, source.rely, false);
-    }
-
-    private static PositionedStack syntheticAspectDisplay(final Aspect aspect, final int amount, final int x,
-        final int y) {
-        return MagicResources.aspectDisplay(ModItems.itemAspect, aspect.getTag(), amount, x, y);
     }
 
 }

@@ -99,7 +99,6 @@ public class ForestryProvider implements PropertyProvider {
 
     @Override
     public boolean canCraft(final IRecipeHandler handler, final int recipeIndex) {
-        if (handler == null) return false;
         return switch (handler) {
             case NEIHandlerBottler _, NEIHandlerCarpenter _, NEIHandlerCentrifuge _,
                  NEIHandlerFabricator _, NEIHandlerFermenter _, NEIHandlerMoistener _,

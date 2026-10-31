@@ -29,7 +29,10 @@ import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.serialization.Serializer;
+import com.sbancuz.plannh.mixins.CachedThaumRecipeAccessor;
+import com.sbancuz.plannh.mixins.InfusionCachedRecipeAccessor;
 import com.sbancuz.plannh.mixins.PositionedStackAccessor;
+import com.sbancuz.plannh.mixins.ResearchInfoAccessor;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.TemplateRecipeHandler;
@@ -61,11 +64,8 @@ class ThaumcraftProviderTest {
             aspects,
             RecipeIngredient.item(false, central),
             List.of(RecipeIngredient.item(false, first), RecipeIngredient.item(false, second))) {};
-        final InfusionRecipeHandler handler = nativeHandler(InfusionRecipeHandler.class);
-        final TemplateRecipeHandler.CachedRecipe cached = nativeCachedRecipe(
-            handler,
-            source,
-            "com.gtnewhorizons.aspectrecipeindex.nei.InfusionRecipeHandler$InfusionCachedRecipe");
+        final AccessorInfusionHandler handler = nativeHandler(AccessorInfusionHandler.class);
+        final TemplateRecipeHandler.CachedRecipe cached = handler.new Recipe(source);
         final List<PositionedStack> real = new ArrayList<>();
         for (final PositionedStack stack : cached.getIngredients()) {
             if (stack.item.getItem() != ModItems.itemAspect) real.add(stack);
@@ -93,6 +93,7 @@ class ThaumcraftProviderTest {
                 .stream()
                 .anyMatch(port -> port.getType() == RecipePropertyAPI.ITEM));
         assertEquals(3, context.get(ThaumcraftProvider.ESSENTIA_UNITS));
+        assertEquals(2, context.get(ThaumcraftProvider.INSTABILITY));
         assertEquals(
             1,
             context.outputs()
@@ -109,11 +110,8 @@ class ThaumcraftProviderTest {
             new AspectList().add(Aspect.AIR, 3),
             RecipeIngredient.item(false, central),
             List.of()) {};
-        final InfusionRecipeHandler handler = nativeHandler(InfusionRecipeHandler.class);
-        final var cached = nativeCachedRecipe(
-            handler,
-            source,
-            "com.gtnewhorizons.aspectrecipeindex.nei.InfusionRecipeHandler$InfusionCachedRecipe");
+        final AccessorInfusionHandler handler = nativeHandler(AccessorInfusionHandler.class);
+        final var cached = handler.new Recipe(source);
         installCachedRecipe(handler, cached);
         final RecipeContext.Builder recipe = RecipeContext.builder();
         new ThaumcraftProvider(_ -> true).populate(recipe, handler, 0);
@@ -142,11 +140,8 @@ class ThaumcraftProviderTest {
             "x",
             'x',
             new ItemStack(ProviderTestFixture.item("arcane_input")));
-        final ShapedArcaneRecipeHandler handler = nativeHandler(ShapedArcaneRecipeHandler.class);
-        final TemplateRecipeHandler.CachedRecipe cached = nativeCachedRecipe(
-            handler,
-            source,
-            "com.gtnewhorizons.aspectrecipeindex.nei.arcaneworkbench.ShapedArcaneRecipeHandler$ArcaneShapedCachedRecipe");
+        final AccessorArcaneHandler handler = nativeHandler(AccessorArcaneHandler.class);
+        final TemplateRecipeHandler.CachedRecipe cached = handler.new Recipe(source);
         installCachedRecipe(handler, cached);
 
         final RecipeContext.Builder builder = RecipeContext.builder();
@@ -177,22 +172,14 @@ class ThaumcraftProviderTest {
             "x",
             'x',
             new ItemStack(ProviderTestFixture.item("free_arcane_input")));
-        final ShapedArcaneRecipeHandler handler = nativeHandler(ShapedArcaneRecipeHandler.class);
-        final var cached = nativeCachedRecipe(
-            handler,
-            source,
-            "com.gtnewhorizons.aspectrecipeindex.nei.arcaneworkbench.ShapedArcaneRecipeHandler$ArcaneShapedCachedRecipe");
+        final AccessorArcaneHandler handler = nativeHandler(AccessorArcaneHandler.class);
+        final var cached = handler.new Recipe(source);
         installCachedRecipe(handler, cached);
-        final Field prerequisites = Class
-            .forName("com.gtnewhorizons.aspectrecipeindex.nei.TemplateThaumHandler$CachedThaumRecipe")
-            .getDeclaredField("prereqs");
-        prerequisites.setAccessible(true);
-        @SuppressWarnings("unchecked")
-        final List<ResearchInfo> research = (List<ResearchInfo>) prerequisites.get(cached);
+        final List<ResearchInfo> research = cached.plannh$getPrereqs();
         research.clear();
         assertTrue(new ThaumcraftProvider(_ -> false).canCraft(handler, 0));
-        research.add(new ResearchInfo(new ResearchItem("rod", "TEST"), true));
-        research.add(new ResearchInfo(new ResearchItem("cap", "TEST"), true));
+        research.add(new AccessorResearchInfo(new ResearchItem("rod", "TEST")));
+        research.add(new AccessorResearchInfo(new ResearchItem("cap", "TEST")));
         assertFalse(new ThaumcraftProvider("rod"::equals).canCraft(handler, 0));
         assertTrue(new ThaumcraftProvider(_ -> true).canCraft(handler, 0));
     }
@@ -262,27 +249,67 @@ class ThaumcraftProviderTest {
         }
     }
 
-    private static TemplateRecipeHandler.CachedRecipe nativeCachedRecipe(final Object handler, final Object source,
-        final String className) throws Exception {
-        final Class<?> cachedType = Class.forName(className);
-        for (final var constructor : cachedType.getDeclaredConstructors()) {
-            final Class<?>[] parameters = constructor.getParameterTypes();
-            if (parameters.length != 3 || !parameters[0].isInstance(handler)
-                || !parameters[1].isInstance(source)
-                || parameters[2] != boolean.class) continue;
-            constructor.setAccessible(true);
-            final TemplateRecipeHandler.CachedRecipe cached = (TemplateRecipeHandler.CachedRecipe) constructor
-                .newInstance(handler, source, true);
-            final Field prereqs = Class
-                .forName("com.gtnewhorizons.aspectrecipeindex.nei.TemplateThaumHandler$CachedThaumRecipe")
-                .getDeclaredField("prereqs");
-            prereqs.setAccessible(true);
-            @SuppressWarnings("unchecked")
-            final List<ResearchInfo> research = (List<ResearchInfo>) prereqs.get(cached);
-            research.add(new ResearchInfo(new ResearchItem("TC_TEST", "TEST"), true));
-            return cached;
+    private static final class AccessorInfusionHandler extends InfusionRecipeHandler {
+
+        private final class Recipe extends InfusionCachedRecipe
+            implements CachedThaumRecipeAccessor, InfusionCachedRecipeAccessor {
+
+            private Recipe(final InfusionRecipe source) {
+                super(source, true);
+                prereqs.add(new AccessorResearchInfo(new ResearchItem("TC_TEST", "TEST")));
+            }
+
+            @Override
+            public AspectList plannh$getAspects() {
+                return getAspects();
+            }
+
+            @Override
+            public List<ResearchInfo> plannh$getPrereqs() {
+                return prereqs;
+            }
+
+            @Override
+            public int plannh$getInstability() {
+                return getInstability();
+            }
         }
-        throw new NoSuchMethodException(className);
+    }
+
+    private static final class AccessorArcaneHandler extends ShapedArcaneRecipeHandler {
+
+        private final class Recipe extends ArcaneShapedCachedRecipe implements CachedThaumRecipeAccessor {
+
+            private Recipe(final ShapedArcaneRecipe source) {
+                super(source, true);
+                prereqs.add(new AccessorResearchInfo(new ResearchItem("TC_TEST", "TEST")));
+            }
+
+            @Override
+            public AspectList plannh$getAspects() {
+                return getAspects();
+            }
+
+            @Override
+            public List<ResearchInfo> plannh$getPrereqs() {
+                return prereqs;
+            }
+        }
+    }
+
+    private static final class AccessorResearchInfo extends ResearchInfo implements ResearchInfoAccessor {
+
+        private final ResearchItem researchItem;
+
+        private AccessorResearchInfo(final ResearchItem researchItem) {
+            super(researchItem, true);
+            this.researchItem = researchItem;
+        }
+
+        @Override
+        public ResearchItem plannh$getResearchItem() {
+            return researchItem;
+        }
     }
 
     private static PositionedStack display() {

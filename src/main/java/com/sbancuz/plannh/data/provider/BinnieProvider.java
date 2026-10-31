@@ -246,19 +246,21 @@ public final class BinnieProvider implements PropertyProvider {
         if (recipeIndex >= recipes.size()) return;
         final var cached = (IncubatorRecipeHandler.CachedIncubatorRecipe) recipes.get(recipeIndex);
 
-        float tickChance = 1.0f;
+        float tickChance1 = 1.0f;
         if (cached.input != null && cached.input.item != null) {
             for (final IIncubatorRecipe incubatorRecipe : Incubator.RECIPES) {
                 final ItemStack recipeInput = incubatorRecipe.getInputStack();
                 if (recipeInput != null && recipeInput.isItemEqual(cached.input.item)) {
-                    tickChance = incubatorRecipe.getChance();
+                    tickChance1 = incubatorRecipe.getChance();
                     break;
                 }
             }
         }
-        if (tickChance <= 0) tickChance = 1.0f;
+        if (tickChance1 <= 0) tickChance1 = 1.0f;
+        float tickChance = tickChance1;
         final int ticks = Math.max(1, (int) (1.0f / tickChance));
         recipe.property(RecipePropertyAPI.DURATION_TICKS, ticks);
         recipe.property(CoFHCompat.RF_COST, (long) (Incubator.ENERGY_PER_TICK / tickChance));
     }
+
 }

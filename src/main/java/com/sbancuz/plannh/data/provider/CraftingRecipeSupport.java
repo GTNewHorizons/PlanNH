@@ -65,41 +65,37 @@ record CraftingRecipeSupport(IRecipeHandler handler, int recipeIndex) {
     void addContainerReturns(final RecipeContext.Builder recipe) {
         int index = 0;
         for (final PositionedStack ingredient : handler.getIngredientStacks(recipeIndex)) {
-            if (ingredient == null || !isUsable(ingredient.item)) continue;
+            if (ingredient == null || ingredient.item.getItem() == null) continue;
             final ItemStack consumed = ingredient.item.copy();
             consumed.stackSize = 1;
             if (!consumed.getItem()
                 .hasContainerItem(consumed)) continue;
             final ItemStack returned = consumed.getItem()
                 .getContainerItem(consumed);
-            if (!isUsable(returned) || returned.stackSize <= 0) continue;
+            if (returned.getItem() == null || returned.stackSize <= 0) continue;
             recipe.output(Port.itemPort(new PositionedStack(returned, 119 + index % 3 * 18, 46 + index / 3 * 18)));
             index++;
         }
     }
 
     private static boolean hasUsableStack(final PositionedStack stack) {
-        if (stack == null) return false;
-        if (isUsable(stack.item)) return true;
+        if (stack.item.getItem() != null) return true;
         if (stack.items == null) return false;
         for (final ItemStack permutation : stack.items) {
-            if (isUsable(permutation)) return true;
+            if (permutation.getItem() != null) return true;
         }
         return false;
     }
 
     private static void selectMissingPermutation(final PositionedStack stack) {
-        if (stack == null || isUsable(stack.item) || stack.items == null) return;
+        if (stack.item.getItem() != null || stack.items == null) return;
         for (int index = 0; index < stack.items.length; index++) {
             final ItemStack permutation = stack.items[index];
-            if (isUsable(permutation)) {
+            if (permutation.getItem() != null) {
                 stack.setPermutationToRender(index);
                 return;
             }
         }
     }
 
-    private static boolean isUsable(final ItemStack stack) {
-        return stack != null && stack.getItem() != null;
-    }
 }

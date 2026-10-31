@@ -48,16 +48,24 @@ public final class TinkersConstructProvider implements PropertyProvider {
 
     @Nonnull
     private IDrawable icon(final IRecipeHandler handler, final int recipeIndex) {
-        if (handler instanceof RecipeHandlerDryingRack)
-            return TinkerArmor.dryingRack == null ? GuiTextures.PROCESSOR : new ItemDrawable(TinkerArmor.dryingRack);
-        if (handler instanceof RecipeHandlerToolMaterials)
-            return TinkerTools.toolForge == null ? GuiTextures.PROCESSOR : new ItemDrawable(TinkerTools.toolForge);
-        if (handler instanceof RecipeHandlerCastingTable)
-            return TinkerSmeltery.searedBlock == null ? GuiTextures.PROCESSOR
-                : new ItemDrawable(TinkerSmeltery.searedBlock, 0);
-        if (handler instanceof RecipeHandlerCastingBasin)
-            return TinkerSmeltery.searedBlock == null ? GuiTextures.PROCESSOR
-                : new ItemDrawable(TinkerSmeltery.searedBlock, 2);
+        switch (handler) {
+            case RecipeHandlerDryingRack recipeHandlerDryingRack -> {
+                return TinkerArmor.dryingRack == null ? GuiTextures.PROCESSOR : new ItemDrawable(TinkerArmor.dryingRack);
+            }
+            case RecipeHandlerToolMaterials recipeHandlerToolMaterials -> {
+                return TinkerTools.toolForge == null ? GuiTextures.PROCESSOR : new ItemDrawable(TinkerTools.toolForge);
+            }
+            case RecipeHandlerCastingTable recipeHandlerCastingTable -> {
+                return TinkerSmeltery.searedBlock == null ? GuiTextures.PROCESSOR
+                    : new ItemDrawable(TinkerSmeltery.searedBlock, 0);
+            }
+            case RecipeHandlerCastingBasin recipeHandlerCastingBasin -> {
+                return TinkerSmeltery.searedBlock == null ? GuiTextures.PROCESSOR
+                    : new ItemDrawable(TinkerSmeltery.searedBlock, 2);
+            }
+            default -> {
+            }
+        }
         if (TinkerSmeltery.smeltery == null) return GuiTextures.PROCESSOR;
         return new ItemDrawable(TinkerSmeltery.smeltery, 0);
     }

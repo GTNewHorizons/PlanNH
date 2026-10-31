@@ -69,8 +69,7 @@ public final class AE2Provider implements PropertyProvider {
         return PowerUnits.AE.convertTo(PowerUnits.RF, ae);
     }
 
-    private record InscriberModel(int maxCards, int maxProcessingTime, int basePowerPerTick, int baseSpeed,
-        int animationTicks) {}
+    private record InscriberModel(int maxCards, int maxProcessingTime, int basePowerPerTick, int baseSpeed) {}
 
     private final MachineProfile QUARTZ_GRINDER = MachineProfile.builder("ae2:quartz_grinder")
         .setting(Settings.MACHINES)
@@ -92,22 +91,16 @@ public final class AE2Provider implements PropertyProvider {
                 .effect(Effects.duration((cfg, ctx) -> {
                     final int cards = ACCELERATION_CARDS.count(cfg, ctx);
                     final int speed = model.baseSpeed() + cards;
-                    final int processingTicks = model.animationTicks() == 0
-                        ? (model.maxProcessingTime() + speed - 1) / speed
-                        : model.maxProcessingTime() / speed + 1;
-                    return processingTicks + model.animationTicks();
+                    return (model.maxProcessingTime() + speed - 1) / speed;
                 })
                     .withTotalCost(CoFHCompat.RF_COST, (current, cfg, ctx) -> {
                         final int cards = ACCELERATION_CARDS.count(cfg, ctx);
                         final int speed = model.baseSpeed() + cards;
-                        final int processingTicks = current.durationTicks() - model.animationTicks();
-                        return rfFromAe((long) model.basePowerPerTick() * speed * processingTicks);
+                        return rfFromAe((long) model.basePowerPerTick() * speed * current.durationTicks());
                     })
                     .withCostPerT(CoFHCompat.RF_PER_T, (current, cfg, ctx) -> current.energyPerT())
-                    .applyParallelism())
-                .icon((_, _) -> icon(model.animationTicks() == 0 ? "ae2:advanced_inscriber" : "ae2:inscriber")));
+                    .applyParallelism()));
 
-    // TODO: Open an upstream AE2 PR to expose each machine's acceleration-card capacity.
     private final MachineProfile INSCRIBER = INSCRIBER_FACTORY
         .builder(
             "ae2:inscriber",
@@ -115,8 +108,9 @@ public final class AE2Provider implements PropertyProvider {
                 3,
                 TileInscriber.MAX_PROCESSING_TIME,
                 TileInscriber.BASE_POWER_PER_TICK,
-                TileInscriber.BASE_SPEED,
-                16)) // TileInscriber performs its smash animation over 16 ticks.
+                TileInscriber.BASE_SPEED
+                ))
+        .icon((_, _) -> icon("ae2:inscriber"))
         .build();
 
     private final MachineProfile ADVANCED_INSCRIBER = INSCRIBER_FACTORY
@@ -126,8 +120,9 @@ public final class AE2Provider implements PropertyProvider {
                 5,
                 TileAdvancedInscriber.MAX_PROCESSING_TIME,
                 TileAdvancedInscriber.BASE_POWER_PER_TICK,
-                TileAdvancedInscriber.BASE_SPEED,
-                0))
+                TileAdvancedInscriber.BASE_SPEED
+                ))
+        .icon((_, _) -> icon("ae2:advanced_inscriber"))
         .build();
 
     private final MachineProfile MOLECULAR_ASSEMBLER = MachineProfile.builder("ae2:molecular_assembler")

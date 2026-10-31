@@ -51,6 +51,8 @@ import forestry.apiculture.genetics.Bee;
 import forestry.core.config.Constants;
 import forestry.plugins.PluginApiculture;
 
+import javax.annotation.Nullable;
+
 /** Shared bee extraction and calculations, plus Forestry's ordinary housings. */
 public class BeeProvider implements PropertyProvider {
 
@@ -67,7 +69,6 @@ public class BeeProvider implements PropertyProvider {
 
     /** The supplier overload keeps headless tests independent of the client singleton. */
     public BeeProvider(final Supplier<IBeekeepingMode> modeSupplier) {
-        if (modeSupplier == null) throw new IllegalArgumentException("Bee mode supplier is required");
         this.modeSupplier = modeSupplier;
         housingFactory = createHousingFactory();
         profiles = List.of(
@@ -108,19 +109,11 @@ public class BeeProvider implements PropertyProvider {
         return housingFactory.builder(id, housing);
     }
 
-    record Housing(BiFunction<MachineConfig, RecipeContext, IBeeModifier> modifier, int frameSlots,
+    public record Housing(BiFunction<MachineConfig, RecipeContext, IBeeModifier> modifier, int frameSlots,
         BiFunction<MachineConfig, RecipeContext, HousingExtras> extras) {
-
-        Housing {
-            if (modifier == null) throw new IllegalArgumentException("Bee housing modifier is required");
-            if (extras == null) throw new IllegalArgumentException("Bee housing extras are required");
-            if (frameSlots < 0 || frameSlots > BeeSettings.FRAMES.size())
-                throw new IllegalArgumentException("Invalid frame slot count: " + frameSlots);
-        }
 
         Housing(final IBeeModifier modifier, final int frameSlots) {
             this((cfg, ctx) -> modifier, frameSlots, (cfg, ctx) -> HousingExtras.EMPTY);
-            if (modifier == null) throw new IllegalArgumentException("Bee housing modifier is required");
         }
 
         Housing(final BiFunction<MachineConfig, RecipeContext, IBeeModifier> modifier, final int frameSlots) {
@@ -130,7 +123,6 @@ public class BeeProvider implements PropertyProvider {
         Housing(final IBeeModifier modifier, final int frameSlots,
             final BiFunction<MachineConfig, RecipeContext, HousingExtras> extras) {
             this((cfg, ctx) -> modifier, frameSlots, extras);
-            if (modifier == null) throw new IllegalArgumentException("Bee housing modifier is required");
         }
     }
 
@@ -140,14 +132,6 @@ public class BeeProvider implements PropertyProvider {
 
         HousingExtras(final List<IBeeModifier> modifiers, final double rfPerWorkCycle) {
             this(modifiers, rfPerWorkCycle, 0);
-        }
-
-        HousingExtras {
-            if (modifiers == null) throw new IllegalArgumentException("Bee housing modifiers are required");
-            if (!Double.isFinite(rfPerWorkCycle) || rfPerWorkCycle < 0)
-                throw new IllegalArgumentException("Invalid bee housing energy");
-            if (!Double.isFinite(rfPerOperation) || rfPerOperation < 0)
-                throw new IllegalArgumentException("Invalid bee operation energy");
         }
     }
 
@@ -242,7 +226,7 @@ public class BeeProvider implements PropertyProvider {
         return defaultMode(client.theWorld, client.thePlayer == null ? null : client.thePlayer.getGameProfile());
     }
 
-    static IBeekeepingMode defaultMode(final World world, final GameProfile player) {
+    static IBeekeepingMode defaultMode(final @Nullable World world, final @Nullable  GameProfile player) {
         if (world != null && !world.isRemote) return BeeManager.beeRoot.getBeekeepingMode(world);
 
         // Forestry synchronizes the player's tracker, not the client's common world tracker.

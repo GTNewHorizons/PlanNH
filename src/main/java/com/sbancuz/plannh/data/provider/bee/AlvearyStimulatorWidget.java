@@ -66,7 +66,10 @@ public final class AlvearyStimulatorWidget extends Flow {
                         })
                         .filter(Objects::nonNull)
                         .toList(),
-                    () -> AlvearyStimulators.resetBoard(cfg, group))
+                    () -> {
+                        cfg.reset(AlvearyStimulators.BOARD_TYPES.get(group));
+                        for (final ChoiceSettingDef<String> setting : AlvearyStimulators.CIRCUITS.get(group)) cfg.reset(setting);
+                    })
                 .name("alveary.stimulator.board")
                 .size(SLOT)
                 .hint("plannh.gui.bees.board_hint")
@@ -145,13 +148,21 @@ public final class AlvearyStimulatorWidget extends Flow {
     }
 
     private boolean acceptsBoardOrTube(final ItemStack stack) {
-        if (AlvearyStimulators.canSetBoard(cfg, group, stack)) return true;
+        if (AlvearyStimulators.canSetBoard(group, stack)) return true;
         return firstTubeSocket(stack) >= 0;
     }
 
     private void selectBoardOrTube(final ItemStack stack) {
-        if (AlvearyStimulators.canSetBoard(cfg, group, stack)) {
-            AlvearyStimulators.setBoard(cfg, group, stack);
+        if (AlvearyStimulators.canSetBoard(group, stack)) {
+            final ICircuit[] circuits = AlvearyStimulators.decodeBoard(stack);
+            if (circuits == null) throw new IllegalArgumentException("Invalid alveary stimulator board");
+            cfg.set(AlvearyStimulators.BOARD_TYPES.get(group), EnumCircuitBoardType.VALUES[stack.getItemDamage()]);
+
+            final List<ChoiceSettingDef<String>> sockets = AlvearyStimulators.CIRCUITS.get(group);
+            for (int socket = 0; socket < AlvearyStimulators.SOCKETS; socket++) {
+                final ICircuit circuit = circuits[socket];
+                cfg.set(sockets.get(socket), circuit == null ? "" : circuit.getUID());
+            }
         } else {
             final int socket = firstTubeSocket(stack);
             if (socket < 0) return;

@@ -1,6 +1,7 @@
 package com.sbancuz.plannh.data.provider.bee;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -256,9 +257,7 @@ public final class GendustryProvider extends BeeProvider {
         }
         return choices.values()
             .stream()
-            .sorted(
-                (left, right) -> left.getDisplayName()
-                    .compareTo(right.getDisplayName()))
+            .sorted(Comparator.comparing(ItemStack::getDisplayName))
             .toList();
     }
 
@@ -270,18 +269,13 @@ public final class GendustryProvider extends BeeProvider {
 
     public static boolean acceptsUpgrade(final int slot, final MachineConfig cfg, final RecipeContext ctx,
         final ItemStack candidate) {
-        return candidate != null && candidate.getItem() instanceof IApiaryUpgrade
-            && maximumUpgradeCount(slot, cfg, ctx, candidate) > 0;
-    }
-
-    public static int maximumUpgradeCount(final int slot, final MachineConfig cfg, final RecipeContext ctx) {
-        final ItemStack selected = cfg.value(UPGRADES.get(slot), ctx);
-        return maximumUpgradeCount(slot, cfg, ctx, selected);
+        return candidate.getItem() instanceof IApiaryUpgrade && maximumUpgradeCount(slot, cfg, ctx, candidate) > 0;
     }
 
     public static int maximumUpgradeCount(final int slot, final MachineConfig cfg, final RecipeContext ctx,
         final ItemStack candidate) {
-        if (candidate == null || !(candidate.getItem() instanceof IApiaryUpgrade)) return MAX_UPGRADE_COUNT;
+        if (!(candidate.getItem() instanceof IApiaryUpgrade)) return MAX_UPGRADE_COUNT;
+
         final List<ItemStack> installed = new ArrayList<>();
         for (int index = 0; index < UPGRADES.size(); index++) {
             if (index == slot) continue;
@@ -296,6 +290,7 @@ public final class GendustryProvider extends BeeProvider {
         final IApiaryUpgrade upgrade = (IApiaryUpgrade) candidate.getItem();
         int maximum = Math.min(MAX_UPGRADE_COUNT, candidate.getMaxStackSize());
         final int nativeMaximum = upgrade.getMaxNumber(candidate);
+
         if (nativeMaximum <= 0) return 0;
         int sameTotal = 0;
         for (final ItemStack other : installed) {
@@ -322,11 +317,10 @@ public final class GendustryProvider extends BeeProvider {
 
     private static HousingExtras resolveUpgrades(final MachineConfig cfg, final RecipeContext ctx) {
         final ApiaryModifiers modifiers = readUpgrades(cfg, ctx);
-        final double rfPerTick = rfPerTick(
-            MachineApiary.baseMjPerTick(),
-            modifiers.energy,
-            Tuning.getSection("Power")
-                .getFloat("RF_MJ_Ratio"));
+        final double baseMjPerTick = MachineApiary.baseMjPerTick();
+        final double rfPerMj = Tuning.getSection("Power")
+            .getFloat("RF_MJ_Ratio");
+        final double rfPerTick = baseMjPerTick * (double) modifiers.energy * rfPerMj;
         return new HousingExtras(
             List.of(new IndustrialBeeModifier(modifiers)),
             rfPerTick * PluginApiculture.ticksPerBeeWorkCycle,
@@ -336,8 +330,8 @@ public final class GendustryProvider extends BeeProvider {
     private static ApiaryModifiers readUpgrades(final MachineConfig cfg, final RecipeContext ctx) {
         final ApiaryModifiers modifiers = new ApiaryModifiers();
         final List<ItemStack> selected = new ArrayList<>();
-        for (int index = 0; index < UPGRADES.size(); index++) {
-            final ItemStack selectedStack = cfg.value(UPGRADES.get(index), ctx);
+        for (ChoiceSettingDef<ItemStack> upgrade : UPGRADES) {
+            final ItemStack selectedStack = cfg.value(upgrade, ctx);
             if (selectedStack == null || !(selectedStack.getItem() instanceof IApiaryUpgrade)) continue;
             final ItemStack stack = selectedStack.copy();
             final int maximum = maximumUpgradeCount(stack, selected);
@@ -345,31 +339,9 @@ public final class GendustryProvider extends BeeProvider {
             stack.stackSize = Math.clamp(stack.stackSize, 1, maximum);
             selected.add(stack);
         }
-        validateUpgradeStacks(selected);
+
         for (final ItemStack stack : selected) ((IApiaryUpgrade) stack.getItem()).applyModifiers(modifiers, stack);
         return modifiers;
-    }
-
-    static void validateUpgradeStacks(final List<ItemStack> selected) {
-        final Map<Long, Integer> installed = new HashMap<>();
-        for (final ItemStack stack : selected) {
-            if (stack == null || !(stack.getItem() instanceof IApiaryUpgrade upgrade))
-                throw new IllegalArgumentException("Selected item is not a Gendustry apiary upgrade");
-            if (stack.stackSize <= 0 || stack.stackSize > stack.getMaxStackSize())
-                throw new IllegalArgumentException("Invalid Gendustry apiary upgrade stack");
-            final int total = installed.merge(upgrade.getStackingId(stack), stack.stackSize, Integer::sum);
-            if (total > upgrade.getMaxNumber(stack))
-                throw new IllegalArgumentException("Gendustry apiary upgrade exceeds its limit");
-        }
-    }
-
-    static double rfPerTick(final double baseMjPerTick, final double energy, final double rfPerMj) {
-        if (!Double.isFinite(baseMjPerTick) || baseMjPerTick < 0
-            || !Double.isFinite(energy)
-            || energy < 0
-            || !Double.isFinite(rfPerMj)
-            || rfPerMj < 0) throw new IllegalArgumentException("Invalid Gendustry apiary energy configuration");
-        return baseMjPerTick * energy * rfPerMj;
     }
 
     private static final class IndustrialBeeModifier extends DefaultBeeModifier {

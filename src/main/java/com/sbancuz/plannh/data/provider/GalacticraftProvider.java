@@ -168,11 +168,6 @@ public final class GalacticraftProvider implements PropertyProvider {
             .anyMatch(GalacticraftProvider::isArcQualifyingInput);
     }
 
-    static boolean arcFurnaceDoubles(final String inputName, final String outputName) {
-        return outputName.toLowerCase(Locale.ROOT)
-            .contains("ingot") && isArcQualifyingInput(inputName.toLowerCase(Locale.ROOT));
-    }
-
     private static boolean isArcQualifyingInput(final String inputName) {
         return inputName.contains("ore") || inputName.contains("raw")
             || inputName.contains("moon")

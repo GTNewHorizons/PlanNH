@@ -12,6 +12,9 @@
     "GTNEIDefaultHandlerAccessor",
     "RecipeWidgetMixin",
     "PositionedStackMixin",
-    "PositionedStackAccessor"
+    "PositionedStackAccessor",
+    "CachedThaumRecipeAccessor",
+    "InfusionCachedRecipeAccessor",
+    "ResearchInfoAccessor"
   ]
 }
