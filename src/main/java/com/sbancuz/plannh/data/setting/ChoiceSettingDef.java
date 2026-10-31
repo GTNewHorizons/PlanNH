@@ -128,17 +128,17 @@ public class ChoiceSettingDef<T> extends SettingDef<T> {
                         .clamp(stack.stackSize, Math.max(1, minimumCount(cfg, ctx)), maximumCount(cfg, ctx));
                     cfg.set(this, type.cast(stack));
                 },
-                edit)
-                    .picker(
-                        () -> choices.get()
-                            .stream()
-                            .map(value -> (ItemStack) value)
-                            .toList(),
-                        () -> cfg.reset(this))
+                edit).picker(
+                    () -> choices.get()
+                        .stream()
+                        .map(value -> (ItemStack) value)
+                        .toList(),
+                    () -> cfg.reset(this))
                     .hint("plannh.settings.item_choice_hint")
                     .tooltipBuilder(
                         tooltip -> TooltipBuilder.create(tooltip)
-                            .langRow(cfg.isExplicit(this) ? "plannh.settings.choice_manual" : "plannh.settings.choice_auto")
+                            .langRow(
+                                cfg.isExplicit(this) ? "plannh.settings.choice_manual" : "plannh.settings.choice_auto")
                             .flush());
 
             if (counted) widget.scrollHandler(direction -> {
