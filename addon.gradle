@@ -2,7 +2,6 @@
 
 test {
     useJUnitPlatform()
-    systemProperty 'java.awt.headless', 'true'
     testLogging {
         events 'passed', 'skipped', 'failed'
         exceptionFormat 'short'
