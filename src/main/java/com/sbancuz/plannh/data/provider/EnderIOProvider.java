@@ -87,15 +87,13 @@ public class EnderIOProvider implements PropertyProvider {
 
     @Nonnull
     private IDrawable icon(final IRecipeHandler handler, final int recipeIndex) {
-        if (handler != null) {
-            for (final Map.Entry<Class<?>, Supplier<Block>> entry : ICONS.entrySet()) {
-                if (entry.getKey()
-                    .isAssignableFrom(handler.getClass())) {
-                    final Block block = entry.getValue()
-                        .get();
-                    if (block != null) return new ItemDrawable(block);
-                    break;
-                }
+        for (final Map.Entry<Class<?>, Supplier<Block>> entry : ICONS.entrySet()) {
+            if (entry.getKey()
+                .isAssignableFrom(handler.getClass())) {
+                final Block block = entry.getValue()
+                    .get();
+                if (block != null) return new ItemDrawable(block);
+                break;
             }
         }
         return GuiTextures.PROCESSOR;
