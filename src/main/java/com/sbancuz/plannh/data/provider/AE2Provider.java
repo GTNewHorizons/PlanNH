@@ -108,8 +108,7 @@ public final class AE2Provider implements PropertyProvider {
                 3,
                 TileInscriber.MAX_PROCESSING_TIME,
                 TileInscriber.BASE_POWER_PER_TICK,
-                TileInscriber.BASE_SPEED
-                ))
+                TileInscriber.BASE_SPEED))
         .icon((_, _) -> icon("ae2:inscriber"))
         .build();
 
@@ -120,8 +119,7 @@ public final class AE2Provider implements PropertyProvider {
                 5,
                 TileAdvancedInscriber.MAX_PROCESSING_TIME,
                 TileAdvancedInscriber.BASE_POWER_PER_TICK,
-                TileAdvancedInscriber.BASE_SPEED
-                ))
+                TileAdvancedInscriber.BASE_SPEED))
         .icon((_, _) -> icon("ae2:advanced_inscriber"))
         .build();
 

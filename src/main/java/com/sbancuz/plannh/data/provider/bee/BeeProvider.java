@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
+import javax.annotation.Nullable;
+
 import net.bdew.neiaddons.forestry.bees.BeeProduceHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.item.ItemStack;
@@ -50,8 +52,6 @@ import forestry.apiculture.blocks.BlockApicultureType;
 import forestry.apiculture.genetics.Bee;
 import forestry.core.config.Constants;
 import forestry.plugins.PluginApiculture;
-
-import javax.annotation.Nullable;
 
 /** Shared bee extraction and calculations, plus Forestry's ordinary housings. */
 public class BeeProvider implements PropertyProvider {
@@ -226,7 +226,7 @@ public class BeeProvider implements PropertyProvider {
         return defaultMode(client.theWorld, client.thePlayer == null ? null : client.thePlayer.getGameProfile());
     }
 
-    static IBeekeepingMode defaultMode(final @Nullable World world, final @Nullable  GameProfile player) {
+    static IBeekeepingMode defaultMode(final @Nullable World world, final @Nullable GameProfile player) {
         if (world != null && !world.isRemote) return BeeManager.beeRoot.getBeekeepingMode(world);
 
         // Forestry synchronizes the player's tracker, not the client's common world tracker.

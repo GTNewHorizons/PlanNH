@@ -68,7 +68,8 @@ public final class AlvearyStimulatorWidget extends Flow {
                         .toList(),
                     () -> {
                         cfg.reset(AlvearyStimulators.BOARD_TYPES.get(group));
-                        for (final ChoiceSettingDef<String> setting : AlvearyStimulators.CIRCUITS.get(group)) cfg.reset(setting);
+                        for (final ChoiceSettingDef<String> setting : AlvearyStimulators.CIRCUITS.get(group))
+                            cfg.reset(setting);
                     })
                 .name("alveary.stimulator.board")
                 .size(SLOT)

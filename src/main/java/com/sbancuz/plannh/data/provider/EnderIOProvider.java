@@ -104,7 +104,9 @@ public class EnderIOProvider implements PropertyProvider {
     private static final String PROFILE_ID = "enderio";
 
     private static Capacitors capacitorType(final ItemStack stack) {
-        if (stack.getItem() == null || stack.getItem() != EnderIO.itemBasicCapacitor || stack.getItemDamage() < 0 || stack.getItemDamage() >= Capacitors.VALUES.length) return Capacitors.BASIC_CAPACITOR;
+        if (stack.getItem() == null || stack.getItem() != EnderIO.itemBasicCapacitor
+            || stack.getItemDamage() < 0
+            || stack.getItemDamage() >= Capacitors.VALUES.length) return Capacitors.BASIC_CAPACITOR;
         return Capacitors.VALUES[stack.getItemDamage()];
     }
 

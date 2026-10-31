@@ -294,8 +294,7 @@ public final class AlvearyStimulators {
 
     private static boolean validCircuitChange(final MachineConfig cfg, final RecipeContext ctx, final int group,
         final int socket, final String uid) {
-        if (group < 0 || group >= CIRCUITS.size() || socket < 0 || socket >= SOCKETS)
-            return false;
+        if (group < 0 || group >= CIRCUITS.size() || socket < 0 || socket >= SOCKETS) return false;
         final EnumCircuitBoardType type = boardType(cfg, ctx, group);
         if (socket >= type.getSockets()) return false;
 
