@@ -7,6 +7,7 @@ import com.cleanroommc.modularui.drawable.text.TextRenderer;
 import com.cleanroommc.modularui.value.IntValue;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.sbancuz.plannh.data.MachineConfig;
+import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
 import lombok.Getter;
@@ -30,12 +31,8 @@ public class IntegerSettingDef extends SettingDef<Integer> {
         return TooltipTheme.Role.TUNABLE;
     }
 
-    private int getMaxWidth() {
-        return fieldWidth(min, max);
-    }
-
     public static int fieldWidth(final int min, final int max) {
-        return fieldWidth(Long.toString(widest(min, max)));
+        return fieldWidth(Long.toString(Math.max(Math.abs((long) min), Math.abs((long) max))));
     }
 
     /** The same field, measured against a value that is not an int - a rate, say. */
@@ -44,16 +41,20 @@ public class IntegerSettingDef extends SettingDef<Integer> {
             .getStringWidth(widest) + PADDING;
     }
 
-    private static long widest(final int min, final int max) {
-        return Math.max(Math.abs((long) min), Math.abs((long) max));
-    }
-
     @Override
-    public IWidget settingsWidget(final MachineConfig config, final Consumer<Runnable> edit) {
+    public IWidget settingsWidget(final MachineConfig cfg, final RecipeContext ctx, final Consumer<Runnable> edit) {
+        final int minimum = cfg.getProfile()
+            .minimum(this);
+        final int maximum = cfg.getProfile()
+            .maximum(this);
         return new TextFieldWidget().name("settings.int")
-            .width(getMaxWidth())
-            .value(new IntValue.Dynamic(() -> config.get(this), val -> edit.accept(() -> config.set(this, val))))
-            .numbersInt(min, max)
+            .width(fieldWidth(minimum, maximum))
+            .value(
+                new IntValue.Dynamic(
+                    () -> cfg.getProfile()
+                        .value(this, cfg, ctx),
+                    val -> edit.accept(() -> cfg.set(this, val))))
+            .numbersInt(minimum, maximum)
             .formatAsInteger(true);
     }
 

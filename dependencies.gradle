@@ -39,7 +39,7 @@ dependencies {
     api("com.github.GTNewHorizons:waila:1.19.34:dev")
     api("com.github.GTNewHorizons:NotEnoughItems:2.8.159-GTNH:dev")
 
-    // implementation for testing and dev purposes, revert to compileOnly when complete
+    // Optional mod integrations
     compileOnly("com.github.GTNewHorizons:EnderIO:2.10.49:dev")
     compileOnly("com.github.GTNewHorizons:Botania:1.13.38-GTNH:dev")
     compileOnly(rfg.deobf("thaumcraft:Thaumcraft:1.7.10-4.2.3.5:dev"))
@@ -53,9 +53,13 @@ dependencies {
     compileOnly("com.github.GTNewHorizons:Binnie:2.6.48:dev")
     compileOnly("com.github.GTNewHorizons:BloodMagic:1.9.14:dev")
     compileOnly("com.github.GTNewHorizons:Galacticraft:3.4.34-GTNH:dev")
-    compileOnly("com.github.GTNewHorizons:gendustry:1.9.13-GTNH:dev")
+    compileOnly("com.github.GTNewHorizons:gendustry:1.9.13-GTNH:dev") {
+        exclude group: 'com.mod-buildcraft', module: 'buildcraft'
+    }
     compileOnly("net.glease:tc4recipelib:1.5.37:dev")
     compileOnly("com.github.GTNewHorizons:ForestryMC:4.11.39:dev")
+    compileOnly("com.github.GTNewHorizons:MagicBees:2.10.7-GTNH:dev")
+    compileOnly("com.github.GTNewHorizons:neiaddons:1.18.1:dev")
     compileOnly("ganymedes01.etfuturum:Et-Futurum-Requiem:2.6.45-GTNH:dev")
     compileOnly("com.github.GTNewHorizons:NEI-Integration:1.5.3:dev")
     compileOnly("com.github.GTNewHorizons:Draconic-Evolution:1.5.34-GTNH:dev")
@@ -66,6 +70,42 @@ dependencies {
     compileOnly("com.github.GTNewHorizons:GT5-Unofficial:5.09.54.221:dev")
     compileOnly("com.github.GTNewHorizons:Applied-Energistics-2-Unofficial:rv3-beta-999-GTNH:dev")
     compileOnly("com.github.GTNewHorizons:twilightforest:2.7.44:dev")
+    compileOnly("com.github.GTNewHorizons:ProjectRed:4.12.47-GTNH:dev")
+
+    // Development runtime only; optional mods are not published as dependencies.
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:EnderIO:2.10.49:dev")
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:Botania:1.13.38-GTNH:dev")
+    runtimeOnlyNonPublishable(rfg.deobf("thaumcraft:Thaumcraft:1.7.10-4.2.3.5:dev"))
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:AspectRecipeIndex:1.1.5:dev")
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:LogisticsPipes:1.5.36-GTNH:dev")
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:Random-Things:2.7.11:dev")
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:ThaumicTinkerer:2.12.33:dev")
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:WitchingGadgets:1.8.52-GTNH:dev")
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:Thaumic_Exploration:1.5.29-GTNH:dev")
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:Avaritia:1.100:dev")
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:Binnie:2.6.48:dev")
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:BloodMagic:1.9.14:dev")
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:Galacticraft:3.4.34-GTNH:dev")
+    // LogisticsPipes supplies GTNH BuildCraft; the legacy artifact duplicates all of its mod IDs.
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:gendustry:1.9.13-GTNH:dev") {
+        exclude group: 'com.mod-buildcraft', module: 'buildcraft'
+    }
+    runtimeOnlyNonPublishable("net.glease:tc4recipelib:1.5.37:dev")
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:ForestryMC:4.11.39:dev")
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:MagicBees:2.10.7-GTNH:dev")
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:neiaddons:1.18.1:dev")
+    runtimeOnlyNonPublishable("ganymedes01.etfuturum:Et-Futurum-Requiem:2.6.45-GTNH:dev")
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:NEI-Integration:1.5.3:dev")
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:Draconic-Evolution:1.5.34-GTNH:dev")
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:harvestcraft:1.3.15-GTNH:dev")
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:Gadomancy:1.5.17:dev")
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:ProjectBlue:1.2.11-GTNH:dev")
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:TinkersConstruct:1.14.119-GTNH:dev")
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:GT5-Unofficial:5.09.54.221:dev")
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:Applied-Energistics-2-Unofficial:rv3-beta-999-GTNH:dev")
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:twilightforest:2.7.44:dev")
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:ProjectRed:4.12.47-GTNH:dev")
+
     runtimeOnlyNonPublishable('com.github.GTNewHorizons:Angelica:2.2.31:dev') { transitive = false }
 
     // runtimeOnlyNonPublishable('net.neoforged:render-nurse:0.0.14')
@@ -95,7 +135,6 @@ dependencies {
     ]
     elkDeps.each { dep ->
         shadowImplementation(dep)
-        testImplementation(dep)
     }
     shadowImplementation("org.eclipse.elk:org.eclipse.elk.alg.layered:$elkVersion") {
         exclude group: 'org.eclipse.emf', module: 'org.eclipse.emf.ecore.xmi'
@@ -103,7 +142,30 @@ dependencies {
 
     // Headless test harness (corpus charts are gtnh-flow style YAML)
     testImplementation('org.junit.jupiter:junit-jupiter:5.10.2')
-    testRuntimeOnly('org.junit.platform:junit-platform-launcher:1.10.2')
     testImplementation('org.yaml:snakeyaml:2.2')
+    elkDeps.each { dep ->
+        testImplementation(dep)
+    }
+    testImplementation('com.github.GTNewHorizons:EnderIO:2.10.49:dev') { transitive = false }
+    testImplementation('com.github.GTNewHorizons:Applied-Energistics-2-Unofficial:rv3-beta-999-GTNH:dev') { transitive = false }
+    testImplementation(rfg.deobf('thaumcraft:Thaumcraft:1.7.10-4.2.3.5:dev')) { transitive = false }
+    testImplementation('com.github.GTNewHorizons:AspectRecipeIndex:1.1.5:dev') { transitive = false }
+    testImplementation('net.glease:tc4recipelib:1.5.37:dev') { transitive = false }
+    testImplementation('com.github.GTNewHorizons:gendustry:1.9.13-GTNH:dev') { transitive = false }
+    testImplementation('com.github.GTNewHorizons:ForestryMC:4.11.39:dev') { transitive = false }
+    testImplementation('com.github.GTNewHorizons:MagicBees:2.10.7-GTNH:dev') { transitive = false }
+    testImplementation('com.github.GTNewHorizons:ProjectRed:4.12.47-GTNH:dev') { transitive = false }
+    testImplementation('com.github.GTNewHorizons:MrTJPCore:1.3.6:dev') { transitive = false }
+    testImplementation('org.scala-lang:scala-library:2.11.5') { transitive = false }
+    testImplementation('com.github.GTNewHorizons:neiaddons:1.18.1:dev') { transitive = false }
+
+    testRuntimeOnly('org.junit.platform:junit-platform-launcher:1.10.2')
+    // FML strips this optional MUI screen interface in game; headless dispatch tests load it directly.
+    testRuntimeOnly('curse.maven:neverenoughanimation-1062347:7664003-sources-7663978') { transitive = false }
+    testRuntimeOnly('com.github.GTNewHorizons:lwjgl3ify:3.0.34:api') { transitive = false }
+    testRuntimeOnly('com.github.GTNewHorizons:EnderCore:0.5.15:dev') { transitive = false }
     testRuntimeOnly('it.unimi.dsi:fastutil:8.5.18')
+    testRuntimeOnly('org.joml:joml:1.10.8')
+    testRuntimeOnly('org.lwjgl.lwjgl:lwjgl:2.9.4-nightly-20150209')
+    testRuntimeOnly('com.github.GTNewHorizons:BuildCraft:7.1.63:dev') { transitive = false }
 }

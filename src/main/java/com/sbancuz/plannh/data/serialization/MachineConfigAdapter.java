@@ -1,8 +1,6 @@
 package com.sbancuz.plannh.data.serialization;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
@@ -13,10 +11,7 @@ import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import com.sbancuz.plannh.data.MachineConfig;
-import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.flowchart.balancer.Pin;
-import com.sbancuz.plannh.data.setting.SettingDef;
-import com.sbancuz.plannh.data.setting.Settings;
 
 /**
  * Adds the save-format rules around Gson's reflective {@link MachineConfig} adapter. Ordinary config
@@ -36,15 +31,6 @@ public final class MachineConfigAdapter implements TypeAdapterFactory {
             public void write(final JsonWriter out, final T value) throws IOException {
                 final JsonElement tree = delegate.toJsonTree(value);
                 final JsonObject object = tree.getAsJsonObject();
-                final MachineConfig config = (MachineConfig) value;
-                final Set<String> profileSettings = new HashSet<>();
-                for (final SettingDef<?> def : config.getProfile()
-                    .defs()) profileSettings.add(def.getKey());
-
-                object.getAsJsonObject("settings")
-                    .entrySet()
-                    .removeIf(entry -> !profileSettings.contains(entry.getKey()));
-
                 final JsonObject rates = object.getAsJsonObject("rates")
                     .getAsJsonObject("rates");
                 rates.entrySet()
@@ -56,7 +42,13 @@ public final class MachineConfigAdapter implements TypeAdapterFactory {
                 object.remove("rates");
                 if (!rates.entrySet()
                     .isEmpty()) object.add("rates", rates);
-                jsonElementAdapter.write(out, object);
+                final boolean serializeNulls = out.getSerializeNulls();
+                out.setSerializeNulls(true);
+                try {
+                    jsonElementAdapter.write(out, object);
+                } finally {
+                    out.setSerializeNulls(serializeNulls);
+                }
             }
 
             @Override
@@ -90,11 +82,6 @@ public final class MachineConfigAdapter implements TypeAdapterFactory {
                 if (value == null) return null;
 
                 final MachineConfig config = (MachineConfig) value;
-                final MachineProfile profile = config.getProfile();
-                if (!profile.id()
-                    .equals(config.getProfileId())) config.setProfileId(profile.id());
-                for (final SettingDef<?> def : profile.defs()) config.get(def);
-                config.get(Settings.MACHINES);
                 if (config.getTargetKind() == null) config.setTargetKind(Pin.NONE);
                 config.getCopies()
                     .setCopies(

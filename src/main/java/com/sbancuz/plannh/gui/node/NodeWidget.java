@@ -8,19 +8,19 @@ import java.util.UUID;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
-import com.cleanroommc.modularui.api.drawable.IKey;
-import com.cleanroommc.modularui.api.widget.IWidget;
+import javax.annotation.Nullable;
+
 import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.drawable.UITexture;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.value.BoolValue;
-import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.CycleButtonWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
+import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
@@ -28,7 +28,6 @@ import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.common.CloseButtonWidget;
 import com.sbancuz.plannh.gui.common.FlowchartFlow;
-import com.sbancuz.plannh.gui.common.FlowchartTextWidget;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.common.HeaderTextWidget;
 import com.sbancuz.plannh.gui.edge.ArrowWidget;
@@ -43,11 +42,9 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
     private static final String TARGET_LANG = "plannh.gui.node.target.rows";
     private static final String THROUGHPUT_LANG = "plannh.gui.node.throughput.rows";
     private static final String PROPERTIES_LANG = "plannh.gui.node.properties";
-    private static final String EXTRACTOR_LANG = "plannh.gui.node.extractor.";
 
-    /** The fold toggles and the profile steps, square for the option row they sit in. */
+    /** Compact square toggles for the node's configuration folds. */
     private static final int FOLD_BUTTON = 12;
-    private static final float EXTRACTOR_RATIO = 3 / 5f - 0.05f;
 
     private final RecipeAreaWidget recipeAreaWidget;
     private final CycleButtonWidget settingsFold;
@@ -58,6 +55,8 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
     private boolean lastTargetOpen;
     private boolean lastThroughputOpen;
     private boolean lastPropertiesOpen;
+    private long effectVersion = Long.MIN_VALUE;
+    private EffectResult effect;
 
     @Getter
     private final List<ArrowWidget> arrowWidgets = new ArrayList<>();
@@ -126,14 +125,13 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
             optionRow.child(
                 FlowchartFlow.row(this)
                     .name("node.options.folds")
-                    .fullWidth()
-                    .coverChildrenHeight()
+                    .coverChildren()
                     .childPadding(4)
                     .child(throughputFold)
                     .child(propertiesFold)
                     .child(targetFold)
                     .child(settingsFold))
-                .child(extractorSwitcher());
+                .child(new ExtractorWidget(this));
             mainColumn.child(optionRow);
             mainColumn.child(new ThroughputInfoWidget(this));
             mainColumn.child(new ConfigurationAreaWidget(this));
@@ -142,28 +140,16 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
             propertiesFold = null;
             targetFold = null;
             settingsFold = null;
+            if (!data.getAvailableProfiles()
+                .isEmpty())
+                mainColumn.child(
+                    FlowchartFlow.row(this)
+                        .fullWidth()
+                        .coverChildrenHeight()
+                        .mainAxisAlignment(Alignment.MainAxis.END)
+                        .child(new ExtractorWidget(this)));
         }
         child(mainColumn);
-    }
-
-    private Flow extractorSwitcher() {
-        return FlowchartFlow.row(this)
-            .name("node.options.extractor")
-            .widthRel(EXTRACTOR_RATIO)
-            .coverChildrenHeight()
-            .childPadding(2)
-            .child(extractorStep(-1))
-            // Dynamic, so the name follows the switcher without the row having to be rebuilt
-            // around it: a text widget re-measures itself when its key's text changes. No width
-            // of its own either - the row it sits in is sized by its contents, so a share of
-            // that row is a share of nothing, and the name comes out one letter per line.
-            .child(
-                new FlowchartTextWidget(
-                    IKey.dynamic(
-                        () -> data.getExtractor()
-                            .getExtractorName()),
-                    this))
-            .child(extractorStep(1));
     }
 
     private CycleButtonWidget fold(final UITexture icon, final String langKey, final BooleanSupplier open,
@@ -180,28 +166,6 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
             .tooltipBuilder(
                 tooltip -> TooltipBuilder.create(tooltip)
                     .langRows(langKey, langKey + (open.getAsBoolean() ? ".hide_hint" : ".show_hint"))
-                    .flush());
-    }
-
-    private IWidget extractorStep(final int delta) {
-        return new ButtonWidget<>().size(FOLD_BUTTON)
-            .name(delta < 0 ? "extractor.prev" : "extractor.next")
-            .overlay(IKey.str(delta < 0 ? "<" : ">"))
-            .setEnabledIf(
-                _ -> data.getAvailableExtractors()
-                    .size() > 1)
-            .onMousePressed(clicked -> {
-                if (clicked != 0) return false;
-                commitEdit(
-                    () -> {
-                        if (!data.switchExtractor(delta))
-                            PlanAPI.showMessage("plannh.error.recipe_edit", data.getMachineName());
-                    });
-                return true;
-            })
-            .tooltipBuilder(
-                tooltip -> TooltipBuilder.create(tooltip)
-                    .langRows(EXTRACTOR_LANG + (delta < 0 ? "prev" : "next"))
                     .flush());
     }
 
@@ -283,6 +247,23 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
             .balance()
             .nodeBalances()
             .get(data.getId());
+    }
+
+    /** Port state and tooltip rows share one evaluation for the current graph revision. */
+    public @Nullable EffectResult effectSnapshot() {
+        if (!data.isAvailable()) return null;
+        final long version = canvas.getGraph()
+            .getVersion();
+        if (effectVersion != version) {
+            effectVersion = version;
+            try {
+                effect = data.computeEffect();
+            } catch (RuntimeException | LinkageError failure) {
+                effect = null;
+                PlanNH.LOG.warn("Could not evaluate machine effect for {}", data.getMachineName(), failure);
+            }
+        }
+        return effect;
     }
 
     /** The mode the whole chart is being solved in, which is what decides which pins exist at all. */

@@ -3,8 +3,11 @@ package com.sbancuz.plannh.data.properties;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
+import java.util.function.ObjLongConsumer;
 import java.util.function.ToIntFunction;
+import java.util.function.ToLongFunction;
 
+import com.cleanroommc.modularui.screen.RichTooltip;
 import com.sbancuz.plannh.data.flowchart.Port;
 
 import lombok.Getter;
@@ -14,9 +17,9 @@ import lombok.experimental.SuperBuilder;
 public class ResourceProperty<T> extends SummaryProperty<T> {
 
     @lombok.Builder.Default
-    private final ToIntFunction<T> amountExtractor = _ -> 1;
+    private final ToLongFunction<T> amountExtractor = _ -> 1;
     @lombok.Builder.Default
-    private final BiConsumer<T, Integer> amountUpdater = (_, _) -> {};
+    private final ObjLongConsumer<T> amountUpdater = (_, _) -> {};
 
     @lombok.Builder.Default
     private final BiPredicate<Port<T>, Port<T>> connectionChecker = (_, _) -> true;
@@ -25,6 +28,8 @@ public class ResourceProperty<T> extends SummaryProperty<T> {
 
     @lombok.Builder.Default
     private final ToIntFunction<T> colorProvider = _ -> -1;
+    @lombok.Builder.Default
+    private final BiConsumer<RichTooltip, T> tooltip = (_, _) -> {};
 
     // Pin/arrow fallback colors; opaque white so a type that declares none stays visible.
     @Getter
@@ -42,11 +47,11 @@ public class ResourceProperty<T> extends SummaryProperty<T> {
         return getKey();
     }
 
-    public int extractAmount(final T value) {
-        return amountExtractor.applyAsInt(value);
+    public long extractAmount(final T value) {
+        return amountExtractor.applyAsLong(value);
     }
 
-    public void setAmount(final T value, final int newAmount) {
+    public void setAmount(final T value, final long newAmount) {
         amountUpdater.accept(value, newAmount);
     }
 
@@ -61,6 +66,11 @@ public class ResourceProperty<T> extends SummaryProperty<T> {
     /** Representative bare-RGB color for this value, or -1 when none is derivable. */
     public int color(final T value) {
         return colorProvider.applyAsInt(value);
+    }
+
+    @SuppressWarnings("unchecked")
+    public void addTooltip(final RichTooltip tooltip, final Object value) {
+        this.tooltip.accept(tooltip, (T) value);
     }
 
     public static <T> ResourcePropertyBuilder<T, ?, ?> builder(final String key, final T defaultValue) {

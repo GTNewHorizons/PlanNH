@@ -1,4 +1,4 @@
-package com.sbancuz.plannh.data.effect.steps;
+package com.sbancuz.plannh.data.provider.gregtech;
 
 import static com.sbancuz.plannh.data.provider.GTProvider.EU_PER_TICK;
 import static com.sbancuz.plannh.data.provider.GTProvider.RECIPE_MAP;
@@ -8,9 +8,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.IntUnaryOperator;
-import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
@@ -21,7 +21,6 @@ import com.sbancuz.plannh.data.effect.EffectComputer;
 import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.effect.EffectStep;
 import com.sbancuz.plannh.data.setting.IntegerSettingDef;
-import com.sbancuz.plannh.data.setting.SettingDef;
 import com.sbancuz.plannh.data.setting.Settings;
 
 import gregtech.api.recipe.RecipeMap;
@@ -29,7 +28,8 @@ import gregtech.api.util.OverclockCalculator;
 
 public class GTOverclockStep implements EffectStep, EffectComputer {
 
-    private record Condition(Predicate<RecipeContext> predicate, Consumer<GTOverclockStep> configurator) {}
+    private record Condition(BiPredicate<MachineConfig, RecipeContext> predicate,
+        Consumer<GTOverclockStep> configurator) {}
 
     private GTOverclockStep() {}
 
@@ -41,7 +41,6 @@ public class GTOverclockStep implements EffectStep, EffectComputer {
     private boolean forcePerfectOC;
     private final List<Condition> conditions = new ArrayList<>();
     private final Map<String, Consumer<GTOverclockStep>> routeModifiers = new HashMap<>();
-    private final Map<String, Map<SettingDef<?>, Object>> routeDefaults = new HashMap<>();
     private IntegerSettingDef catalystSetting;
     private IntUnaryOperator catalystComputer;
 
@@ -56,12 +55,6 @@ public class GTOverclockStep implements EffectStep, EffectComputer {
         return this;
     }
 
-    public GTOverclockStep withDefault(final String recipeMapId, final SettingDef<?> key, final Object value) {
-        routeDefaults.computeIfAbsent(recipeMapId, k -> new HashMap<>())
-            .put(key, value);
-        return this;
-    }
-
     public GTOverclockStep withHeat() {
         this.forceHeat = true;
         return this;
@@ -72,84 +65,94 @@ public class GTOverclockStep implements EffectStep, EffectComputer {
         return this;
     }
 
-    public GTOverclockStep applyIf(final Predicate<RecipeContext> predicate,
+    public GTOverclockStep applyIf(final BiPredicate<MachineConfig, RecipeContext> predicate,
         final Consumer<GTOverclockStep> configurator) {
         conditions.add(new Condition(predicate, configurator));
         return this;
     }
 
     @Override
-    public EffectResult compute(MachineConfig config, RecipeContext ctx) {
+    public EffectResult compute(final MachineConfig cfg, final RecipeContext ctx) {
         final Object dur = ctx.properties().get(RecipePropertyAPI.DURATION_TICKS);
         final int d = dur instanceof final Number n ? n.intValue() : 0;
-        return apply(new EffectResult(d, 0, 1), config, ctx);
+        return apply(new EffectResult(d, 0, 1), cfg, ctx);
     }
 
     @Override
-    public Map<SettingDef<?>, Object> routeDefaults(final RecipeContext ctx) {
-        final RecipeMap<?> map = ctx.getOrDefault(RECIPE_MAP, null);
-        if (map == null || routeDefaults.isEmpty()) return Map.of();
-        return routeDefaults.getOrDefault(map.unlocalizedName, Map.of());
+    public EffectResult apply(final EffectResult current, final MachineConfig cfg, final RecipeContext ctx) {
+        // Conditions configure a private evaluation copy. The registered effect is shared by all
+        // recipe evaluations and must not retain route-specific state.
+        final GTOverclockStep evaluation = copy();
+        return evaluation.applyResolved(current, cfg, ctx);
     }
 
-    @Override
-    public EffectResult apply(EffectResult current, MachineConfig config, RecipeContext ctx) {
-        forceHeat = false;
-        forcePerfectOC = false;
-        catalystSetting = null;
-        catalystComputer = null;
-
+    private EffectResult applyResolved(final EffectResult current, final MachineConfig cfg, final RecipeContext ctx) {
         for (final Condition cond : conditions) {
             if (cond.predicate()
-                .test(ctx)) {
+                .test(cfg, ctx)) {
                 cond.configurator()
                     .accept(this);
             }
         }
 
-        if (!routeModifiers.isEmpty() || !routeDefaults.isEmpty()) {
+        if (!routeModifiers.isEmpty()) {
             final RecipeMap<?> map = ctx.getOrDefault(RECIPE_MAP, null);
             if (map != null) {
                 final String uid = map.unlocalizedName;
                 final Consumer<GTOverclockStep> mod = routeModifiers.get(uid);
                 if (mod != null) mod.accept(this);
-                final Map<SettingDef<?>, Object> defs = routeDefaults.get(uid);
-                if (defs != null) config.applyDefaults(defs);
             }
         }
 
         final int parallels;
         if (catalystSetting != null) {
-            final int cat = config.get(catalystSetting);
-            parallels = cat > 0 ? catalystComputer.applyAsInt(cat) : config.get(Settings.PARALLELS);
+            final int cat = cfg.getProfile()
+                .value(catalystSetting, cfg, ctx);
+            parallels = cat > 0 ? catalystComputer.applyAsInt(cat)
+                : cfg.getProfile()
+                    .value(Settings.PARALLELS, cfg, ctx);
         } else {
-            parallels = config.get(Settings.PARALLELS);
+            parallels = cfg.getProfile()
+                .value(Settings.PARALLELS, cfg, ctx);
         }
-        final int machines = config.get(Settings.MACHINES);
+        final int machines = cfg.getProfile()
+            .value(Settings.MACHINES, cfg, ctx);
 
         final long eut = recipeEUt(ctx, current);
         final int recipeDuration = current.durationTicks();
 
-        if (eut <= 0 || recipeDuration <= 0 || config.get(Settings.VOLTAGE) == Settings.Voltage.OFF) {
+        final Settings.Voltage voltage = cfg.getProfile()
+            .value(Settings.VOLTAGE, cfg, ctx);
+        if (eut <= 0 || recipeDuration <= 0 || voltage == null || voltage == Settings.Voltage.OFF) {
             current.durationTicks(recipeDuration);
             current.energyPerT(eut);
-            current.throughputFactor(parallels * machines);
+            current.throughputFactor(Math.multiplyExact(parallels, machines));
+            current.energyRateProperty(EU_PER_TICK);
+            current.properties()
+                .put(EU_PER_TICK, eut);
+            current.properties()
+                .put(TOTAL_EU, Math.multiplyExact(eut, (long) recipeDuration));
             return current;
         }
 
-        final OverclockCalculator calc = buildGtCalc(config, eut, recipeDuration, parallels);
+        final OverclockCalculator calc = buildGtCalc(cfg, ctx, eut, recipeDuration, parallels);
 
         if (forcePerfectOC) calc.enablePerfectOC();
 
         if (forceHeat) {
-            final int machineHeat = config.get(Settings.MACHINE_HEAT);
-            if (config.get(Settings.HEAT_OC) && machineHeat > 0) {
-                final int recipeHeat = config.get(Settings.RECIPE_HEAT);
+            final int machineHeat = cfg.getProfile()
+                .value(Settings.MACHINE_HEAT, cfg, ctx);
+            if (cfg.getProfile()
+                .value(Settings.HEAT_OC, cfg, ctx) && machineHeat > 0) {
+                final int recipeHeat = cfg.getProfile()
+                    .value(Settings.RECIPE_HEAT, cfg, ctx);
                 calc.setHeatOC(true)
                     .setRecipeHeat(recipeHeat > 0 ? recipeHeat : machineHeat)
                     .setMachineHeat(machineHeat);
-                if (config.get(Settings.HEAT_DISCOUNT)) calc.setHeatDiscount(true);
-                final int hdMult = config.get(Settings.HEAT_DISCOUNT_MULT);
+                if (cfg.getProfile()
+                    .value(Settings.HEAT_DISCOUNT, cfg, ctx)) calc.setHeatDiscount(true);
+                final int hdMult = cfg.getProfile()
+                    .value(Settings.HEAT_DISCOUNT_MULT, cfg, ctx);
                 if (hdMult != 100) calc.setHeatDiscountMultiplier(hdMult / 100.0);
             }
         }
@@ -157,7 +160,12 @@ public class GTOverclockStep implements EffectStep, EffectComputer {
         calc.calculate();
         current.durationTicks(calc.getDuration());
         current.energyPerT(calc.getConsumption());
-        current.throughputFactor(parallels * machines);
+        current.throughputFactor(Math.multiplyExact(parallels, machines));
+        current.energyRateProperty(EU_PER_TICK);
+        current.properties()
+            .put(EU_PER_TICK, calc.getConsumption());
+        current.properties()
+            .put(TOTAL_EU, Math.multiplyExact(calc.getConsumption(), (long) calc.getDuration()));
         return current;
     }
 
@@ -171,12 +179,16 @@ public class GTOverclockStep implements EffectStep, EffectComputer {
         return 0;
     }
 
-    private static OverclockCalculator buildGtCalc(MachineConfig config, long eut, int duration, int parallels) {
+    private static OverclockCalculator buildGtCalc(final MachineConfig cfg, final RecipeContext ctx, final long eut,
+        final int duration, final int parallels) {
         final long voltage = tierNameToVoltage(
-            config.get(Settings.VOLTAGE)
+            cfg.getProfile()
+                .value(Settings.VOLTAGE, cfg, ctx)
                 .name());
-        final int amp = config.get(Settings.AMP);
-        final int speed = config.get(Settings.SPEED);
+        final int amp = cfg.getProfile()
+            .value(Settings.AMP, cfg, ctx);
+        final int speed = cfg.getProfile()
+            .value(Settings.SPEED, cfg, ctx);
 
         final OverclockCalculator calc = new OverclockCalculator().setRecipeEUt(eut)
             .setEUt(voltage)
@@ -186,31 +198,52 @@ public class GTOverclockStep implements EffectStep, EffectComputer {
             .setParallel(parallels)
             .setAmperageOC(true);
 
-        if (config.get(Settings.PERFECT_OC)) calc.enablePerfectOC();
-        if (config.get(Settings.LASER_OC)) calc.setLaserOC(true);
-        if (config.get(Settings.NO_OVERCLOCK)) calc.setNoOverclock(true);
+        if (cfg.getProfile()
+            .value(Settings.PERFECT_OC, cfg, ctx)) calc.enablePerfectOC();
+        if (cfg.getProfile()
+            .value(Settings.LASER_OC, cfg, ctx)) calc.setLaserOC(true);
+        if (cfg.getProfile()
+            .value(Settings.NO_OVERCLOCK, cfg, ctx)) calc.setNoOverclock(true);
 
-        final int eutDisc = config.get(Settings.EUT_DISCOUNT);
+        final int eutDisc = cfg.getProfile()
+            .value(Settings.EUT_DISCOUNT, cfg, ctx);
         if (eutDisc > 0) calc.setEUtDiscount(eutDisc / 100.0);
 
-        final int ocMult = config.get(Settings.EUT_INCREASE_PER_OC);
+        final int ocMult = cfg.getProfile()
+            .value(Settings.EUT_INCREASE_PER_OC, cfg, ctx);
         if (ocMult != 400) calc.setEUtIncreasePerOC(ocMult / 100.0);
 
-        final int durMult = config.get(Settings.DURATION_DECREASE_PER_OC);
+        final int durMult = cfg.getProfile()
+            .value(Settings.DURATION_DECREASE_PER_OC, cfg, ctx);
         if (durMult != 200) calc.setDurationDecreasePerOC(durMult / 100.0);
 
-        final int maxOc = config.get(Settings.MAX_OVERCLOCKS);
+        final int maxOc = cfg.getProfile()
+            .value(Settings.MAX_OVERCLOCKS, cfg, ctx);
         if (maxOc > 0) calc.setMaxOverclocks(maxOc);
 
-        final int maxReg = config.get(Settings.MAX_REGULAR_OC);
+        final int maxReg = cfg.getProfile()
+            .value(Settings.MAX_REGULAR_OC, cfg, ctx);
         if (maxReg > 0) calc.setMaxRegularOverclocks(maxReg);
 
-        final int skips = config.get(Settings.MAX_TIER_SKIPS);
+        final int skips = cfg.getProfile()
+            .value(Settings.MAX_TIER_SKIPS, cfg, ctx);
         if (skips > 0) calc.setMaxTierSkips(skips);
 
-        if (config.get(Settings.UNLIMITED_SKIPS)) calc.setUnlimitedTierSkips();
+        if (cfg.getProfile()
+            .value(Settings.UNLIMITED_SKIPS, cfg, ctx)) calc.setUnlimitedTierSkips();
 
         return calc;
+    }
+
+    private GTOverclockStep copy() {
+        final GTOverclockStep copy = new GTOverclockStep();
+        copy.forceHeat = forceHeat;
+        copy.forcePerfectOC = forcePerfectOC;
+        copy.catalystSetting = catalystSetting;
+        copy.catalystComputer = catalystComputer;
+        copy.conditions.addAll(conditions);
+        copy.routeModifiers.putAll(routeModifiers);
+        return copy;
     }
 
     static long recipeEUt(RecipeContext ctx, EffectResult current) {
@@ -218,6 +251,6 @@ public class GTOverclockStep implements EffectStep, EffectComputer {
         if (euPerTick != null && euPerTick > 0) return euPerTick;
         final Long totalEu = ctx.getOrDefault(TOTAL_EU, null);
         if (totalEu != null && totalEu > 0 && current.durationTicks() > 0) return totalEu / current.durationTicks();
-        return current.energyPerT();
+        return Math.round(current.energyPerT());
     }
 }

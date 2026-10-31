@@ -11,6 +11,7 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
+import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.MachineGroup;
@@ -35,10 +36,8 @@ class UnavailableNodeCalculationTest {
     @Test
     void unavailableNodeContributesNothingToBalanceOrTopologyDespiteStaleState() {
         final Graph graph = new Graph();
-        final Node available = node("available", "wire", 2);
-        final Node unavailable = node("unavailable", "stale", 99);
-        unavailable.getInputs()
-            .add(TestIngredients.port("wire", 1));
+        final Node available = node("available", List.of(), List.of("wire"), 2);
+        final Node unavailable = node("unavailable", List.of("wire"), List.of(), 99);
         unavailable.getMachineConfig()
             .getRates()
             .rates()
@@ -99,8 +98,8 @@ class UnavailableNodeCalculationTest {
     @Test
     void unavailableNodeDoesNotConsumeMachineGroupPoolMembership() {
         final Graph graph = new Graph();
-        final Node available = node("available", "product", 1);
-        final Node unavailable = node("unavailable", "stale", 7);
+        final Node available = node("available", List.of(), List.of("product"), 1);
+        final Node unavailable = node("unavailable", List.of(), List.of(), 7);
         markUnavailable(unavailable);
         graph.addNode(available);
         graph.addNode(unavailable);
@@ -132,10 +131,8 @@ class UnavailableNodeCalculationTest {
     void unavailableNodeIsAbsentFromSummaryAndBoundaryEvenWithAnEdge() {
         final Graph graph = new Graph();
         graph.setBalanceMode(BalanceMode.NONE);
-        final Node available = node("available", "product", 2);
-        final Node unavailable = node("unavailable", "stale", 99);
-        unavailable.getInputs()
-            .add(TestIngredients.port("product", 1));
+        final Node available = node("available", List.of(), List.of("product"), 2);
+        final Node unavailable = node("unavailable", List.of("product"), List.of(), 99);
         markUnavailable(unavailable);
         graph.addNode(available);
         graph.addNode(unavailable);
@@ -190,6 +187,36 @@ class UnavailableNodeCalculationTest {
     }
 
     @Test
+    void removingTheLastRecipeClearsTheSummary() {
+        final Graph graph = new Graph();
+        graph.setBalanceMode(BalanceMode.NONE);
+        final Node recipe = node("recipe", List.of(), List.of("product"), 2);
+        graph.addNode(recipe);
+        final Summary summary = new Summary().recompute(graph);
+        assertFalse(
+            summary.lines(Summary.Section.OUTPUTS)
+                .isEmpty());
+
+        graph.removeNode(recipe.getId());
+        summary.recompute(graph);
+
+        assertEquals(graph.getVersion(), summary.calculatedAt());
+        assertTrue(
+            summary.lines(Summary.Section.OUTPUTS)
+                .isEmpty());
+        assertTrue(
+            summary.lines(Summary.Section.INPUTS)
+                .isEmpty());
+        assertTrue(
+            summary.lines(Summary.Section.MACHINE_COUNTS)
+                .isEmpty());
+        assertTrue(
+            summary.balance()
+                .nodeBalances()
+                .isEmpty());
+    }
+
+    @Test
     void resourceMismatchAtSamePortIndicesIsExcludedFromSolverAndConfiguredBoundary() {
         final Graph graph = connectedGraph("source", "target");
         final Edge edge = graph.getEdges()
@@ -200,13 +227,6 @@ class UnavailableNodeCalculationTest {
             .get(edge.getSourceNodeId());
         final Node target = graph.getNodes()
             .get(edge.getTargetNodeId());
-        source.getOutputs()
-            .set(0, TestIngredients.port("source", 1));
-        target.getInputs()
-            .add(TestIngredients.port("target", 1));
-        target.getOutputs()
-            .clear();
-
         final ModelData model = Balancer.run(BalanceMode.NONE, graph)
             .ctx().model;
 
@@ -228,10 +248,6 @@ class UnavailableNodeCalculationTest {
             .next();
         final Node target = graph.getNodes()
             .get(edge.getTargetNodeId());
-        target.getInputs()
-            .add(TestIngredients.port("wire", 1));
-        target.getOutputs()
-            .clear();
         edge.setInactive(true);
 
         final ModelData model = Balancer.run(BalanceMode.NONE, graph)
@@ -267,11 +283,12 @@ class UnavailableNodeCalculationTest {
                 .isInactive());
     }
 
-    private static Node node(final String name, final String output, final int copies) {
-        GtnhFlowLoader.ensureDefaultMachineProfile();
-        final Node node = new Node(UUID.randomUUID(), name, 0, 0);
-        node.getOutputs()
-            .add(TestIngredients.port(output, 1));
+    private static Node node(final String name, final List<String> inputs, final List<String> outputs,
+        final int copies) {
+        final RecipeContext.Builder recipe = RecipeContext.builder();
+        inputs.forEach(input -> recipe.input(TestIngredients.port(input, 1)));
+        outputs.forEach(output -> recipe.output(TestIngredients.port(output, 1)));
+        final Node node = new Node(UUID.randomUUID(), name, 0, 0, GtnhFlowLoader.defaultProfile(), recipe.build());
         node.getMachineConfig()
             .set(Settings.MACHINES, copies);
         return node;
@@ -288,8 +305,8 @@ class UnavailableNodeCalculationTest {
 
     private static Graph connectedGraph(final String sourceName, final String targetName) {
         final Graph graph = new Graph();
-        final Node source = node(sourceName, sourceName, 1);
-        final Node target = node(targetName, targetName, 1);
+        final Node source = node(sourceName, List.of(), List.of(sourceName), 1);
+        final Node target = node(targetName, List.of(targetName), List.of(), 1);
         graph.addNode(source);
         graph.addNode(target);
         graph.addEdge(edge(source, target));
@@ -308,10 +325,9 @@ class UnavailableNodeCalculationTest {
     }
 
     private static Node serializableNode(final String name) throws Exception {
-        final Node node = node(name, name, 1);
-        final Recipe.RecipeId recipeId = Recipe.RecipeId.of(null, name, List.of());
-        set(node, "recipeId", recipeId);
-        set(node, "extractor", null);
+        final Node node = node(name, List.of(name), List.of(name), 1);
+        set(node, "recipeId", Recipe.RecipeId.of(null, name, List.of()));
+        set(node, "selectedProfile", null);
         set(node, "initialized", true);
         return node;
     }
@@ -324,11 +340,11 @@ class UnavailableNodeCalculationTest {
 
     private static void markUnavailable(final Node node) {
         try {
-            final Field extractor = Node.class.getDeclaredField("extractor");
-            extractor.setAccessible(true);
-            extractor.set(node, null);
+            final Field selectedProfile = Node.class.getDeclaredField("selectedProfile");
+            selectedProfile.setAccessible(true);
+            selectedProfile.set(node, null);
         } catch (final ReflectiveOperationException failure) {
-            throw new AssertionError("Node extractor field changed", failure);
+            throw new AssertionError("Node selected profile field changed", failure);
         }
     }
 }

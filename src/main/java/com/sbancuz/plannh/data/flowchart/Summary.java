@@ -77,14 +77,14 @@ public final class Summary extends GraphData {
          * is the component's own - the sort key of the amount-sorted sections, which contain only
          * Measure rows - and lives here rather than on the interface.
          */
-        record Measure<T> (SummaryProperty<T> label, T resource, float amount) implements Line<T> {
+        record Measure<T> (SummaryProperty<T> label, T resource, double amount) implements Line<T> {
 
             @Override
             public String displayName() {
                 return label.formatDisplayName(resource);
             }
 
-            public String displayAmount(final float value) {
+            public String displayAmount(final double value) {
                 return label.formatAmount(value);
             }
         }
@@ -309,7 +309,7 @@ public final class Summary extends GraphData {
      * summary's {@link Mode}.
      */
     public Summary recompute(final Graph graph) {
-        if (atGraph == graph && atVersion >= graph.getVersion() && atMode == mode && atSettings == settingsVersion)
+        if (atGraph == graph && atVersion == graph.getVersion() && atMode == mode && atSettings == settingsVersion)
             return this;
         atGraph = graph;
         atMode = mode;
@@ -317,9 +317,9 @@ public final class Summary extends GraphData {
 
         this.balance = Balancer.balance(graph, graph.getBalanceMode());
 
-        final Map<LineKey, Float> outputs = new HashMap<>();
-        final Map<LineKey, Float> inputs = new HashMap<>();
-        final Map<LineKey, Float> properties = new HashMap<>();
+        final Map<LineKey, Double> outputs = new HashMap<>();
+        final Map<LineKey, Double> inputs = new HashMap<>();
+        final Map<LineKey, Double> properties = new HashMap<>();
 
         final int cycleTicks = balance.totalDurationTicks();
 
@@ -331,9 +331,9 @@ public final class Summary extends GraphData {
                 .get(node.id);
             if (nb == null) continue;
 
-            final float scale = mode == Mode.THROUGHPUT
-                ? (float) GuiHelper.TICKS_PER_SECOND / Math.max(1, nb.durationPerOp())
-                : (float) cycleTicks / Math.max(1, nb.durationPerOp());
+            final double scale = mode == Mode.THROUGHPUT
+                ? (double) GuiHelper.TICKS_PER_SECOND / Math.max(1, nb.durationPerOp())
+                : (double) cycleTicks / Math.max(1, nb.durationPerOp());
             accumulate(node.getOutputs(), nb.effectiveOutputs(), scale, outputs);
             accumulate(node.getInputs(), nb.effectiveInputs(), scale, inputs);
         }
@@ -361,12 +361,12 @@ public final class Summary extends GraphData {
     }
 
     /** Fold each port's effective flow into {@code into}, scaled to one chart cycle. */
-    private static void accumulate(final List<Port<?>> ports, final Map<Integer, Float> totals, final float scale,
-        final Map<LineKey, Float> into) {
+    private static void accumulate(final List<Port<?>> ports, final Map<Integer, Double> totals, final double scale,
+        final Map<LineKey, Double> into) {
         for (int i = 0; i < ports.size(); i++) {
-            final Float total = totals.get(i);
+            final Double total = totals.get(i);
             if (total == null || total <= 0) continue;
-            into.merge(new LineKey.ResourceKey<>(ports.get(i)), total * scale, Float::sum);
+            into.merge(new LineKey.ResourceKey<>(ports.get(i)), total * scale, Double::sum);
         }
     }
 
@@ -376,13 +376,13 @@ public final class Summary extends GraphData {
      * port carrying the resource, so error grows with the number of contributors, and at 1e-6 a
      * fully recycled ingredient on a large chart prints a ghost line for a rate that is really zero.
      */
-    private static void net(final Map<LineKey, Float> inputs, final Map<LineKey, Float> outputs) {
-        final Map<LineKey, Float> netInputs = new HashMap<>();
+    private static void net(final Map<LineKey, Double> inputs, final Map<LineKey, Double> outputs) {
+        final Map<LineKey, Double> netInputs = new HashMap<>();
         for (final var entry : inputs.entrySet()) {
             final LineKey key = entry.getKey();
-            final float cons = entry.getValue();
-            final float prod = outputs.getOrDefault(key, 0f);
-            final float eps = Math.max(prod, cons) * 1e-4f;
+            final double cons = entry.getValue();
+            final double prod = outputs.getOrDefault(key, 0d);
+            final double eps = Math.max(prod, cons) * 1e-4d;
             if (Math.abs(cons - prod) <= eps) {
                 outputs.remove(key);
             } else if (cons > prod) {
@@ -396,16 +396,20 @@ public final class Summary extends GraphData {
         inputs.putAll(netInputs);
     }
 
-    private static void accumulateProperties(final BalanceResult balance, final Map<LineKey, Float> into) {
+    private static void accumulateProperties(final BalanceResult balance, final Map<LineKey, Double> into) {
         for (final var entry : balance.propertyTotals()
             .entrySet()) {
             if (!(entry.getKey() instanceof SummaryProperty<?>prop)) continue;
-            into.merge(new LineKey.PropertyKey(prop), (float) entry.getValue(), Float::sum);
+            into.merge(
+                new LineKey.PropertyKey(prop),
+                entry.getValue()
+                    .doubleValue(),
+                Double::sum);
         }
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    private static List<Line<?>> flatten(final Map<LineKey, Float> map) {
+    private static List<Line<?>> flatten(final Map<LineKey, Double> map) {
         final List<Line<?>> result = new ArrayList<>();
         for (final var entry : map.entrySet()) {
             if (entry.getValue() <= 0) continue;
@@ -430,7 +434,7 @@ public final class Summary extends GraphData {
             if (nb == null) continue;
             final double ops = nb.operations();
             if (ops <= 0) continue;
-            out.add(new Line.Measure<>(MACHINE_LABEL, node.getMachineName(), (float) ops));
+            out.add(new Line.Measure<>(MACHINE_LABEL, node.getMachineName(), ops));
         }
         return out;
     }
@@ -494,7 +498,7 @@ public final class Summary extends GraphData {
 
         record ResourceKey<T> (Port<T> port) implements LineKey {
 
-            Line<?> toLine(final float amount) {
+            Line<?> toLine(final double amount) {
                 return new Line.Measure<>(port.getType(), port.getValue(), amount);
             }
 

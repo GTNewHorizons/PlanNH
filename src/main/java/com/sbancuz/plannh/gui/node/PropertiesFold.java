@@ -7,6 +7,7 @@ import java.util.Map;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.utils.Alignment;
+import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.properties.SummaryProperty;
@@ -17,6 +18,7 @@ import com.sbancuz.plannh.gui.common.FlowchartTextWidget;
 class PropertiesFold extends NodeFold {
 
     private static final String LANG = "plannh.gui.node.properties.";
+    private long lastVersion = Long.MIN_VALUE;
 
     public PropertiesFold(final NodeWidget node) {
         super(
@@ -24,6 +26,15 @@ class PropertiesFold extends NodeFold {
             () -> node.getData()
                 .isPropertiesOpen());
         name("fold.properties");
+        onUpdateListener(w -> {
+            final long version = node.getCanvas()
+                .getGraph()
+                .getVersion();
+            if (version != lastVersion) {
+                lastVersion = version;
+                markStale();
+            }
+        }, true);
     }
 
     @Override
@@ -31,11 +42,21 @@ class PropertiesFold extends NodeFold {
         removeAll();
 
         final Node data = node.getData();
-        final Map<RecipeProperty<?>, Object> properties = data.getProperties();
+        final EffectResult effect = node.effectSnapshot();
+        final Map<RecipeProperty<?>, Object> properties = effect == null ? data.getProperties()
+            : data.displayProperties(effect);
 
-        for (final SummaryProperty<?> prop : properties(data)) {
+        // Filter and sort the same snapshot used for the displayed values.
+        final List<SummaryProperty<?>> visible = new ArrayList<>();
+        for (final Map.Entry<RecipeProperty<?>, Object> entry : properties.entrySet()) {
+            if (entry.getKey() instanceof SummaryProperty<?>prop && entry.getValue() instanceof Number number
+                && number.doubleValue() != 0) visible.add(prop);
+        }
+        visible.sort(Comparator.comparing(PropertiesFold::name));
+
+        for (final SummaryProperty<?> prop : visible) {
             final String name = name(prop);
-            final float amount = ((Number) properties.get(prop)).floatValue();
+            final double amount = ((Number) properties.get(prop)).doubleValue();
 
             child(
                 FlowchartFlow.row(node)
@@ -66,22 +87,6 @@ class PropertiesFold extends NodeFold {
 
         if (getChildren().isEmpty()) child(hint(LANG + "none_hint"));
         scheduleResize();
-    }
-
-    /**
-     * Every property this recipe puts a number to, sorted by the name it is shown under so the rows
-     * do not jump around between one opening of the node and the next.
-     */
-    private static List<SummaryProperty<?>> properties(final Node node) {
-        final List<SummaryProperty<?>> found = new ArrayList<>();
-        for (final Map.Entry<RecipeProperty<?>, Object> entry : node.getProperties()
-            .entrySet()) {
-            if (!(entry.getKey() instanceof final SummaryProperty<?> prop)) continue;
-            if (!(entry.getValue() instanceof final Number number) || number.floatValue() == 0) continue;
-            found.add(prop);
-        }
-        found.sort(Comparator.comparing(PropertiesFold::name));
-        return found;
     }
 
     /** What a property calls itself. */

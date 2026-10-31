@@ -77,6 +77,10 @@ class ThroughputFold extends NodeFold {
 
         final Balancer.NodeBalance balance = node.balance();
         final int duration = balance == null ? 0 : balance.durationPerOp();
+        if (balance != null && !hasPlannedThroughput(balance)) {
+            scheduleResize();
+            return;
+        }
         if (duration <= 0) {
             child(hint(LANG + "unbalanced"));
             scheduleResize();
@@ -87,17 +91,18 @@ class ThroughputFold extends NodeFold {
         rates(true, data.getInputs(), balance.effectiveInputs(), duration, unit);
         rates(false, data.getOutputs(), balance.effectiveOutputs(), duration, unit);
 
-        // Solved, and still nothing to say: a machine with no port the solve moved has no rate to
-        // print, which is a different thing from not having been solved.
-        if (getChildren().isEmpty()) child(hint(LANG + "unplanned"));
         scheduleResize();
     }
 
+    static boolean hasPlannedThroughput(final Balancer.NodeBalance balance) {
+        return balance != null && balance.operations() > 0;
+    }
+
     /** One row per port moving this way, and nothing at all when none is. */
-    private void rates(final boolean input, final List<Port<?>> ports, final Map<Integer, Float> perCycle,
+    private void rates(final boolean input, final List<Port<?>> ports, final Map<Integer, Double> perCycle,
         final int duration, final RateUnit unit) {
         for (int i = 0; i < ports.size(); i++) {
-            final Float rate = perCycle.get(i);
+            final Double rate = perCycle.get(i);
             if (rate == null || rate <= 0) continue;
 
             final Flow row = rateRow(ports.get(i), i, input, rate, duration, unit);
@@ -106,7 +111,7 @@ class ThroughputFold extends NodeFold {
         }
     }
 
-    private Flow rateRow(final Port<?> port, final int portIndex, final boolean input, final float perCycle,
+    private Flow rateRow(final Port<?> port, final int portIndex, final boolean input, final double perCycle,
         final int duration, final RateUnit unit) {
         // The summary's shape: the bar, the name and the value are siblings in one row. The bar is
         // pixels, so it takes what it takes, and the two texts are given caps out of the rest - a name
@@ -138,7 +143,7 @@ class ThroughputFold extends NodeFold {
     }
 
     private void writeTooltip(final RichTooltip tooltip, final Port<?> port, final int portIndex, final boolean input,
-        final float perCycle, final int duration) {
+        final double perCycle, final int duration) {
         tooltip.addFromItem(
             port.getAllStacks()
                 .getFirst().item);

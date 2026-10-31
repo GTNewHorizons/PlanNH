@@ -2,14 +2,15 @@ package com.sbancuz.plannh.data;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
+import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.google.gson.annotations.SerializedName;
 import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.flowchart.balancer.Pin;
-import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.setting.CopyCountTarget;
 import com.sbancuz.plannh.data.setting.OutputRateTarget;
 import com.sbancuz.plannh.data.setting.SettingDef;
@@ -23,51 +24,34 @@ import lombok.Setter;
 @Setter
 public class MachineConfig {
 
-    @SerializedName("profile")
-    private String profileId;
     @Getter(AccessLevel.NONE)
-    private final Map<SettingDef<?>, Object> settings;
+    private final Map<SettingDef<?>, Object> settings = new HashMap<>();
+    private transient MachineProfile profile;
+    private String profileId;
 
-    /** The targets this machine is held to. Values here, and one of them is what counts. */
     private final CopyCountTarget copies = new CopyCountTarget();
     private final OutputRateTarget rates = new OutputRateTarget();
     private Pin targetKind = Pin.NONE;
+    private final Map<Integer, Double> inputConsumption = new HashMap<>();
+    private final Map<Integer, Double> outputProductivity = new HashMap<>();
 
-    // todo make these functional
-    private final Map<Integer, Float> inputConsumption = new HashMap<>();
-    private final Map<Integer, Float> outputProductivity = new HashMap<>();
+    /** Used by Gson so omitted fields retain their defaults. */
+    private MachineConfig() {}
 
-    public MachineConfig() {
-        this(MachineProfileRegistry.get(MachineProfileRegistry.defaultId()));
-    }
-
-    public MachineConfig(@Nullable final MachineProfile requested) {
+    public MachineConfig(final MachineProfile requested) {
         this(requested, Map.of());
     }
 
-    /**
-     * @param settings the values that differ from the profile's, e.g. as read back from a save.
-     *                 Every profile default is filled in here, so a config is whole from the moment
-     *                 it exists and reading a setting never has to invent one.
-     */
-    public MachineConfig(@Nullable final MachineProfile requested, final Map<SettingDef<?>, Object> settings) {
-        // An unknown profile id means the chart was saved with a mod (or a mod version) that is
-        // not present now. That is a chart to degrade, not a save to lose: fall back to the
-        // default profile, exactly as getProfile() does for the same reason.
-        MachineProfile profile = requested != null ? requested
-            : MachineProfileRegistry.get(MachineProfileRegistry.defaultId());
-        profileId = profile.id();
-
-        this.settings = new HashMap<>(settings);
-
-        for (final SettingDef<?> def : profile.defs()) this.settings.putIfAbsent(def, def.getDefaultValue());
-        this.settings.putIfAbsent(Settings.MACHINES, Settings.MACHINES.getDefaultValue());
+    /** Creates a sparse user configuration; defaults remain owned by the profile. */
+    public MachineConfig(final MachineProfile requested, final Map<SettingDef<?>, Object> settings) {
+        setProfile(requested);
+        this.settings.putAll(settings);
     }
 
-    /** A detached configuration for recipe extraction, which may fail before publication. */
     public MachineConfig(final MachineConfig source) {
+        profile = source.profile;
         profileId = source.profileId;
-        settings = new HashMap<>(source.settings);
+        settings.putAll(source.settings);
         copies.setCopies(source.copies.copies());
         rates.rates()
             .putAll(source.rates.rates());
@@ -76,92 +60,88 @@ public class MachineConfig {
         outputProductivity.putAll(source.outputProductivity);
     }
 
-    /** The copies target is the one that stands in for {@link Settings#MACHINES} as a row. */
     public boolean isCopiesTargeted() {
         return targetKind == Pin.FIXED_COPIES;
     }
 
-    /**
-     * How many copies of this machine the chart runs - the copies target when one is pinned, and the
-     * machine setting otherwise. The physical answer either way, which is why it is neither name.
-     */
-    public int configuredCopies() {
-        return isCopiesTargeted() ? copies.copies() : get(Settings.MACHINES);
+    public <T> T getOrDefault(final SettingDef<T> setting) {
+        return getOrDefault(setting, setting::getDefaultValue);
     }
 
-    @Nonnull
-    public MachineProfile getProfile() {
-        final MachineProfile p = MachineProfileRegistry.get(profileId);
-        // TODO
-        return p != null ? p : MachineProfileRegistry.get(MachineProfileRegistry.defaultId());
+    /** Resolves explicit settings and the active profile's derived defaults. */
+    public <T> T value(final SettingDef<T> setting, final RecipeContext ctx) {
+        if (profile == null) throw new IllegalStateException("Machine profile is unavailable");
+        return profile.value(setting, this, ctx);
     }
 
     @SuppressWarnings("unchecked")
-    public <T> T get(final SettingDef<T> setting) {
-        return (T) settings.computeIfAbsent(setting, SettingDef::getDefaultValue);
+    public <T> T getOrDefault(final SettingDef<T> setting, final Supplier<? extends T> fallback) {
+        if (settings.containsKey(setting)) return (T) settings.get(setting);
+        return fallback.get();
     }
 
-    public <T> void set(final SettingDef<T> setting, T value) {
+    public <T> void set(final SettingDef<T> setting, @Nullable final T value) {
         settings.put(setting, value);
     }
 
-    /** Seeds the values that are still unset. A default never overwrites a choice already made. */
-    public void applyDefaults(final Map<SettingDef<?>, Object> defaults) {
-        defaults.forEach(settings::putIfAbsent);
+    public boolean isExplicit(final SettingDef<?> setting) {
+        return settings.containsKey(setting);
     }
 
-    /**
-     * Applies the profile's per-recipe-map route defaults (e.g. Perfect OC on for specific recipe
-     * machines) to the settings. Only values still at the profile default are overridden, so a
-     * user's explicit choice is never clobbered.
-     */
-    public void seedRouteDefaults(Map<RecipeProperty<?>, Object> properties) {
-        final Map<SettingDef<?>, Object> defaults = getProfile().effectComputer()
-            .routeDefaults(new RecipeContext(properties));
-        if (defaults.isEmpty()) return;
-
-        for (final Map.Entry<SettingDef<?>, Object> e : defaults.entrySet()) {
-            final SettingDef<?> def = e.getKey();
-            final Object current = settings.get(def);
-            if (current == null || current.equals(def.getDefaultValue())) settings.put(def, e.getValue());
-        }
+    public void reset(final SettingDef<?> setting) {
+        settings.remove(setting);
     }
 
     @Nonnull
-    public EffectResult computeEffect(final Map<RecipeProperty<?>, Object> properties) {
+    public EffectResult computeEffect(final RecipeContext ctx) {
         final MachineProfile profile = getProfile();
-        EffectResult result = profile.effectComputer()
-            .compute(this, new RecipeContext(properties));
-        final int tickMod = get(Settings.TICK_MODIFIER);
-        if (tickMod > 0 && tickMod != 100) {
-            final double factor = 100.0 / tickMod;
-            final int newDuration = Math.max(1, (int) Math.round(result.durationTicks() * factor));
-            final long newEnergyPerT = Math.round(result.energyPerT() / factor);
-            result = new EffectResult(newDuration, newEnergyPerT, result.throughputFactor());
-        }
-        return result;
+        if (profile == null) throw new IllegalStateException("Machine profile is unavailable");
+        return profile.computeEffect(this, ctx);
     }
 
-    /**
-     * Takes another node's machine settings, for the members of a machine group: they are one
-     * machine, so they run at one tier with one set of upgrades. What each recipe asks for is left
-     * alone - the machine count, and the targets with it - because a plan belongs to the recipe that
-     * made it and not to the machine they share.
-     */
+    public void setProfile(@Nullable final MachineProfile profile) {
+        this.profile = profile;
+        if (profile != null) profileId = profile.id();
+    }
+
+    public void selectProfile(final MachineProfile newProfile) {
+        if (!Objects.equals(profile, newProfile)) {
+            settings.clear();
+            inputConsumption.clear();
+            outputProductivity.clear();
+        }
+        setProfile(newProfile);
+    }
+
     public void copySettingsFrom(final MachineConfig other) {
-        final int machines = get(Settings.MACHINES);
+        if (!Objects.equals(profile, other.profile)) {
+            throw new IllegalArgumentException("Cannot copy settings between different machine profiles");
+        }
+        final boolean machinesExplicit = isExplicit(Settings.MACHINES);
+        final Object machines = settings.get(Settings.MACHINES);
         final Pin kind = targetKind;
         settings.clear();
         settings.putAll(other.settings);
-        set(Settings.MACHINES, machines);
+        if (machinesExplicit) settings.put(Settings.MACHINES, machines);
+        else settings.remove(Settings.MACHINES);
         targetKind = kind;
     }
 
-    public float inputMultiplier(final int inputIndex) {
-        return inputConsumption.getOrDefault(inputIndex, 1.0f);
+    public double inputMultiplier(final int inputIndex, final DoubleSupplier fallback) {
+        final Double value = inputConsumption.get(inputIndex);
+        return value == null ? fallback.getAsDouble() : value;
     }
 
-    public float outputMultiplier(final int outputIndex) {
-        return outputProductivity.getOrDefault(outputIndex, 1.0f);
+    public void inputMultiplier(final int index, final double value) {
+        inputConsumption.put(index, value);
+    }
+
+    public double outputMultiplier(final int outputIndex, final DoubleSupplier fallback) {
+        final Double value = outputProductivity.get(outputIndex);
+        return value == null ? fallback.getAsDouble() : value;
+    }
+
+    public void outputMultiplier(final int index, final double value) {
+        outputProductivity.put(index, value);
     }
 }

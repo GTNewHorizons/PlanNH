@@ -33,7 +33,7 @@ abstract class NodeFold extends FlowchartFlow {
         super(GuiAxis.Y, node);
         this.node = node;
         builtWith = node.getData()
-            .getExtractor();
+            .recipeContext();
 
         // The margin goes with the rows: a shut fold is skipped whole by the area, margin included, so
         // the gap between two folds is there only while both of them are open.
@@ -43,12 +43,12 @@ abstract class NodeFold extends FlowchartFlow {
 
         onUpdateListener(w -> {
             if (!dirty && builtWith == node.getData()
-                .getExtractor()) return;
+                .recipeContext()) return;
 
             if (holdsFocus()) return;
             dirty = false;
             builtWith = node.getData()
-                .getExtractor();
+                .recipeContext();
 
             rebuild();
         }, true);

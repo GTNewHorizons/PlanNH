@@ -50,7 +50,7 @@ public final class ModelData {
         private Machine(final Node node) {
             this.node = node;
             final MachineConfig cfg = node.getMachineConfig();
-            final var eff = cfg.computeEffect(node.getProperties());
+            final var eff = node.computeEffect();
             this.durTicks = Math.max(1, eff.durationTicks());
             final int tf = eff.throughputFactor();
             this.inQty = new double[node.getInputs()
@@ -58,14 +58,14 @@ public final class ModelData {
             for (int i = 0; i < inQty.length; i++) {
                 final var s = node.getInputs()
                     .get(i);
-                inQty[i] = Math.max(0, s.getAmount()) * s.getChance() * cfg.inputMultiplier(i) * tf;
+                inQty[i] = Math.max(0d, s.getAmount()) * s.getChance() * eff.inputMultiplier(i) * tf;
             }
             this.outQty = new double[node.getOutputs()
                 .size()];
             for (int i = 0; i < outQty.length; i++) {
                 final var s = node.getOutputs()
                     .get(i);
-                outQty[i] = Math.max(0, s.getAmount()) * s.getChance() * cfg.outputMultiplier(i) * tf;
+                outQty[i] = Math.max(0d, s.getAmount()) * s.getChance() * eff.outputMultiplier(i) * tf;
             }
 
             this.targetExtent = cfg.getTargetKind() == Pin.TARGET_RATE ? cfg.getRates()
