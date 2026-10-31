@@ -51,21 +51,16 @@ public class FlowchartScreen extends ModularScreen {
     @Getter
     private final CanvasWidget canvas;
 
-    private final ParentWidget<?> messages = new ParentWidget<>().name("screen.messages")
-        .relativeToScreen()
-        .full()
-        .background(IDrawable.EMPTY)
-        .hoverBackground(IDrawable.EMPTY);
-
-    private FlowchartScreen(final ModularPanel panel, CanvasWidget canvas) {
+    private final ParentWidget<?> messages;
+    private FlowchartScreen(final ModularPanel panel, final CanvasWidget canvas, final ParentWidget<?> messages) {
         super(PlanNH.MODID, panel);
         getContext().setSettings(new UISettings());
         getContext().getUISettings()
             .getRecipeViewerSettings()
             .enable();
 
+        this.messages = messages;
         this.canvas = canvas;
-        panel.child(messages);
     }
 
     public static FlowchartScreen create() {
@@ -85,7 +80,7 @@ public class FlowchartScreen extends ModularScreen {
 
         Menu<?> contextMenu = new Menu<>();
 
-        CanvasWidget canvas = new CanvasWidget(contextMenu, panel, new ElkLayoutStrategy());
+        CanvasWidget canvas = new CanvasWidget(contextMenu, panel);
 
         contextMenu.setEnabledIf(_ -> canvas.isMenuOpen())
             .coverChildren()
@@ -301,11 +296,17 @@ public class FlowchartScreen extends ModularScreen {
                                 .addTooltipLine("Import Graph"))))
             .child(canvas);
 
+        final ParentWidget<?> messages = new ParentWidget<>().name("screen.messages")
+            .relativeToScreen()
+            .background(IDrawable.EMPTY)
+            .hoverBackground(IDrawable.EMPTY);
+
         panel.child(mainColumn);
         panel.child(new SummaryWidget(canvas));
         panel.child(contextMenu);
+        panel.child(messages);
 
-        return new FlowchartScreen(panel, canvas);
+        return new FlowchartScreen(panel, canvas, messages);
     }
 
     @Override
@@ -320,52 +321,15 @@ public class FlowchartScreen extends ModularScreen {
                 IKey.str(message),
                 getContext().getAbsMouseX(),
                 getContext().getAbsMouseY(),
-                Math.max(10, Math.min(280, getScreenArea().width - 18))));
+                Math.clamp(getScreenArea().width - 18, 10, 280)));
         messages.scheduleResize();
     }
 
     @Override
-    public boolean onMousePressed(final int mouseButton) {
-        // Handle reset before popup/parent ghost-drop dispatch. A popup is a separate panel, so its
-        // hovered children do not have the choice widget in their parent chain.
-        if (mouseButton == 2) {
-            final ItemStack ghost = NEIUtil.getNEIDragAndDropTarget(getContext());
-            if (getPanelManager().getTopMostPanel() instanceof SelectionPicker.Popup picker && picker.getContext()
-                .isMouseAbove(picker) && picker.resetOwnerSelection()) {
-                stopNEIGhostDrag(ghost);
-                return true;
-            }
-            for (IWidget widget = getContext().getTopHovered(); widget != null; widget = widget.getParent()) {
-                if (widget instanceof ItemChoiceWidget choice && choice.resetSelection()) {
-                    stopNEIGhostDrag(ghost);
-                    return true;
-                }
-                if (widget instanceof SettingsFold.SettingsRow row && row.resetSelection()) {
-                    stopNEIGhostDrag(ghost);
-                    return true;
-                }
-            }
-        }
-        return super.onMousePressed(mouseButton);
-    }
-
-    @Override
     public boolean onMouseScroll(final UpOrDown direction, final int amount) {
-        // ModularPanel gives a focused widget the first chance at the wheel. Refresh the live hover
-        // path first, then let a hovered item choice win over a previously focused numeric field.
+        // This for some reason fixes a bug when you scroll to increase the upgrades in a machine, then zoom doesn't happen
         super.onFrameUpdate();
-        for (IWidget widget = getContext().getTopHovered(); widget != null; widget = widget.getParent()) {
-            if (widget instanceof ItemChoiceWidget choice && choice.hasScrollHandler()
-                && choice.onMouseScroll(direction, amount)) {
-                return true;
-            }
-        }
         return super.onMouseScroll(direction, amount);
-    }
-
-    private static void stopNEIGhostDrag(final ItemStack ghost) {
-        if (ghost != null) ghost.stackSize = 0;
-        NEIUtil.stopNEIGhostDrag();
     }
 
     // Screen level, not canvas level: the panel only offers keys to the hovered widget, so the
