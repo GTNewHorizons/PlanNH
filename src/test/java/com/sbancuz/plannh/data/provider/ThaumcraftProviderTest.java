@@ -213,7 +213,7 @@ class ThaumcraftProviderTest {
                 ThaumcraftProvider.BOOST_SOURCE,
                 RecipeContext.builder()
                     .build()));
-        assertEquals(0d, loaded.inputMultiplier(2));
+        assertEquals(0d, loaded.inputMultiplier(2, () -> 1d));
     }
 
     private static void installCachedRecipe(final TemplateRecipeHandler handler,

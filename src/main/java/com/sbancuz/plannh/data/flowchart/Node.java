@@ -119,7 +119,6 @@ public class Node extends GraphData {
         return selectedProfile != null;
     }
 
-    // TODO: remove
     public RecipeContext recipeContext() {
         return context;
     }
@@ -134,11 +133,6 @@ public class Node extends GraphData {
 
     public Map<RecipeProperty<?>, Object> getProperties() {
         return context.properties();
-    }
-
-    // TODO: SEe this
-    public Map<RecipeProperty<?>, Object> displayProperties() {
-        return isAvailable() ? displayProperties(computeEffect()) : getProperties();
     }
 
     public Map<RecipeProperty<?>, Object> displayProperties(final EffectResult effect) {

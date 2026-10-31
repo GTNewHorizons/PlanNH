@@ -3,7 +3,6 @@ package com.sbancuz.plannh.gui.setting;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.IntConsumer;
 import java.util.function.IntUnaryOperator;
 import java.util.function.Predicate;
@@ -21,8 +20,6 @@ import com.cleanroommc.modularui.integration.recipeviewer.RecipeViewerIngredient
 import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
-import com.sbancuz.plannh.data.MachineConfig;
-import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.setting.ChoiceSettingDef;
 import com.sbancuz.plannh.gui.common.ItemSelectionGrid;
 import com.sbancuz.plannh.gui.common.SelectionPicker;
@@ -45,28 +42,7 @@ public final class ItemChoiceWidget extends ButtonWidget<ItemChoiceWidget>
     private boolean shiftHeld;
     private BiConsumer<RichTooltip, ItemStack> pickerTooltip;
     private IntConsumer scrollHandler;
-    private IntUnaryOperator selectionCount;
-
-    /** Binds native item choices to their stored value, including non-item settings. */
-    public <T> ItemChoiceWidget(final ChoiceSettingDef<T> setting, final MachineConfig cfg, final RecipeContext ctx,
-        final Consumer<Runnable> edit, final Supplier<List<ItemStack>> choices, final Function<T, ItemStack> display,
-        final Function<ItemStack, T> value) {
-        this(
-            setting,
-            () -> display.apply(cfg.value(setting, ctx)),
-            stack -> value.apply(stack) != null,
-            stack -> cfg.set(setting, value.apply(stack)),
-            edit);
-        selectionCount = count -> setting.isCounted()
-            ? Math.clamp(count, Math.max(1, setting.minimumCount(cfg, ctx)), setting.maximumCount(cfg, ctx))
-            : 1;
-        picker(choices, () -> cfg.reset(setting));
-        hint("plannh.settings.item_choice_hint");
-        tooltipBuilder(
-            tooltip -> TooltipBuilder.create(tooltip)
-                .langRow(cfg.isExplicit(setting) ? "plannh.settings.choice_manual" : "plannh.settings.choice_auto")
-                .flush());
-    }
+    private final IntUnaryOperator selectionCount;
 
     public ItemChoiceWidget(final ChoiceSettingDef<?> anchor, final Supplier<ItemStack> selection,
         final Predicate<ItemStack> accepts, final Consumer<ItemStack> select, final Consumer<Runnable> edit) {
@@ -140,10 +116,6 @@ public final class ItemChoiceWidget extends ButtonWidget<ItemChoiceWidget>
     public ItemChoiceWidget scrollHandler(final IntConsumer handler) {
         this.scrollHandler = handler;
         return this;
-    }
-
-    public boolean hasScrollHandler() {
-        return scrollHandler != null;
     }
 
     @Override

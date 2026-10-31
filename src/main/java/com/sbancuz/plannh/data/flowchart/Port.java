@@ -82,14 +82,12 @@ public class Port<T> {
 
     public void merge(final Port<?> other) {
         final long newAmount = Math.addExact(getAmount(), other.getAmount());
-        // An amount-weighted average is undefined when there is no amount to weight by, and the NaN
-        // chance it would leave here reaches the balancer as a NaN coefficient, where it poisons a
-        // whole solve instead of failing anywhere near this line.
         if (newAmount != 0) {
             final double a = getAmount();
             final double b = other.getAmount();
             chance = (float) ((a * chance + b * other.chance) / (a + b));
         }
+
         allStacks.addAll(other.allStacks);
         type.setAmount(value, newAmount);
     }

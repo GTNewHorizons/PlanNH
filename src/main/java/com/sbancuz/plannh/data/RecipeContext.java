@@ -1,7 +1,6 @@
 package com.sbancuz.plannh.data;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,7 +20,7 @@ public final class RecipeContext {
     private final List<Port<?>> outputs;
 
     private RecipeContext(final Builder builder) {
-        properties = Collections.unmodifiableMap(new HashMap<>(builder.properties));
+        properties = Map.copyOf(builder.properties);
         inputs = List.copyOf(builder.inputs);
         outputs = List.copyOf(builder.outputs);
     }
@@ -69,7 +68,6 @@ public final class RecipeContext {
         private Builder() {}
 
         public <T> Builder property(final RecipeProperty<T> property, @Nullable final T value) {
-            if (property == null) throw new NullPointerException();
             properties.put(property, value);
             return this;
         }
@@ -89,13 +87,11 @@ public final class RecipeContext {
         }
 
         public Builder input(final Port<?> port) {
-            if (port == null) throw new NullPointerException();
             inputs.add(port);
             return this;
         }
 
         public Builder output(final Port<?> port) {
-            if (port == null) throw new NullPointerException();
             outputs.add(port);
             return this;
         }

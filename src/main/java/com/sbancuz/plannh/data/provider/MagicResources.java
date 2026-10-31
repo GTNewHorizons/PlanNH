@@ -41,8 +41,6 @@ public final class MagicResources {
             tooltip.addLine(IKey.lang("plannh.resources.unit.aura"));
         });
 
-    private MagicResources() {}
-
     @Nonnull
     public static Port<Amount> port(final ResourceProperty<Amount> type, final String id, final String name,
         final int color, final long amount, final PositionedStack display) {
@@ -52,11 +50,11 @@ public final class MagicResources {
     /** ARI's recipe display variant: discovered rendering, aspect NBT, and the recipe amount. */
     public static PositionedStack aspectDisplay(final Item aspectItem, final String aspectTag, final long amount,
         final int x, final int y) {
-        if (aspectItem == null) throw new IllegalStateException("Aspect Recipe Index aspect item is unavailable");
         final ItemStack stack = new ItemStack(aspectItem, (int) Math.clamp(amount, 1L, Integer.MAX_VALUE), 1);
         stack.setTagCompound(new NBTTagCompound());
         stack.getTagCompound()
             .setString("Aspect", aspectTag);
+
         return new PositionedStack(stack, x, y, false);
     }
 

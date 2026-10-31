@@ -20,6 +20,8 @@ import com.sbancuz.plannh.gui.setting.ItemChoiceWidget;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
+import lombok.Getter;
+
 /** A registered value selected from a runtime registry, rather than a Java enum. */
 public class ChoiceSettingDef<T> extends SettingDef<T> {
 
@@ -27,8 +29,11 @@ public class ChoiceSettingDef<T> extends SettingDef<T> {
     private final Supplier<List<T>> choices;
     private final Function<T, String> display;
     private final BiPredicate<T, T> equality;
+    @Getter
     private int minCount;
+    @Getter
     private int maxCount;
+    @Getter
     private boolean counted;
 
     public ChoiceSettingDef(final String key, final T defaultValue, final Class<T> type,
@@ -52,18 +57,6 @@ public class ChoiceSettingDef<T> extends SettingDef<T> {
         this.maxCount = max;
         this.counted = true;
         return this;
-    }
-
-    public int getMinCount() {
-        return minCount;
-    }
-
-    public int getMaxCount() {
-        return maxCount;
-    }
-
-    public boolean isCounted() {
-        return counted;
     }
 
     public int minimumCount(final MachineConfig cfg, final RecipeContext ctx) {
@@ -128,15 +121,26 @@ public class ChoiceSettingDef<T> extends SettingDef<T> {
         if (type == ItemStack.class) {
             final ItemChoiceWidget widget = new ItemChoiceWidget(
                 this,
-                cfg,
-                ctx,
-                edit,
-                () -> choices.get()
-                    .stream()
-                    .map(value -> (ItemStack) value)
-                    .toList(),
-                value -> (ItemStack) value,
-                stack -> acceptsItem(stack) ? type.cast(stack) : null);
+                () -> (ItemStack) cfg.value(this, ctx),
+                this::acceptsItem,
+                stack -> {
+                    if (counted) stack.stackSize = Math
+                        .clamp(stack.stackSize, Math.max(1, minimumCount(cfg, ctx)), maximumCount(cfg, ctx));
+                    cfg.set(this, type.cast(stack));
+                },
+                edit)
+                    .picker(
+                        () -> choices.get()
+                            .stream()
+                            .map(value -> (ItemStack) value)
+                            .toList(),
+                        () -> cfg.reset(this))
+                    .hint("plannh.settings.item_choice_hint")
+                    .tooltipBuilder(
+                        tooltip -> TooltipBuilder.create(tooltip)
+                            .langRow(cfg.isExplicit(this) ? "plannh.settings.choice_manual" : "plannh.settings.choice_auto")
+                            .flush());
+
             if (counted) widget.scrollHandler(direction -> {
                 final int current = count(cfg, ctx);
                 final int next = Math.clamp(current + direction, minimumCount(cfg, ctx), maximumCount(cfg, ctx));
@@ -146,6 +150,7 @@ public class ChoiceSettingDef<T> extends SettingDef<T> {
                     tooltip -> TooltipBuilder.create(tooltip)
                         .langRow("plannh.settings.item_count_scroll")
                         .flush());
+
             return widget;
         }
         final List<T> values = choices.get();

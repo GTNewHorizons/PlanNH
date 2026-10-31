@@ -187,8 +187,8 @@ class NodeFailureTest {
                 .rate(0),
             1e-9);
         assertEquals(Pin.TARGET_RATE, config.getTargetKind());
-        assertEquals(0.5, config.inputMultiplier(0), 1e-6);
-        assertEquals(1.25, config.outputMultiplier(0), 1e-6);
+        assertEquals(0.5, config.inputMultiplier(0, () -> 1d), 1e-6);
+        assertEquals(1.25, config.outputMultiplier(0, () -> 1d), 1e-6);
     }
 
     @Test

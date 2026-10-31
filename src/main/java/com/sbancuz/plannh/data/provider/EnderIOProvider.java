@@ -4,9 +4,7 @@ import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
-import java.util.stream.IntStream;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -15,11 +13,9 @@ import net.minecraft.block.Block;
 import net.minecraft.item.ItemStack;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
-import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
-import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.effect.Effects;
@@ -28,7 +24,6 @@ import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.setting.ChoiceSettingDef;
 import com.sbancuz.plannh.data.setting.Settings;
-import com.sbancuz.plannh.gui.setting.ItemChoiceWidget;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.FurnaceRecipeHandler;
@@ -54,40 +49,23 @@ import crazypants.enderio.power.Capacitors;
 
 public class EnderIOProvider implements PropertyProvider {
 
-    private static final int MAX_CAPACITOR_TIER = 6;
-
-    public static final ChoiceSettingDef<Integer> CAPACITOR = new ChoiceSettingDef<>(
+    public static final ChoiceSettingDef<ItemStack> CAPACITOR = new ChoiceSettingDef<>(
         "eio_capacitor",
-        0,
-        Integer.class,
-        () -> IntStream.rangeClosed(0, MAX_CAPACITOR_TIER)
-            .boxed()
-            .toList(),
-        tier -> Integer.toString(tier)) {
+        null,
+        ItemStack.class,
+        () -> EnderIO.itemBasicCapacitor == null ? List.of()
+            : Arrays.stream(Capacitors.VALUES)
+                .map(Capacitors::getItemStack)
+                .toList(),
+        stack -> stack == null ? "-" : stack.getDisplayName()) {
 
         @Override
-        public IWidget settingsWidget(final MachineConfig cfg, final RecipeContext ctx, final Consumer<Runnable> edit) {
-            return new ItemChoiceWidget(
-                this,
-                cfg,
-                ctx,
-                edit,
-                () -> EnderIO.itemBasicCapacitor == null ? List.of()
-                    : Arrays.stream(Capacitors.VALUES, 0, MAX_CAPACITOR_TIER + 1)
-                        .map(Capacitors::getItemStack)
-                        .toList(),
-                tier -> EnderIO.itemBasicCapacitor == null ? null
-                    : Capacitors.VALUES[Math.clamp(tier, 0, MAX_CAPACITOR_TIER)].getItemStack(),
-                stack -> {
-                    if (stack == null || stack.getItem() == null || stack.getItem() != EnderIO.itemBasicCapacitor)
-                        return null;
-                    final int metadata = stack.getItemDamage();
-                    if (metadata >= 0 && metadata <= MAX_CAPACITOR_TIER) return metadata;
-                    return switch (metadata) {
-                        case 7, 8, 9 -> metadata - 7;
-                        default -> null;
-                    };
-                });
+        protected boolean acceptsItem(final ItemStack stack) {
+            // Totemic capacitor power depends on the stack's enchantments.
+            return stack != null && stack.getItem() != null
+                && stack.getItem() == EnderIO.itemBasicCapacitor
+                && stack.getItemDamage() >= 0
+                && stack.getItemDamage() < Capacitors.VALUES.length;
         }
     };
 
@@ -124,10 +102,14 @@ public class EnderIOProvider implements PropertyProvider {
     }
 
     private static final String PROFILE_ID = "enderio";
-    private static final int[] CAPACITOR_RF_PER_T = Arrays.stream(Capacitors.VALUES)
-        .limit(MAX_CAPACITOR_TIER + 1L)
-        .mapToInt(capacitor -> capacitor.capacitor.getMaxEnergyExtracted())
-        .toArray();
+
+    private static Capacitors capacitorType(final ItemStack stack) {
+        if (stack == null || stack.getItem() == null
+            || stack.getItem() != EnderIO.itemBasicCapacitor
+            || stack.getItemDamage() < 0
+            || stack.getItemDamage() >= Capacitors.VALUES.length) return Capacitors.BASIC_CAPACITOR;
+        return Capacitors.VALUES[stack.getItemDamage()];
+    }
 
     static final RecipeProperty<Integer> FIXED_RF_PER_TICK = RecipeProperty
         .<Integer>builder("enderio.fixed_rf_per_tick", 0)
@@ -153,9 +135,10 @@ public class EnderIOProvider implements PropertyProvider {
         .derive(Settings.RF_PER_TICK, (cfg, ctx) -> {
             final Integer fixed = ctx.getOrDefault(FIXED_RF_PER_TICK, null);
             if (fixed != null) return fixed;
-            final int capacitor = cfg.getOrDefault(CAPACITOR);
-            final int index = Math.clamp(capacitor, 0, CAPACITOR_RF_PER_T.length - 1);
-            return CAPACITOR_RF_PER_T[index];
+            final ItemStack stack = cfg.value(CAPACITOR, ctx);
+            final Capacitors type = capacitorType(stack);
+            return (type == Capacitors.TOTEMIC_CAPACITOR ? EnderIO.itemBasicCapacitor.getCapacitor(stack)
+                : type.capacitor).getMaxEnergyExtracted();
         })
         .derive(Settings.DURATION_TICKS, (cfg, ctx) -> {
             final long cost = energy(ctx);
@@ -182,11 +165,11 @@ public class EnderIOProvider implements PropertyProvider {
         // TODO: Open an upstream PR to expose TileCrafter tick intervals and completion semantics instead of copying
         // them here.
         .effect(Effects.duration((cfg, ctx) -> {
-            final int capacitor = Math.clamp(cfg.value(CAPACITOR, ctx), 0, MAX_CAPACITOR_TIER);
-            final int interval;
-            if (capacitor == 0) interval = 20;
-            else if (capacitor == 1) interval = 10;
-            else interval = 2;
+            final int interval = switch (capacitorType(cfg.value(CAPACITOR, ctx))) {
+                case BASIC_CAPACITOR -> 20;
+                case ACTIVATED_CAPACITOR -> 10;
+                default -> 2;
+            };
             // TileCrafter checks ticksSinceLastCraft <= ticksPerCraft, so completion is one tick later.
             return interval + 1;
         })

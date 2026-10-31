@@ -1,14 +1,11 @@
 package com.sbancuz.plannh.gui;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.item.ItemStack;
 
 import com.cleanroommc.modularui.api.UpOrDown;
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
-import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.drawable.Rectangle;
-import com.cleanroommc.modularui.integration.nei.NEIUtil;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.ModularScreen;
 import com.cleanroommc.modularui.screen.UISettings;
@@ -30,10 +27,6 @@ import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
-import com.sbancuz.plannh.gui.common.SelectionPicker;
-import com.sbancuz.plannh.gui.layout.ElkLayoutStrategy;
-import com.sbancuz.plannh.gui.node.SettingsFold;
-import com.sbancuz.plannh.gui.setting.ItemChoiceWidget;
 import com.sbancuz.plannh.gui.summary.SummaryWidget;
 import com.sbancuz.plannh.nei.NEIPlanConfig;
 
@@ -52,6 +45,7 @@ public class FlowchartScreen extends ModularScreen {
     private final CanvasWidget canvas;
 
     private final ParentWidget<?> messages;
+
     private FlowchartScreen(final ModularPanel panel, final CanvasWidget canvas, final ParentWidget<?> messages) {
         super(PlanNH.MODID, panel);
         getContext().setSettings(new UISettings());
@@ -327,7 +321,8 @@ public class FlowchartScreen extends ModularScreen {
 
     @Override
     public boolean onMouseScroll(final UpOrDown direction, final int amount) {
-        // This for some reason fixes a bug when you scroll to increase the upgrades in a machine, then zoom doesn't happen
+        // This for some reason fixes a bug when you scroll to increase the upgrades in a machine, then zoom doesn't
+        // happen
         super.onFrameUpdate();
         return super.onMouseScroll(direction, amount);
     }

@@ -127,11 +127,6 @@ public class MachineConfig {
         targetKind = kind;
     }
 
-    public double inputMultiplier(final int inputIndex) {
-        final Double value = inputConsumption.get(inputIndex);
-        return value == null ? 1d : value;
-    }
-
     public double inputMultiplier(final int inputIndex, final DoubleSupplier fallback) {
         final Double value = inputConsumption.get(inputIndex);
         return value == null ? fallback.getAsDouble() : value;
@@ -139,11 +134,6 @@ public class MachineConfig {
 
     public void inputMultiplier(final int index, final double value) {
         inputConsumption.put(index, value);
-    }
-
-    public double outputMultiplier(final int outputIndex) {
-        final Double value = outputProductivity.get(outputIndex);
-        return value == null ? 1d : value;
     }
 
     public double outputMultiplier(final int outputIndex, final DoubleSupplier fallback) {

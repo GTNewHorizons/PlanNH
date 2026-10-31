@@ -10,7 +10,6 @@ public final class ProfileFactory<M> {
 
     ProfileFactory(final MachineProfile.Definition<?> source, final BiConsumer<MachineProfile.Builder, M> specialize) {
         template = new MachineProfile.Template(source);
-        if (specialize == null) throw new NullPointerException();
         this.specialize = specialize;
     }
 

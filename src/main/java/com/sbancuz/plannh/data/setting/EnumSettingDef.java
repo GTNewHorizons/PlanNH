@@ -60,6 +60,7 @@ public class EnumSettingDef<E extends Enum<E>> extends SettingDef<E> {
                 return val != null ? val : type.getEnumConstants()[0];
             }, val -> edit.accept(() -> cfg.set(this, val))))
             .width(getMaxWidth());
+
         for (final E constant : type.getEnumConstants()) {
             button.stateOverlay(constant, IKey.dynamic(() -> displayValue(constant)));
         }
