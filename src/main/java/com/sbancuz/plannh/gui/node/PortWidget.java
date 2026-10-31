@@ -117,7 +117,8 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         background(
             new DynamicDrawable(
                 () -> new Rectangle().color(
-                    inactiveDemand ? PlannhColors.PORT_INACTIVE_OVERLAY.getColor() : PlannhColors.TRANSPARENT.getColor())),
+                    inactiveDemand ? PlannhColors.PORT_INACTIVE_OVERLAY.getColor()
+                        : PlannhColors.TRANSPARENT.getColor())),
             new DynamicDrawable(
                 () -> new Rectangle().color(inactiveDemand ? PlannhColors.PORT_INACTIVE_BORDER.getColor() : color)
                     .hollow()));
@@ -135,9 +136,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
                     .alignment(Alignment.TopRight));
         }
 
-        onUpdateListener(w -> {
-            refreshInactiveState();
-        }, true);
+        onUpdateListener(w -> { refreshInactiveState(); }, true);
     }
 
     private void selectConfiguration(@Nullable final ItemStack itemStack) {
