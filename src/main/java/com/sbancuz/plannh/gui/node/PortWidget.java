@@ -38,6 +38,7 @@ import com.sbancuz.plannh.data.flowchart.resource.LongItemStack;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.GuiHelper.RateUnit;
+import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.common.ItemSelectionGrid;
 import com.sbancuz.plannh.gui.common.SelectionPicker;
 import com.sbancuz.plannh.gui.edge.ArrowWidget;
@@ -64,10 +65,6 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     static final int PORT_OFFSET_X = 1;
     static final int PORT_OFFSET_Y = -1;
     static final int PORT_SIZE = 18;
-
-    private static final int INACTIVE_BORDER = Color.argb(170, 170, 170, 170);
-    private static final int INACTIVE_OVERLAY = Color.argb(80, 128, 128, 128);
-    private static final int TRANSPARENT = Color.argb(0, 0, 0, 0);
 
     private final CanvasWidget canvas;
 
@@ -118,9 +115,11 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         refreshInactiveState();
 
         background(
-            new DynamicDrawable(() -> new Rectangle().color(inactiveDemand ? INACTIVE_OVERLAY : TRANSPARENT)),
             new DynamicDrawable(
-                () -> new Rectangle().color(inactiveDemand ? INACTIVE_BORDER : color)
+                () -> new Rectangle().color(
+                    inactiveDemand ? PlannhColors.PORT_INACTIVE_OVERLAY.getColor() : PlannhColors.TRANSPARENT.getColor())),
+            new DynamicDrawable(
+                () -> new Rectangle().color(inactiveDemand ? PlannhColors.PORT_INACTIVE_BORDER.getColor() : color)
                     .hollow()));
         hoverOverlay(new Rectangle().color(Color.argb(255, 255, 255, 128)));
         pos(stack.relx + PORT_OFFSET_X, stack.rely + PORT_OFFSET_Y + yShift);
@@ -135,6 +134,10 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
                     .size(9)
                     .alignment(Alignment.TopRight));
         }
+
+        onUpdateListener(w -> {
+            refreshInactiveState();
+        }, true);
     }
 
     private void selectConfiguration(@Nullable final ItemStack itemStack) {
@@ -310,11 +313,11 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     private boolean configuredInactiveDemand() {
         if (!input || portType != PortType.INPUT) return false;
         final EffectResult current = currentEffect();
-        return current != null && isInactiveDemand(true, portType, current.inputMultiplier(index.leftInt()));
+        return current != null && isInactiveDemand(portType, current.inputMultiplier(index.leftInt()));
     }
 
-    static boolean isInactiveDemand(final boolean input, final PortType portType, final double multiplier) {
-        return input && portType == PortType.INPUT && multiplier == 0d;
+    static boolean isInactiveDemand(final PortType portType, final double multiplier) {
+        return portType == PortType.INPUT && multiplier == 0d;
     }
 
     private @Nullable EffectResult currentEffect() {
@@ -449,12 +452,6 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
 
     @Override
     public void drawMovingState(ModularGuiContext context, float partialTicks) {}
-
-    @Override
-    public void onUpdate() {
-        super.onUpdate();
-        refreshInactiveState();
-    }
 
     @Override
     public @Nullable Area getMovingArea() {
