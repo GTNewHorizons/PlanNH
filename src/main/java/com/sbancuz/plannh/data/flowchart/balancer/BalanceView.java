@@ -2,11 +2,13 @@ package com.sbancuz.plannh.data.flowchart.balancer;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.flowchart.Edge;
@@ -83,19 +85,18 @@ public final class BalanceView {
      */
     private static List<Boundary> configuredBoundary(final Graph graph) {
         final Set<PortRef> wired = new HashSet<>();
+        final Map<UUID, Node> nodes = new HashMap<>();
+        graph.allNodes().forEach(node -> nodes.put(node.getId(), node));
         for (final Edge edge : graph.getEdges()
             .values()) {
-            final Node source = graph.getNodes()
-                .get(edge.getSourceNodeId());
-            final Node target = graph.getNodes()
-                .get(edge.getTargetNodeId());
+            final Node source = nodes.get(edge.getSourceNodeId());
+            final Node target = nodes.get(edge.getTargetNodeId());
             if (!edge.isActive(source, target)) continue;
             wired.add(new PortRef(edge.getSourceNodeId(), edge.getSourceOutputItemIndex(), false));
             wired.add(new PortRef(edge.getTargetNodeId(), edge.getTargetInputItemIndex(), true));
         }
         final List<Boundary> out = new ArrayList<>();
-        for (final Node node : graph.getNodes()
-            .values()) {
+        for (final Node node : graph.allNodes().toList()) {
             if (!node.isAvailable()) continue;
             final double count = node.configuredCopies();
             if (count <= 0) continue;
@@ -289,10 +290,10 @@ public final class BalanceView {
     }
 
     private static Port<?> portOf(final Graph graph, final External external) {
-        final Node node = graph.getNodes()
-            .get(
-                external.port()
-                    .nodeId());
+        final Node node = graph.allNodes()
+            .filter(candidate -> candidate.getId().equals(external.port().nodeId()))
+            .findFirst()
+            .orElse(null);
         if (node == null) return null;
         final List<Port<?>> ports = external.port()
             .input() ? node.getInputs() : node.getOutputs();

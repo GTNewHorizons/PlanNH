@@ -324,8 +324,7 @@ public final class Summary extends GraphData {
         final int cycleTicks = balance.totalDurationTicks();
 
         // Accumulate scaled flows per resource across all ports, connected and unconnected alike.
-        for (final Node node : graph.getNodes()
-            .values()) {
+        for (final Node node : graph.allNodes().toList()) {
             if (!node.isAvailable()) continue;
             final var nb = balance.nodeBalances()
                 .get(node.id);
@@ -426,8 +425,7 @@ public final class Summary extends GraphData {
     /** One Measure row per machine with work to do; the chart-wide totals line is appended after. */
     private List<Line<?>> machineLines(final Graph graph) {
         final List<Line<?>> out = new ArrayList<>();
-        for (final Node node : graph.getNodes()
-            .values()) {
+        for (final Node node : graph.allNodes().toList()) {
             if (!node.isAvailable()) continue;
             final var nb = balance.nodeBalances()
                 .get(node.id);

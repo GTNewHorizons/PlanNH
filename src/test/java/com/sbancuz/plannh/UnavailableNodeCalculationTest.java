@@ -101,8 +101,6 @@ class UnavailableNodeCalculationTest {
         final Node available = node("available", List.of(), List.of("product"), 1);
         final Node unavailable = node("unavailable", List.of(), List.of(), 7);
         markUnavailable(unavailable);
-        graph.addNode(available);
-        graph.addNode(unavailable);
 
         final MachineGroup group = new MachineGroup();
         group.setMachineCapacity(1);
@@ -291,6 +289,11 @@ class UnavailableNodeCalculationTest {
         final Node node = new Node(UUID.randomUUID(), name, 0, 0, GtnhFlowLoader.defaultProfile(), recipe.build());
         node.getMachineConfig()
             .set(Settings.MACHINES, copies);
+        try {
+            set(node, "recipeId", Recipe.RecipeId.of(null, name, List.of()));
+        } catch (final Exception failure) {
+            throw new AssertionError("Node recipe ID field changed", failure);
+        }
         return node;
     }
 

@@ -235,8 +235,7 @@ public final class Balancer {
     @Nonnull
     private static Map<UUID, Double> configuredCounts(final Graph graph) {
         final Map<UUID, Double> counts = new HashMap<>();
-        for (final Node node : graph.getNodes()
-            .values()) {
+        for (final Node node : graph.allNodes().toList()) {
             if (!node.isAvailable()) continue;
             counts.put(node.getId(), (double) node.configuredCopies());
         }
@@ -257,7 +256,7 @@ public final class Balancer {
         double totalOps = 0;
         int totalDuration = 0;
 
-        for (final Node node : graph.getNodes().values()) {
+        for (final Node node : graph.allNodes().toList()) {
             if (!node.isAvailable()) continue;
             final double count = copyCounts.getOrDefault(node.getId(), 0.0);
             totalOps += count;

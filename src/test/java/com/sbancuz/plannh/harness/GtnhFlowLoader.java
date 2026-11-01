@@ -3,6 +3,7 @@ package com.sbancuz.plannh.harness;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -24,6 +25,7 @@ import com.sbancuz.plannh.data.flowchart.balancer.Pin;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.setting.Settings;
 
+import codechicken.nei.recipe.Recipe;
 import it.unimi.dsi.fastutil.ints.IntIntMutablePair;
 
 /**
