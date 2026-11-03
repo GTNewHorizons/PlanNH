@@ -41,17 +41,17 @@ public final class GuiHelper {
      * prefixes kick in at 10k and milli-fy trickle rates, and the never-collapse-to-zero rule is
      * not expressible there.
      */
-    public static String formatRate(final float rate) {
+    public static String formatRate(final double rate) {
         // Suffixes and base match NEI's and AE2's ReadableNumberConverter (both "kMGTPE" over 1000),
         // which is what a player reads everywhere else in the pack. G rather than B also keeps a
         // billion apart from the B fluid amounts already use for buckets.
-        if (rate >= 1e18f) return String.format(Locale.ROOT, "%.1fE", rate / 1e18f);
-        if (rate >= 1e15f) return String.format(Locale.ROOT, "%.1fP", rate / 1e15f);
-        if (rate >= 1e12f) return String.format(Locale.ROOT, "%.1fT", rate / 1e12f);
-        if (rate >= 1e9f) return String.format(Locale.ROOT, "%.1fG", rate / 1e9f);
-        if (rate >= 1e6f) return String.format(Locale.ROOT, "%.1fM", rate / 1e6f);
-        if (rate >= 1000f) return String.format(Locale.ROOT, "%.1fk", rate / 1000f);
-        if (rate >= 1f) return String.format(Locale.ROOT, "%.2f", rate);
+        if (rate >= 1e18d) return String.format(Locale.ROOT, "%.1fE", rate / 1e18d);
+        if (rate >= 1e15d) return String.format(Locale.ROOT, "%.1fP", rate / 1e15d);
+        if (rate >= 1e12d) return String.format(Locale.ROOT, "%.1fT", rate / 1e12d);
+        if (rate >= 1e9d) return String.format(Locale.ROOT, "%.1fG", rate / 1e9d);
+        if (rate >= 1e6d) return String.format(Locale.ROOT, "%.1fM", rate / 1e6d);
+        if (rate >= 1000d) return String.format(Locale.ROOT, "%.1fk", rate / 1000d);
+        if (rate >= 1d) return String.format(Locale.ROOT, "%.2f", rate);
         return trimTrailingZeros(String.format(Locale.ROOT, "%.5f", rate));
     }
 
@@ -113,9 +113,9 @@ public final class GuiHelper {
         GuiDraw.drawRect(x + w - bw, y, bw, h, color);
     }
 
-    public static float rate(final float perCycle, final int durationTicks, final RateUnit unit) {
-        final float cycleSeconds = durationTicks / (float) TICKS_PER_SECOND;
-        return perCycle / cycleSeconds * (float) unit.secondsPerUnit;
+    public static double rate(final double perCycle, final int durationTicks, final RateUnit unit) {
+        final double cycleSeconds = durationTicks / (double) TICKS_PER_SECOND;
+        return perCycle / cycleSeconds * unit.secondsPerUnit;
     }
 
     public static boolean shiftHeld() {

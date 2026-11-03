@@ -7,7 +7,6 @@ plannh.settings.tick_modifier=Accel
 plannh.settings.machines=Mach
 plannh.settings.energy_per_tick=Energy/t
 plannh.settings.inputs_per_tick=Inputs/t
-plannh.settings.burnable_override=Burnable
 
 ## Settings - GT
 plannh.settings.voltage=Tier
@@ -39,9 +38,109 @@ plannh.settings.mana_per_tick=Mana/t
 
 ## Settings - Thaumcraft (and friends)
 plannh.settings.vis_per_tick=Vis/t
+plannh.settings.thaumcraft.bellows=Bellows
+plannh.settings.thaumcraft.fire_vis=Fire Vis
+plannh.settings.thaumcraft.furnace_boost_source=Boost Supply
+plannh.settings.thaumcraft.vis_discount=Vis Disc.%
+plannh.settings.thaumcraft.furnace_boost_source.none=None
+plannh.settings.thaumcraft.furnace_boost_source.network_vis=Vis Network
+plannh.settings.thaumcraft.furnace_boost_source.essentia_nozzle=Essentia Nozzle
+plannh.tooltip.thaumcraft.furnace_steady_state=Assumes continuous supply; excludes startup buffers
+plannh.settings.witchinggadgets.bellows=Bellows
+
+## Settings - Furnaces
+plannh.settings.galacticraft.arc_power_tier=Power Tier
+plannh.settings.twilightforest.cinder_log_count=Cinder Logs
 
 ## Settings - Forestry
 plannh.settings.forestry_rf_per_tick=For. RF/t
+plannh.settings.bee_speed=Bee Speed
+plannh.settings.bee_lifespan=Bee Lifespan
+plannh.settings.bee_frame_1=Frame 1
+plannh.settings.bee_frame_2=Frame 2
+plannh.settings.bee_frame_3=Frame 3
+plannh.settings.bee_alveary_stimulator_1_board_type=Stimulator 1
+plannh.settings.bee_alveary_stimulator_2_board_type=Stimulator 2
+plannh.settings.bee_alveary_stimulator_3_board_type=Stimulator 3
+plannh.settings.bee_alveary_stimulator_1_circuit_1=Circuit 1.1
+plannh.settings.bee_alveary_stimulator_1_circuit_2=Circuit 1.2
+plannh.settings.bee_alveary_stimulator_1_circuit_3=Circuit 1.3
+plannh.settings.bee_alveary_stimulator_1_circuit_4=Circuit 1.4
+plannh.settings.bee_alveary_stimulator_2_circuit_1=Circuit 2.1
+plannh.settings.bee_alveary_stimulator_2_circuit_2=Circuit 2.2
+plannh.settings.bee_alveary_stimulator_2_circuit_3=Circuit 2.3
+plannh.settings.bee_alveary_stimulator_2_circuit_4=Circuit 2.4
+plannh.settings.bee_alveary_stimulator_3_circuit_1=Circuit 3.1
+plannh.settings.bee_alveary_stimulator_3_circuit_2=Circuit 3.2
+plannh.settings.bee_alveary_stimulator_3_circuit_3=Circuit 3.3
+plannh.settings.bee_alveary_stimulator_3_circuit_4=Circuit 3.4
+plannh.settings.bee_no_stimulator=None
+plannh.settings.bee_magic_production_aura=Production Booster
+plannh.settings.bee_magic_lifespan_aura=Lifespan Booster
+plannh.settings.bee_no_frame=None
+plannh.settings.gendustry_apiary_upgrade_1=Upgrade 1
+plannh.settings.gendustry_apiary_upgrade_2=Upgrade 2
+plannh.settings.gendustry_apiary_upgrade_3=Upgrade 3
+plannh.settings.gendustry_apiary_upgrade_4=Upgrade 4
+plannh.settings.gendustry_apiary_upgrade_1_count=Upgrade 1 Count
+plannh.settings.gendustry_apiary_upgrade_2_count=Upgrade 2 Count
+plannh.settings.gendustry_apiary_upgrade_3_count=Upgrade 3 Count
+plannh.settings.gendustry_apiary_upgrade_4_count=Upgrade 4 Count
+plannh.gui.gendustry.upgrades=Apiary Upgrades
+plannh.gui.gendustry.installed=Installed
+plannh.settings.choice_hint=Left/Right-click to cycle; middle-click to reset
+plannh.settings.item_drop_hint=Drop from NEI to select
+plannh.settings.item_choice_hint=Click to choose; middle-click to reset
+plannh.settings.item_choice_invalid=Unavailable with these settings
+plannh.settings.middle_reset_hint=Middle-click to reset
+plannh.settings.item_count_scroll=Scroll to change count
+plannh.settings.choice_auto=Recipe default
+plannh.settings.choice_manual=Custom value
+plannh.bees.genetic_speed=Genetic Speed
+plannh.bees.base_lifespan=Base Lifespan
+plannh.bees.work_cycles=%s work cycles
+plannh.bees.calculation=Production
+plannh.bees.requirements=Requirements
+plannh.bees.details_hint=Hold Shift for details
+plannh.bees.lifetime_model=One operation = queen lifetime + rebreeding
+plannh.bees.supplied_conditions=Assumes stable breeding and all production conditions met
+plannh.bees.unmodeled_effects=Excludes world effects and bonus flower products
+plannh.bees.aura_on=Enabled
+plannh.bees.aura_off=Disabled
+plannh.bees.aura_toggle=Click to toggle booster
+plannh.bees.aura_booster_source=Requires a Vis or Mana Apiary Booster within 6 blocks
+plannh.bees.aura_cost=Booster fuel costs are not included
+plannh.bees.aura_production=Production Bonus
+plannh.bees.aura_death=Lifespan Bonus
+plannh.bees.aura_port=Booster charge: %s (not an item)
+plannh.bees.aura_renewal=Consumes 1 charge/t after the initial aura expires
+plannh.bees.aura_steady_state=Includes rebreeding; excludes startup and idle time
+plannh.bees.aura_provider_limit=Boosters may not sustain this rate
+plannh.bees.stimulator_energy=Energy per Work Cycle
+plannh.bees.mj_per_cycle=%s MJ/work cycle
+plannh.gui.bees.frames=Frames
+plannh.gui.bees.frame_hint=Click or drop from NEI to choose a frame
+plannh.gui.bees.frame_slot=Frame
+plannh.gui.bees.frame_empty=No frame
+plannh.gui.bees.frame_reset=Middle-click to clear frame
+plannh.gui.bees.frame_maintenance=Assumes fresh frames; replacement costs excluded
+plannh.gui.bees.frame_order=Frames apply in slot order, then boards; bonus caps apply
+plannh.gui.bees.board_hint=Click to choose a board
+plannh.gui.bees.board_drop=Drop a board to replace, or a tube to fill an empty socket
+plannh.gui.bees.board_reset=Middle-click to reset board and circuits
+plannh.gui.bees.board_powered=Assumes continuous power
+plannh.gui.bees.board_caps=Bonus caps apply per board
+plannh.gui.bees.stimulator=Stimulator
+plannh.gui.bees.sockets=Circuits
+plannh.gui.bees.total_stimulator_energy=Total Stimulator Energy
+plannh.gui.bees.tube_hint=Click or drop from NEI to choose a circuit
+plannh.gui.bees.tube_reset=Middle-click to clear circuit
+plannh.gui.bees.circuit=Circuit
+plannh.gui.bees.circuit_empty=No circuit
+plannh.gui.bees.circuit_effects=Circuit Effects
+
+## Settings - Ender IO
+plannh.settings.eio_capacitor=Capacitor
 
 ## Settings - BloodMagic
 plannh.settings.lp_per_tick=BM LP/t
@@ -54,6 +153,18 @@ plannh.settings.steam_eut_discount=Steam EU%
 plannh.settings.steam_duration_modifier=Steam Spd%
 
 ## Properties
+## Typed Magic Resources
+plannh.resources.essentia=Essentia
+plannh.resources.stored_vis=Stored Vis
+plannh.resources.network_vis=Network Vis
+plannh.resources.aura_charge=Aura Charge
+plannh.resources.unit.centivis=centivis
+plannh.resources.unit.aura=aura
+plannh.properties.thaumcraft.essentia_units=Essentia Units
+plannh.properties.thaumcraft.stored_vis_units=Stored Vis Units
+plannh.gui.node.port.inactive=Not required with these settings
+plannh.gui.node.port.base_amount=Base Amount
+plannh.gui.node.port.per_operation=Per Operation
 ## Properties - General
 plannh.properties.duration_ticks=Duration
 plannh.properties.num_components=Components
@@ -71,6 +182,8 @@ plannh.properties.gt.fusion_threshold=Fusion Threshold
 plannh.properties.gt.recipe_map=Recipe Map
 plannh.properties.gt.steam_eu_pert=Steam/t
 plannh.properties.gt.total_steam_eu=Total Steam
+plannh.properties.gt.eoh.start_eu=Base Startup EU
+plannh.properties.gt.eoh.output_eu=Base Returned EU
 
 ## Properties - Avaritia
 plannh.properties.avaritia.compression_cost=Compression Cost
@@ -81,6 +194,7 @@ plannh.properties.botania.mana_cost=Mana Cost
 ## Properties - BloodMagic
 plannh.properties.bloodmagic.lp_amount=LP Cost
 plannh.properties.bloodmagic.lp_tier=LP Tier
+plannh.properties.bloodmagic.reagent=Reagent
 
 ## Properties - Thaumcraft (and friends)
 plannh.properties.thaumcraft.vis_cost=Vis Cost
@@ -88,9 +202,14 @@ plannh.properties.thaumcraft.instability=Instability
 plannh.properties.thaumcraft.total_vis=Total Vis
 plannh.properties.thaumcraft.research_key=Research Key
 plannh.properties.thaumcraft.num_components=Components
+plannh.properties.thaumcraft.essentia=Essentia
+plannh.properties.witchinggadgets.fire_essentia_per_fuel=Fire Essentia per Refill
+plannh.properties.galacticraft.gj_per_t=gJ/t
+plannh.properties.projectred.power_units_per_t=ProjectRed Power/t
 
 ## Properties - Forestry
 plannh.properties.forestry.processing_time=Processing Time
+plannh.properties.bee_species=Bee Species
 
 ## Properties - Cofh core
 plannh.properties.cofh.rf_total=RF Total
@@ -113,6 +232,7 @@ plannh.share.copy_to_clipboard=Plan exported to clipboard
 plannh.share.copy_from_clipboard=Plan imported from clipboard
 
 ## GUI
+plannh.gui.recipe.add_to_plan=Add recipe to plan
 plannh.error.recipe_add=Could not add this recipe. The plan was not changed. See the log for details.
 plannh.error.recipe_edit=Could not update recipe %s. The previous settings were preserved. See the log for details.
 plannh.error.save=Could not write the plan to disk. See the log for details.
@@ -177,8 +297,10 @@ plannh.gui.node.properties.none_hint=This recipe carries no properties to show
 
 ## GUI - Node extractor
 ## The switcher on the node's option row, over how this recipe is read
+plannh.gui.node.machine=Machine
 plannh.gui.node.extractor.prev=Previous extractor
 plannh.gui.node.extractor.next=Next extractor
+plannh.gui.node.extractor.choose=Click to choose an extractor
 
 ## GUI - Node settings
 plannh.gui.node.settings=Machine settings
@@ -257,10 +379,6 @@ nei.options.plannh.item_columns=Item Columns
 nei.options.plannh.item_columns.tip=Number of columns in the NEI item panel (minimum: 6)
 nei.options.plannh.blur_strength=Blur Strength
 nei.options.plannh.blur_strength.tip=How much should the background be blurred (0 = off)
-nei.options.plannh.burnable_override=Show burnable setting
-nei.options.plannh.burnable_override.0=Off
-nei.options.plannh.burnable_override.1=On
-nei.options.plannh.burnable_override.tip=Hide/Show burnable setting override in recipe configs (may help if some items don't show when a recipes has multiple outputs)
 nei.options.keys.plannh=PlanNH
 nei.options.keys.plannh.undo=Undo
 nei.options.keys.plannh.redo=Redo

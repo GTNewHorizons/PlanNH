@@ -20,6 +20,8 @@ import net.minecraft.item.ItemStack;
 import org.junit.jupiter.api.Test;
 
 import com.sbancuz.plannh.data.MachineConfig;
+import com.sbancuz.plannh.data.MachineProfile;
+import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.flowchart.balancer.Pin;
@@ -36,16 +38,38 @@ class NodeFailureTest {
 
     @Test
     void constructorRejectsUnresolvedInputlessRecipe() {
-        final IRecipeHandler handler = fakeHandler();
+        final Node node = new Node(fakeHandler(), 0);
 
-        final Node node = new Node(handler, 0);
         assertFalse(node.isAvailable());
         assertNull(node.getHandlerRef());
     }
 
     @Test
+    void profileExtractsThroughItsOwningProvider() {
+        final Fixture fixture = fixture((recipe, handler, index) -> {
+            recipe.property(GtnhFlowLoader.DURATION_TICKS, 17);
+            recipe.input(TestIngredients.port("owned-input", 1));
+        });
+
+        final RecipeContext context = fixture.profile()
+            .getRecipeContext(RecipeHandlerRef.of(fakeHandler(), 0));
+
+        assertEquals(17, context.get(GtnhFlowLoader.DURATION_TICKS));
+        assertEquals(
+            "owned-input",
+            TestIngredients.nameOf(
+                context.inputs()
+                    .getFirst()));
+    }
+
+    @Test
     void unavailableInitLeavesSafeCollectionsAndDoesNotRetry() throws Exception {
-        final Node node = harnessNode("unavailable");
+        final Node node = syntheticNode(
+            "unavailable",
+            profile("unavailable"),
+            RecipeContext.builder()
+                .build());
+        set(node, "selectedProfile", null);
         set(node, "initialized", false);
         set(node, "handlerRef", null);
 
@@ -54,7 +78,6 @@ class NodeFailureTest {
         assertTrue(node.isInitialized());
         assertFalse(node.isAvailable());
         assertNull(node.getHandlerRef());
-        assertNull(node.getExtractor());
         assertNotNullCollections(node);
         final List<Port<?>> inputs = node.getInputs();
 
@@ -65,20 +88,15 @@ class NodeFailureTest {
     }
 
     @Test
-    void failedExtractorSwitchDoesNotPublishPartialCandidate() throws Exception {
-        final PropertyProvider oldExtractor = provider((node, handler, index) -> Map.of());
-        final PropertyProvider failingExtractor = provider((node, handler, index) -> {
-            node.getInputs()
-                .add(TestIngredients.port("candidate-input", 1));
-            node.getOutputs()
-                .add(TestIngredients.port("candidate-output", 1));
-            node.getProperties()
-                .put(GtnhFlowLoader.DURATION_TICKS, 99);
-            node.getMachineConfig()
-                .set(Settings.MACHINES, 99);
-            throw new IllegalStateException("extractor failed");
+    void failedProfileSwitchDoesNotPublishPartialCandidate() throws Exception {
+        final Fixture old = fixture((recipe, handler, index) -> {});
+        final Fixture failing = fixture((recipe, handler, index) -> {
+            recipe.input(TestIngredients.port("candidate-input", 1));
+            recipe.output(TestIngredients.port("candidate-output", 1));
+            recipe.property(GtnhFlowLoader.DURATION_TICKS, 99);
+            throw new IllegalStateException("provider failed");
         });
-        final Node node = configuredNode(oldExtractor, failingExtractor);
+        final Node node = configuredNode(old, failing);
 
         final List<Port<?>> inputs = node.getInputs();
         final List<Port<?>> outputs = node.getOutputs();
@@ -86,10 +104,10 @@ class NodeFailureTest {
         final MachineConfig machineConfig = node.getMachineConfig();
         final Map<Integer, ItemStack> inputConfigurations = node.getInputConfigurations();
         final ItemStack configuredInput = inputConfigurations.get(0);
-        final int extractorIndex = node.getExtractorIndex();
+        final MachineProfile selected = node.getSelectedProfile();
         final boolean settingsOpen = node.isSettingsOpen();
 
-        assertThrows(IllegalStateException.class, () -> node.switchExtractor(1));
+        assertThrows(IllegalStateException.class, () -> node.selectProfile(1));
 
         assertSame(inputs, node.getInputs());
         assertSame(outputs, node.getOutputs());
@@ -100,7 +118,7 @@ class NodeFailureTest {
             configuredInput,
             node.getInputConfigurations()
                 .get(0));
-        assertEquals(extractorIndex, node.getExtractorIndex());
+        assertSame(selected, node.getSelectedProfile());
         assertEquals(settingsOpen, node.isSettingsOpen());
         assertEquals(
             42,
@@ -109,30 +127,27 @@ class NodeFailureTest {
         assertEquals(
             7,
             node.getMachineConfig()
-                .get(Settings.MACHINES));
+                .getOrDefault(Settings.MACHINES, Settings.MACHINES::getDefaultValue));
     }
 
     @Test
-    void successfulExtractorSwitchPublishesIsolatedCandidate() throws Exception {
-        final PropertyProvider oldExtractor = provider((node, handler, index) -> Map.of());
-        final PropertyProvider replacement = provider((node, handler, index) -> {
-            node.getInputs()
-                .add(TestIngredients.port("new-input", 2));
-            node.getOutputs()
-                .add(TestIngredients.port("new-output", 3));
-            return Map.of(GtnhFlowLoader.DURATION_TICKS, 99);
+    void successfulProfileSwitchPublishesIsolatedCandidate() throws Exception {
+        final Fixture old = fixture((recipe, handler, index) -> {});
+        final Fixture replacement = fixture((recipe, handler, index) -> {
+            recipe.input(TestIngredients.port("new-input", 2));
+            recipe.output(TestIngredients.port("new-output", 3));
+            recipe.property(GtnhFlowLoader.DURATION_TICKS, 99);
         });
-        final Node node = configuredNode(oldExtractor, replacement);
+        final Node node = configuredNode(old, replacement);
 
         final List<Port<?>> oldInputs = node.getInputs();
         final List<Port<?>> oldOutputs = node.getOutputs();
         final Map<RecipeProperty<?>, Object> oldProperties = node.getProperties();
         final MachineConfig oldMachineConfig = node.getMachineConfig();
 
-        node.switchExtractor(1);
+        assertTrue(node.selectProfile(1));
 
-        assertEquals(1, node.getExtractorIndex());
-        assertSame(replacement, node.getExtractor());
+        assertSame(replacement.profile(), node.getSelectedProfile());
         assertNotSame(oldInputs, node.getInputs());
         assertNotSame(oldOutputs, node.getOutputs());
         assertNotSame(oldProperties, node.getProperties());
@@ -156,8 +171,12 @@ class NodeFailureTest {
                 .isEmpty());
 
         final MachineConfig config = node.getMachineConfig();
-        assertEquals(7, config.get(Settings.MACHINES));
-        assertEquals(88, config.get(Settings.TICK_MODIFIER));
+        assertEquals(
+            replacement.profile()
+                .id(),
+            config.getProfileId());
+        assertEquals(7, config.getOrDefault(Settings.MACHINES, Settings.MACHINES::getDefaultValue));
+        assertEquals(88, config.getOrDefault(Settings.TICK_MODIFIER, Settings.TICK_MODIFIER::getDefaultValue));
         assertEquals(
             4,
             config.getCopies()
@@ -168,28 +187,23 @@ class NodeFailureTest {
                 .rate(0),
             1e-9);
         assertEquals(Pin.TARGET_RATE, config.getTargetKind());
-        assertEquals(0.5f, config.inputMultiplier(0), 1e-6f);
-        assertEquals(1.25f, config.outputMultiplier(0), 1e-6f);
+        assertEquals(0.5, config.inputMultiplier(0, () -> 1d), 1e-6);
+        assertEquals(1.25, config.outputMultiplier(0, () -> 1d), 1e-6);
     }
 
     @Test
     void extractionCombinesMatchingPortsWithoutChangingPreviousPorts() throws Exception {
-        final PropertyProvider original = provider((node, handler, index) -> Map.of());
-        final PropertyProvider replacement = provider((node, handler, index) -> {
-            node.getInputs()
-                .add(TestIngredients.port("input", 2));
-            node.getInputs()
-                .add(TestIngredients.port("input", 3));
-            node.getOutputs()
-                .add(TestIngredients.port("output", 4));
-            node.getOutputs()
-                .add(TestIngredients.port("output", 5));
-            return Map.of();
+        final Fixture original = fixture((recipe, handler, index) -> {});
+        final Fixture replacement = fixture((recipe, handler, index) -> {
+            recipe.input(TestIngredients.port("input", 2));
+            recipe.input(TestIngredients.port("input", 3));
+            recipe.output(TestIngredients.port("output", 4));
+            recipe.output(TestIngredients.port("output", 5));
         });
         final Node node = configuredNode(original, replacement);
         final List<Port<?>> previousInputs = node.getInputs();
 
-        assertTrue(node.switchExtractor(1));
+        assertTrue(node.selectProfile(1));
 
         assertEquals(
             1,
@@ -221,15 +235,42 @@ class NodeFailureTest {
                 .getAmount());
     }
 
-    private static Node configuredNode(final PropertyProvider oldExtractor, final PropertyProvider replacement)
-        throws Exception {
-        final Node node = harnessNode("switchable");
-        node.getInputs()
-            .add(TestIngredients.port("old-input", 1));
-        node.getOutputs()
-            .add(TestIngredients.port("old-output", 1));
-        node.getProperties()
-            .put(GtnhFlowLoader.DURATION_TICKS, 42);
+    @Test
+    void pickerSelectsAnExplicitProfileWhileTheOldSelectionIsUnavailable() throws Exception {
+        final Fixture original = fixture((recipe, handler, index) -> {});
+        final Fixture replacement = fixture((recipe, handler, index) -> {});
+        final Node node = configuredNode(original, replacement);
+        set(node, "availableProfiles", List.of(original.profile(), original.profile(), replacement.profile()));
+        set(node, "selectedProfile", null);
+
+        final List<Port<?>> inputs = node.getInputs();
+        final List<Port<?>> outputs = node.getOutputs();
+        final Map<RecipeProperty<?>, Object> properties = node.getProperties();
+        final MachineConfig config = node.getMachineConfig();
+        final RecipeContext context = node.recipeContext();
+        final RecipeHandlerRef handlerRef = node.getHandlerRef();
+
+        assertFalse(node.selectProfile(-1));
+        assertFalse(node.selectProfile(3));
+        assertSame(inputs, node.getInputs());
+        assertSame(outputs, node.getOutputs());
+        assertSame(properties, node.getProperties());
+        assertSame(config, node.getMachineConfig());
+        assertSame(context, node.recipeContext());
+        assertSame(handlerRef, node.getHandlerRef());
+        assertNull(node.getSelectedProfile());
+
+        assertTrue(node.selectProfile(2));
+
+        assertSame(replacement.profile(), node.getSelectedProfile());
+    }
+
+    private static Node configuredNode(final Fixture old, final Fixture replacement) throws Exception {
+        final RecipeContext.Builder recipe = RecipeContext.builder()
+            .property(GtnhFlowLoader.DURATION_TICKS, 42)
+            .input(TestIngredients.port("old-input", 1))
+            .output(TestIngredients.port("old-output", 1));
+        final Node node = syntheticNode("switchable", old.profile(), recipe.build());
         node.setSettingsOpen(false);
 
         final MachineConfig config = node.getMachineConfig();
@@ -241,10 +282,8 @@ class NodeFailureTest {
             .rates()
             .put(0, 12.5);
         config.setTargetKind(Pin.TARGET_RATE);
-        config.getInputConsumption()
-            .put(0, 0.5f);
-        config.getOutputProductivity()
-            .put(0, 1.25f);
+        config.inputMultiplier(0, 0.5);
+        config.outputMultiplier(0, 1.25);
         node.getInputConfigurations()
             .put(
                 0,
@@ -253,29 +292,40 @@ class NodeFailureTest {
                     .getFirst().item.copy());
 
         set(node, "handlerRef", RecipeHandlerRef.of(fakeHandler(), 0));
-        set(node, "extractor", oldExtractor);
-        set(node, "availableExtractors", List.of(oldExtractor, replacement));
-        set(node, "extractorIndex", 0);
+        set(node, "availableProfiles", List.of(old.profile(), replacement.profile()));
+        set(node, "selectedProfile", old.profile());
         return node;
     }
 
-    private static Node harnessNode(final String name) {
-        GtnhFlowLoader.ensureDefaultMachineProfile();
-        return new Node(UUID.randomUUID(), name, 0, 0);
+    private static Node syntheticNode(final String name, final MachineProfile profile, final RecipeContext context) {
+        return new Node(UUID.randomUUID(), name, 0, 0, profile, context);
     }
 
-    private static PropertyProvider provider(final Extract extraction) {
-        return new PropertyProvider() {
+    private static Fixture fixture(final Populate populate) {
+        final class FixtureProvider implements PropertyProvider {
+
+            private MachineProfile profile;
 
             @Override
             public void register() {}
 
             @Override
-            public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler,
-                final int recipeIndex) {
-                return extraction.apply(node, handler, recipeIndex);
+            public List<MachineProfile> getProfiles(final IRecipeHandler handler, final int recipeIndex) {
+                return List.of(profile);
             }
-        };
+
+            @Override
+            public void populate(final RecipeContext.Builder recipe, final IRecipeHandler handler,
+                final int recipeIndex) {
+                populate.apply(recipe, handler, recipeIndex);
+            }
+        }
+        final FixtureProvider provider = new FixtureProvider();
+        final MachineProfile profile = MachineProfile.builder("test-machine")
+            .provider(provider)
+            .build();
+        provider.profile = profile;
+        return new Fixture(profile, provider);
     }
 
     private static IRecipeHandler fakeHandler() {
@@ -304,11 +354,18 @@ class NodeFailureTest {
         return null;
     }
 
+    private static MachineProfile profile(final String id) {
+        return MachineProfile.builder(id)
+            .setting(Settings.MACHINES)
+            .setting(Settings.TICK_MODIFIER)
+            .build();
+    }
+
     private static void assertNotNullCollections(final Node node) {
         assertTrue(node.getInputs() != null);
         assertTrue(node.getOutputs() != null);
         assertTrue(node.getProperties() != null);
-        assertTrue(node.getAvailableExtractors() != null);
+        assertTrue(node.getAvailableProfiles() != null);
         assertTrue(node.getInputConfigurations() != null);
     }
 
@@ -318,9 +375,11 @@ class NodeFailureTest {
         field.set(node, value);
     }
 
-    @FunctionalInterface
-    private interface Extract {
+    private record Fixture(MachineProfile profile, PropertyProvider provider) {}
 
-        Map<RecipeProperty<?>, Object> apply(Node node, IRecipeHandler handler, int recipeIndex);
+    @FunctionalInterface
+    private interface Populate {
+
+        void apply(RecipeContext.Builder recipe, IRecipeHandler handler, int recipeIndex);
     }
 }

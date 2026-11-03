@@ -12,4 +12,6 @@ public interface RecipeWidgetAccessor {
     HandlerInfo plannh$getHandlerInfo();
 
     void plannh$setInputs(List<PositionedStack> inputs);
+
+    void plannh$setOutputs(List<PositionedStack> outputs);
 }

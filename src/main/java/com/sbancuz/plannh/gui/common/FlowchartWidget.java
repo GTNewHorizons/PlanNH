@@ -93,6 +93,11 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
         }
         PlanAPI.undoHistory()
             .commitEdit(dragEditToken, canvas.getGraph());
+        if (successful) {
+            canvas.getGraph()
+                .bumpVersion();
+            PlanAPI.save();
+        }
         dragEditToken = null;
     }
 

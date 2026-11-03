@@ -97,7 +97,7 @@ class BalancerSmokeTest {
         assertEquals(
             3,
             lcr.getMachineConfig()
-                .get(Settings.MACHINES),
+                .getOrDefault(Settings.MACHINES, Settings.MACHINES::getDefaultValue),
             "configured count must survive viewing");
         assertEquals(
             8.0 / 15.0,

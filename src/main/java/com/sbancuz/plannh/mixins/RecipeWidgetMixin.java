@@ -29,11 +29,19 @@ public abstract class RecipeWidgetMixin implements RecipeWidgetAccessor {
     @Unique
     private List<PositionedStack> plannh$inputs;
 
+    @Unique
+    private List<PositionedStack> plannh$outputs;
+
     @Inject(method = "getCyclingStacks", at = @At("HEAD"), cancellable = true)
     private void plannh$getInputs(CallbackInfoReturnable<List<PositionedStack>> cir) {
         if (plannh$inputs != null) {
             cir.setReturnValue(plannh$inputs);
         }
+    }
+
+    @Inject(method = "getOutputs", at = @At("HEAD"), cancellable = true)
+    private void plannh$getOutputs(CallbackInfoReturnable<List<PositionedStack>> cir) {
+        if (plannh$outputs != null) cir.setReturnValue(plannh$outputs);
     }
 
     @Override
@@ -49,5 +57,10 @@ public abstract class RecipeWidgetMixin implements RecipeWidgetAccessor {
     @Override
     public void plannh$setInputs(List<PositionedStack> inputs) {
         plannh$inputs = inputs;
+    }
+
+    @Override
+    public void plannh$setOutputs(List<PositionedStack> outputs) {
+        plannh$outputs = outputs;
     }
 }

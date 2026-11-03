@@ -19,9 +19,9 @@ public final class TestIngredients {
     public static final class TestIngredient {
 
         public final String name;
-        public int amount;
+        public long amount;
 
-        public TestIngredient(final String name, final int amount) {
+        public TestIngredient(final String name, final long amount) {
             this.name = name;
             this.amount = amount;
         }
@@ -52,7 +52,7 @@ public final class TestIngredients {
      * as {@code amount * chance}.
      */
     public static Port<TestIngredient> port(final String name, final double perCraft) {
-        final int amount = (int) Math.ceil(perCraft);
+        final long amount = (long) Math.ceil(perCraft);
         final float chance = (float) (perCraft / amount);
         return new Port<>(
             TEST,

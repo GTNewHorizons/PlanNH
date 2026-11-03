@@ -27,9 +27,9 @@ public final class MachineSettingsAdapter
         for (final Map.Entry<SettingDef<?>, Object> entry : source.entrySet()) {
             final SettingDef<?> def = entry.getKey();
             final Object value = entry.getValue();
-            if (def == null || value == null || value.equals(def.getDefaultValue())) continue;
+            if (def == null) continue;
             final JsonElement encoded = def.serialize(value, Object.class, context);
-            if (encoded != null && !encoded.isJsonNull()) saved.put(def.getKey(), encoded);
+            saved.put(def.getKey(), encoded == null ? com.google.gson.JsonNull.INSTANCE : encoded);
         }
         return context.serialize(saved);
     }
@@ -44,8 +44,9 @@ public final class MachineSettingsAdapter
             .entrySet()) {
             final SettingDef<?> def = Settings.get(entry.getKey());
             if (def == null) continue;
-            final Object value = def.deserialize(entry.getValue(), Object.class, context);
-            if (value != null) settings.put(def, value);
+            final Object value = entry.getValue()
+                .isJsonNull() ? null : def.deserialize(entry.getValue(), Object.class, context);
+            settings.put(def, value);
         }
         return settings;
     }

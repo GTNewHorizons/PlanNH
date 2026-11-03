@@ -2,6 +2,7 @@ package com.sbancuz.plannh.gui;
 
 import net.minecraft.client.Minecraft;
 
+import com.cleanroommc.modularui.api.UpOrDown;
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.drawable.Rectangle;
@@ -26,7 +27,6 @@ import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
-import com.sbancuz.plannh.gui.layout.ElkLayoutStrategy;
 import com.sbancuz.plannh.gui.summary.SummaryWidget;
 import com.sbancuz.plannh.nei.NEIPlanConfig;
 
@@ -44,21 +44,17 @@ public class FlowchartScreen extends ModularScreen {
     @Getter
     private final CanvasWidget canvas;
 
-    private final ParentWidget<?> messages = new ParentWidget<>().name("screen.messages")
-        .relativeToScreen()
-        .full()
-        .background(IDrawable.EMPTY)
-        .hoverBackground(IDrawable.EMPTY);
+    private final ParentWidget<?> messages;
 
-    private FlowchartScreen(final ModularPanel panel, CanvasWidget canvas) {
+    private FlowchartScreen(final ModularPanel panel, final CanvasWidget canvas, final ParentWidget<?> messages) {
         super(PlanNH.MODID, panel);
         getContext().setSettings(new UISettings());
         getContext().getUISettings()
             .getRecipeViewerSettings()
             .enable();
 
+        this.messages = messages;
         this.canvas = canvas;
-        panel.child(messages);
     }
 
     public static FlowchartScreen create() {
@@ -78,7 +74,7 @@ public class FlowchartScreen extends ModularScreen {
 
         Menu<?> contextMenu = new Menu<>();
 
-        CanvasWidget canvas = new CanvasWidget(contextMenu, panel, new ElkLayoutStrategy());
+        CanvasWidget canvas = new CanvasWidget(contextMenu, panel);
 
         contextMenu.setEnabledIf(_ -> canvas.isMenuOpen())
             .coverChildren()
@@ -294,11 +290,17 @@ public class FlowchartScreen extends ModularScreen {
                                 .addTooltipLine("Import Graph"))))
             .child(canvas);
 
+        final ParentWidget<?> messages = new ParentWidget<>().name("screen.messages")
+            .relativeToScreen()
+            .background(IDrawable.EMPTY)
+            .hoverBackground(IDrawable.EMPTY);
+
         panel.child(mainColumn);
         panel.child(new SummaryWidget(canvas));
         panel.child(contextMenu);
+        panel.child(messages);
 
-        return new FlowchartScreen(panel, canvas);
+        return new FlowchartScreen(panel, canvas, messages);
     }
 
     @Override
@@ -313,8 +315,16 @@ public class FlowchartScreen extends ModularScreen {
                 IKey.str(message),
                 getContext().getAbsMouseX(),
                 getContext().getAbsMouseY(),
-                Math.max(10, Math.min(280, getScreenArea().width - 18))));
+                Math.clamp(getScreenArea().width - 18, 10, 280)));
         messages.scheduleResize();
+    }
+
+    @Override
+    public boolean onMouseScroll(final UpOrDown direction, final int amount) {
+        // This for some reason fixes a bug when you scroll to increase the upgrades in a machine, then zoom doesn't
+        // happen
+        super.onFrameUpdate();
+        return super.onMouseScroll(direction, amount);
     }
 
     // Screen level, not canvas level: the panel only offers keys to the hovered widget, so the

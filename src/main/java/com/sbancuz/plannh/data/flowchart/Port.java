@@ -6,12 +6,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidStack;
 
 import com.cleanroommc.modularui.utils.Color;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
+import com.sbancuz.plannh.data.flowchart.resource.LongFluidStack;
+import com.sbancuz.plannh.data.flowchart.resource.LongItemStack;
 import com.sbancuz.plannh.data.properties.ResourceProperty;
 
 import codechicken.nei.PositionedStack;
+import codechicken.nei.item.ItemFluidDisplay;
+import codechicken.nei.recipe.StackInfo;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -31,7 +36,16 @@ public class Port<T> {
         allStacks.add(stack);
     }
 
-    public int getAmount() {
+    public static Port<LongFluidStack> fluid(final FluidStack stack, final float chance, final int x, final int y) {
+        return fluid(stack, stack.amount, chance, new PositionedStack(ItemFluidDisplay.createStack(stack), x, y));
+    }
+
+    public static Port<LongFluidStack> fluid(final FluidStack stack, final long amount, final float chance,
+        final PositionedStack display) {
+        return new Port<>(RecipePropertyAPI.FLUID, new LongFluidStack(stack.copy(), amount), chance, display);
+    }
+
+    public long getAmount() {
         return type.extractAmount(value);
     }
 
@@ -67,17 +81,31 @@ public class Port<T> {
     }
 
     public void merge(final Port<?> other) {
-        final int newAmount = getAmount() + other.getAmount();
-        // An amount-weighted average is undefined when there is no amount to weight by, and the NaN
-        // chance it would leave here reaches the balancer as a NaN coefficient, where it poisons a
-        // whole solve instead of failing anywhere near this line.
-        if (newAmount != 0) chance = (getAmount() * chance + other.getAmount() * other.chance) / newAmount;
+        final long newAmount = Math.addExact(getAmount(), other.getAmount());
+        if (newAmount != 0) {
+            final double a = getAmount();
+            final double b = other.getAmount();
+            chance = (float) ((a * chance + b * other.chance) / (a + b));
+        }
+
         allStacks.addAll(other.allStacks);
         type.setAmount(value, newAmount);
     }
 
-    public static Port<ItemStack> itemPort(PositionedStack ps) {
-        return new Port<>(RecipePropertyAPI.ITEM, ps.item.copy(), (float) ps.getChance() / CHANCE_FULL, ps.copy());
+    public static Port<?> fromStack(final PositionedStack ps) {
+        if (!StackInfo.isFluidDisplayItem(ps.item)) return itemPort(ps);
+        final long amount = StackInfo.itemStackToNBT(ps.item)
+            .getLong("Count");
+        return fluid(StackInfo.getFluid(ps.item), amount, (float) ps.getChance() / CHANCE_FULL, ps.copy());
+    }
+
+    public static Port<LongItemStack> itemPort(final PositionedStack ps) {
+        final ItemStack stack = ps.item.copy();
+        return new Port<>(
+            RecipePropertyAPI.ITEM,
+            new LongItemStack(stack, stack.stackSize),
+            (float) ps.getChance() / CHANCE_FULL,
+            ps.copy());
     }
 
     /**

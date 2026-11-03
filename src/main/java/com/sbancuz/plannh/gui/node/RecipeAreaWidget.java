@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import net.minecraft.client.Minecraft;
 
@@ -69,12 +70,13 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
         neiWidget.showAsWidget(true);
         neiWidget.x = WIDGET_OFFSET_X;
 
+        final int recipeHeight;
         if (Compat.GREGTECH.isLoaded && handlerRef.handler instanceof GTNEIDefaultHandlerAccessor handler) {
             Size size = handler.getNeiProperties().recipeBackgroundSize;
-            size(size.width, size.height);
+            recipeHeight = size.height;
             recipeWidth = size.width;
         } else {
-            size(neiWidget.w, neiWidget.h);
+            recipeHeight = neiWidget.h;
             recipeWidth = neiWidget.w;
         }
 
@@ -89,6 +91,27 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
                 .map(Port::getAllStacks)
                 .flatMap(List::stream)
                 .toList());
+        accessor.plannh$setOutputs(
+            outputs.stream()
+                .map(Port::getAllStacks)
+                .flatMap(List::stream)
+                .toList());
+        final Stream<PositionedStack> portStacks = Stream.concat(inputs.stream(), outputs.stream())
+            .flatMap(
+                port -> port.getAllStacks()
+                    .stream());
+        final int portsWidth = portStacks.mapToInt(stack -> PortWidget.portRight(stack.relx))
+            .max()
+            .orElse(0);
+        final int portsHeight = Stream.concat(inputs.stream(), outputs.stream())
+            .flatMap(
+                port -> port.getAllStacks()
+                    .stream())
+            .mapToInt(stack -> PortWidget.portBottom(stack.rely, yShift))
+            .max()
+            .orElse(0);
+        recipeWidth = widthWithPorts(recipeWidth, portsWidth);
+        size(recipeWidth, Math.max(recipeHeight, portsHeight));
 
         // inputs
         for (int i = 0; i < inputs.size(); i++) {
@@ -173,5 +196,9 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
 
     public Map<IntIntPair, PortWidget> getPortWidgets(boolean isInput) {
         return isInput ? inputPortWidgets : outputPortWidgets;
+    }
+
+    static int widthWithPorts(final int recipeWidth, final int rightmostPort) {
+        return Math.max(recipeWidth, rightmostPort);
     }
 }

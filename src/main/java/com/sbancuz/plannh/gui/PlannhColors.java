@@ -18,7 +18,8 @@ public final class PlannhColors {
         CHIP_BG           = C.argb("chip_bg",            "0xE6141414"),
         NOTE_BG           = C.argb("note_bg",            "0xC8FFF0A0"),
         NOTE_BG_EDITING   = C.argb("note_bg_editing",    "0xE6FFFAE0"),
-        SETTINGS_PANEL_BG = C.argb("settings_panel_bg",  "0xAA202020");
+        SETTINGS_PANEL_BG = C.argb("settings_panel_bg",  "0xAA202020"),
+        TRANSPARENT       = C.argb("transparent",        "0x00000000");
 
     // ── Borders / Lines / Separators ──
     public static final ColorResource
@@ -93,6 +94,10 @@ public final class PlannhColors {
         PIN_FLUID_OUT_H  = C.argb("pin_fluid_out_h",   "0x3C3C8CC8"),
         PIN_FLUID_IN     = C.argb("pin_fluid_in",      "0xDC3C64C8"),
         PIN_FLUID_IN_H   = C.argb("pin_fluid_in_h",    "0x3C3C64C8");
+
+    public static final ColorResource
+        PORT_INACTIVE_BORDER  = C.argb("port_inactive_border",  "0xAAAAAAAA"),
+        PORT_INACTIVE_OVERLAY = C.argb("port_inactive_overlay", "0x80508080");
 
     // ── Close / Delete Buttons ──
     public static final ColorResource

@@ -15,7 +15,7 @@ import org.yaml.snakeyaml.Yaml;
 
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
-import com.sbancuz.plannh.data.MachineProfileRegistry;
+import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
@@ -72,22 +72,12 @@ public final class GtnhFlowLoader {
         "light_fuel_hydrogen_loop", "230_platline", "palladium_line", "nanocircuits", "cetane", "jet_fuel",
         "microsheep", "palladium", "twoslack", "excess_choice", "symmetric_choice", "two_decisions" };
 
-    /**
-     * Machine profiles are normally registered during mod init; headless tests need the default
-     * profile present before any MachineConfig is constructed. The record is built directly
-     * because MachineProfile.Builder reads NEIClientConfig in its constructor, which needs a
-     * running client. Tests that build {@link Node}s by hand (instead of via {@link #load}) must
-     * call this first.
-     */
-    public static void ensureDefaultMachineProfile() {
-        if (MachineProfileRegistry.get(MachineProfileRegistry.defaultId()) == null) {
-            MachineProfileRegistry.register(
-                new MachineProfile(
-                    MachineProfileRegistry.defaultId(),
-                    "Default",
-                    List.of(MachineProfile.entry(Settings.MACHINES), MachineProfile.entry(Settings.TICK_MODIFIER)),
-                    (s, ctx) -> new EffectResult(ctx.getOrDefault(DURATION_TICKS, 1), 0, 1)));
-        }
+    public static MachineProfile defaultProfile() {
+        return MachineProfile.builder("test")
+            .setting(Settings.MACHINES)
+            .setting(Settings.TICK_MODIFIER)
+            .effect((cfg, ctx) -> new EffectResult(ctx.getOrDefault(DURATION_TICKS, 1), 0, 1))
+            .build();
     }
 
     private GtnhFlowLoader() {}
@@ -112,7 +102,6 @@ public final class GtnhFlowLoader {
      */
     public static LoadedChart load(final String name, final InputStream in) {
         Objects.requireNonNull(in, "null yaml stream for chart: " + name);
-        ensureDefaultMachineProfile();
         final List<Map<String, Object>> raw = new Yaml().load(in);
 
         final Graph graph = new Graph();
@@ -128,20 +117,29 @@ public final class GtnhFlowLoader {
             if (entry == null || !entry.containsKey("m")) continue;
             final int machineIndex = index++;
 
-            final Node node = new Node(nodeId(name, machineIndex), String.valueOf(entry.get("m")), 0, 0);
-            node.getProperties().put(DURATION_TICKS,
+            final RecipeContext.Builder recipe = RecipeContext.builder();
+            recipe.property(
+                DURATION_TICKS,
                 (int) Math.round(asDouble(entry.get("dur"), 1.0) * TICKS_PER_SECOND));
 
             for (final Map.Entry<String, Double> io : ioMap(entry.get("I")).entrySet()) {
                 consumers.computeIfAbsent(io.getKey(), k -> new ArrayList<>())
-                    .add(new int[] { machineIndex, node.getInputs().size() });
-                node.getInputs().add(TestIngredients.port(io.getKey(), io.getValue()));
+                    .add(new int[] { machineIndex, recipe.inputs().size() });
+                recipe.input(TestIngredients.port(io.getKey(), io.getValue()));
             }
             for (final Map.Entry<String, Double> io : ioMap(entry.get("O")).entrySet()) {
                 producers.computeIfAbsent(io.getKey(), k -> new ArrayList<>())
-                    .add(new int[] { machineIndex, node.getOutputs().size() });
-                node.getOutputs().add(TestIngredients.port(io.getKey(), io.getValue()));
+                    .add(new int[] { machineIndex, recipe.outputs().size() });
+                recipe.output(TestIngredients.port(io.getKey(), io.getValue()));
             }
+
+            final Node node = new Node(
+                nodeId(name, machineIndex),
+                String.valueOf(entry.get("m")),
+                0,
+                0,
+                defaultProfile(),
+                recipe.build());
 
             if (entry.containsKey("number")) {
                 final int count = (int) asDouble(entry.get("number"), 1.0);

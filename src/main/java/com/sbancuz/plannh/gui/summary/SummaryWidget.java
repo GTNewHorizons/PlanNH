@@ -16,7 +16,6 @@ import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widgets.CycleButtonWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.sbancuz.plannh.api.PlanAPI;
-import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.gui.CanvasWidget;
@@ -43,7 +42,6 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
     protected final CanvasWidget canvas;
     protected final Summary data;
 
-    private Graph lastGraph;
     private final FlowchartList sectionsList;
     private boolean moving = false;
     private int dragStartMouseX, dragStartMouseY;
@@ -166,11 +164,7 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
     @Override
     public void onUpdate() {
         super.onUpdate();
-        final Graph current = canvas.getGraph();
-        if (lastGraph != current) {
-            lastGraph = current;
-            data.recompute(current);
-        }
+        data.recompute(canvas.getGraph());
     }
 
     protected void reposition() {

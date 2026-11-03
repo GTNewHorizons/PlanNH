@@ -55,6 +55,7 @@ public final class Settings {
     public static final IntegerSettingDef VIS_PER_TICK = new IntegerSettingDef("vis_per_tick", 1, 1, 100);
     public static final IntegerSettingDef INPUTS_PER_TICK = new IntegerSettingDef("inputs_per_tick", 1, 1, 10000);
     public static final IntegerSettingDef LP_PER_TICK = new IntegerSettingDef("lp_per_tick", 20, 1, 100000);
+    public static final IntegerSettingDef RF_PER_TICK = new IntegerSettingDef("rf_per_tick", 0, 0, 1000000);
 
     public static final IntegerSettingDef STEAM_EUT_DISCOUNT = new IntegerSettingDef(
         "steam_eut_discount",
@@ -80,14 +81,9 @@ public final class Settings {
         0,
         0,
         8637);
-    public static final IntegerSettingDef CATALYST_ACCEL_CARD = new IntegerSettingDef("catalyst_accel_card", 0, 0, 5);
 
     // ── enum-type settings ──
     public static final EnumSettingDef<Voltage> VOLTAGE = new EnumSettingDef<>("voltage", Voltage.OFF, Voltage.class);
-    public static final EnumSettingDef<Burnable> BURNABLE_OVERRIDE = new EnumSettingDef<>(
-        "burnable_override",
-        Burnable.OFF,
-        Burnable.class);
 
     public enum Voltage {
         OFF,
@@ -106,11 +102,5 @@ public final class Settings {
         UMV,
         UXV,
         MAX;
-    }
-
-    public enum Burnable {
-        OFF,
-        IN,
-        OUT;
     }
 }

@@ -6,6 +6,6 @@ import com.sbancuz.plannh.data.RecipeContext;
 @FunctionalInterface
 public interface EffectFunction<T> {
 
-    T apply(EffectResult current, MachineConfig config, RecipeContext ctx);
+    T apply(EffectResult current, MachineConfig cfg, RecipeContext ctx);
 
 }

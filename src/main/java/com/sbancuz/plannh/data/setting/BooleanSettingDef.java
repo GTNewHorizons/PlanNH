@@ -7,6 +7,7 @@ import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.value.BoolValue;
 import com.cleanroommc.modularui.widgets.ToggleButton;
 import com.sbancuz.plannh.data.MachineConfig;
+import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 
 public class BooleanSettingDef extends SettingDef<Boolean> {
@@ -21,9 +22,13 @@ public class BooleanSettingDef extends SettingDef<Boolean> {
     }
 
     @Override
-    public IWidget settingsWidget(final MachineConfig config, final Consumer<Runnable> edit) {
+    public IWidget settingsWidget(final MachineConfig cfg, final RecipeContext ctx, final Consumer<Runnable> edit) {
         return new ToggleButton().name("settings.toggle")
-            .value(new BoolValue.Dynamic(() -> config.get(this), val -> edit.accept(() -> config.set(this, val))))
+            .value(
+                new BoolValue.Dynamic(
+                    () -> cfg.getProfile()
+                        .value(this, cfg, ctx),
+                    val -> edit.accept(() -> cfg.set(this, val))))
             .overlay(false, IKey.str("[ ]"))
             .overlay(true, IKey.str("[✓]"));
     }

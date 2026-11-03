@@ -10,9 +10,9 @@ import lombok.experimental.SuperBuilder;
 public class SummaryProperty<T> extends RecipeProperty<T> {
 
     @lombok.Builder.Default
-    private final Function<Float, String> amountFormatter = GuiHelper::formatRate;
+    private final Function<Double, String> amountFormatter = GuiHelper::formatRate;
 
-    public String formatAmount(final float value) {
+    public String formatAmount(final double value) {
         return amountFormatter.apply(value);
     }
 

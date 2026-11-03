@@ -13,11 +13,11 @@ final class TextRow extends SummaryFlow {
         super(GuiAxis.X);
         name(name);
         fullWidth().coverChildrenHeight(SummaryBody.LINE_H)
-            .paddingLeft(SummaryBody.TEXT_X)
             .hoverBackground(new Rectangle().color(PlannhColors.SUMMARY_ROW_HOVER.getColor()))
             .child(
                 new TextWidget<>(text).name(name + ".text")
                     .color(color)
+                    .paddingLeft(SummaryBody.TEXT_X)
                     .textAlign(Alignment.CenterLeft)
                     .fullWidth());
     }
