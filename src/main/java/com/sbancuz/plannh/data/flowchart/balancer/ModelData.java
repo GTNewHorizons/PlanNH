@@ -116,8 +116,8 @@ public final class ModelData {
     final double[] gateWeights;
 
     ModelData(final Graph graph, final Heuristics heuristics) {
-        for (final Node node : graph.getNodes()
-            .values()) {
+        for (final Node node : graph.allNodes()
+            .toList()) {
             if (!node.isAvailable()) continue;
             machineIndex.put(node.getId(), machines.size());
             machines.add(new Machine(node));
@@ -166,7 +166,12 @@ public final class ModelData {
      * (no machines, or a capacity of zero) is not a pool at all.
      */
     private void buildPools(final Graph graph) {
-        for (final Group group : graph.getGroups().values()) {
+        final List<Group> groups = new ArrayList<>(graph.getGroups().values());
+        for (int i = 0; i < groups.size(); i++) {
+            final Group group = groups.get(i);
+            for (final GraphData child : group.getChildren().values()) {
+                if (child instanceof Group nested) groups.add(nested);
+            }
             if (!(group instanceof final MachineGroup machineGroup) || machineGroup.getMachineCapacity() <= 0) continue;
             final List<Integer> members = new ArrayList<>();
             for (final Map.Entry<UUID, GraphData> entry : group.getChildren().entrySet()) {

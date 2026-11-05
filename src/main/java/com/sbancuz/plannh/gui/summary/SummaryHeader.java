@@ -10,15 +10,13 @@ import com.cleanroommc.modularui.widgets.CycleButtonWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.data.flowchart.Summary.Line;
-import com.sbancuz.plannh.data.flowchart.balancer.Note;
 import com.sbancuz.plannh.gui.FlowchartList;
 import com.sbancuz.plannh.gui.PlannhColors;
 
 /**
  * The title row of one summary section: the reorder grip, a section-colored highlight bar, the
  * section's name (with a row count for the content sections), and a fold toggle wired straight
- * into the {@link Summary}'s fold bitmask. The CHOICES header carries the budget notes as a hover
- * tooltip.
+ * into the {@link Summary}'s fold bitmask.
  */
 class SummaryHeader extends ParentWidget<SummaryHeader> {
 
@@ -56,14 +54,6 @@ class SummaryHeader extends ParentWidget<SummaryHeader> {
                 .height(1)
                 .background(new Rectangle().color(PlannhColors.SUMMARY_SEPARATOR.getColor())));
 
-        if (section == Summary.Section.CHOICES) {
-            tooltipDynamic(tooltip -> {
-                for (final Note note : data.getChoiceNotes()) {
-                    tooltip.add(note.render())
-                        .newLine();
-                }
-            });
-        }
     }
 
     private static int accentColor(final Summary.Section section) {
@@ -106,10 +96,12 @@ class SummaryHeader extends ParentWidget<SummaryHeader> {
     }
 
     private static int count(final Summary.Section section, final Summary data) {
-        if (section == Summary.Section.CHOICES) {
+        if (section == Summary.Section.CHOICES || section == Summary.Section.MACHINE_COUNTS) {
             return (int) data.lines(section)
                 .stream()
-                .filter(Line.Choice.class::isInstance)
+                .filter(
+                    line -> section == Summary.Section.CHOICES ? line instanceof Line.Choice
+                        : line instanceof Line.Measure<?>)
                 .count();
         }
         return data.lineCount(section);

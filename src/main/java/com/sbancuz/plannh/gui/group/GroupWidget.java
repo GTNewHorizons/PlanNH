@@ -2,20 +2,16 @@ package com.sbancuz.plannh.gui.group;
 
 import static com.sbancuz.plannh.data.flowchart.Group.GROUP_MIN_W;
 
-import java.util.List;
 import java.util.SortedMap;
 import java.util.UUID;
 
-import org.jetbrains.annotations.Nullable;
-
 import com.cleanroommc.modularui.api.IPanelHandler;
 import com.cleanroommc.modularui.api.drawable.IKey;
-import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.drawable.DynamicDrawable;
 import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.drawable.Rectangle;
-import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.utils.Color;
+import com.cleanroommc.modularui.utils.TreeUtil;
 import com.cleanroommc.modularui.value.BoolValue;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.ColorPickerDialog;
@@ -25,15 +21,18 @@ import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.MachineGroup;
 import com.sbancuz.plannh.gui.CanvasWidget;
+import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.common.CloseButtonWidget;
 import com.sbancuz.plannh.gui.common.FlowchartFlow;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.common.HeaderTextWidget;
 
+import lombok.Getter;
+
 public abstract class GroupWidget<G extends Group> extends FlowchartWidget<GroupWidget<G>, G> {
 
+    @Getter
     protected final GroupAreaWidget areaWidget;
-    private List<FlowchartWidget<?, ?>> dragStartIntersect;
 
     public static <G extends Group> GroupWidget<?> of(CanvasWidget canvas, G group) {
         if (group instanceof MachineGroup machineGroup) return new MachineGroupWidget(canvas, machineGroup);
@@ -48,8 +47,11 @@ public abstract class GroupWidget<G extends Group> extends FlowchartWidget<Group
 
         background(
             new DynamicDrawable(
-                () -> new Rectangle().hollow(getBorderWidth())
-                    .color(data.getColor())));
+                () -> new Rectangle().hollow(2)
+                    .color(Color.withAlpha(data.getColor(), 255))),
+            new DynamicDrawable(
+                () -> new Rectangle().hollow(1)
+                    .color(PlannhColors.FRAME_BORDER.getColor())));
 
         data.getChildren()
             .values()
@@ -85,17 +87,17 @@ public abstract class GroupWidget<G extends Group> extends FlowchartWidget<Group
         child(mainColumn);
     }
 
-    protected int getBorderWidth() {
-        return 2;
-    }
-
     protected Flow getTopRow() {
         return FlowchartFlow.row(this)
             .name("group.header")
             .coverChildrenHeight()
             .fullWidth()
             .childPadding(4)
-            .background(new DynamicDrawable(() -> new Rectangle().color(data.getColor())))
+            .background(
+                new DynamicDrawable(() -> new Rectangle().color(data.getColor())),
+                new DynamicDrawable(
+                    () -> new Rectangle().hollow(1)
+                        .color(PlannhColors.FRAME_BORDER.getColor())))
             .child(new HeaderTextWidget(this, data::getColor));
     }
 
@@ -127,33 +129,9 @@ public abstract class GroupWidget<G extends Group> extends FlowchartWidget<Group
                     .addTooltipLine("Open Color Picker"));
     }
 
-    @Override
-    public boolean onDragStartWithOffset(int mouseButton, int x, int y) {
-        if (super.onDragStartWithOffset(mouseButton, x, y)) {
-            dragStartIntersect = canvas.getFlowchartWidgets()
-                .values()
-                .stream()
-                .filter(
-                    widget -> widget.getArea()
-                        .intersects(getArea()))
-                .toList();
-            return true;
-        }
-        return false;
-    }
-
-    @Override
-    public boolean canDropHere(int x, int y, @Nullable IWidget widget) {
-        // groups can also intersect with their children
-        return canvas.isMouseInsideCanvas() && canvas.getFlowchartWidgets()
-            .values()
-            .stream()
-            .filter(
-                f -> f.getArea()
-                    .intersects(getArea()))
-            .allMatch(
-                f -> f == this || f instanceof GroupWidget<?>groupWidget && groupWidget.canAddToGroup(this)
-                    || dragStartIntersect.contains(f));
+    public boolean canContain(FlowchartWidget<?, ?> widget) {
+        return TreeUtil.findParent(this, parent -> parent == widget) == null && areaWidget.getArea()
+            .contains(widget.getPositionedArea()) && canAddToGroup(widget);
     }
 
     public abstract boolean canAddToGroup(FlowchartWidget<?, ?> widget);
@@ -179,32 +157,6 @@ public abstract class GroupWidget<G extends Group> extends FlowchartWidget<Group
     protected SortedMap<UUID, ? super G> getDefaultContainer() {
         return canvas.getGraph()
             .getGroups();
-    }
-
-    public int getMouseGroupX() {
-        ModularGuiContext context = getContext();
-
-        return getScreen().getPanelManager()
-            .getAllHoveredWidgetsList(false)
-            .stream()
-            .filter(locatedWidget -> locatedWidget.getElement() == areaWidget)
-            .findFirst()
-            .orElseThrow()
-            .getTransformationMatrix()
-            .unTransformX(context.getAbsMouseX(), context.getAbsMouseY());
-    }
-
-    public int getMouseGroupY() {
-        ModularGuiContext context = getContext();
-
-        return getScreen().getPanelManager()
-            .getAllHoveredWidgetsList(false)
-            .stream()
-            .filter(locatedWidget -> locatedWidget.getElement() == areaWidget)
-            .findFirst()
-            .orElseThrow()
-            .getTransformationMatrix()
-            .unTransformY(context.getAbsMouseX(), context.getAbsMouseY());
     }
 
     public int contentAreaOffset() {

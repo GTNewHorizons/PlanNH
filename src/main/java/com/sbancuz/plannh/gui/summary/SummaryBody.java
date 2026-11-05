@@ -31,6 +31,7 @@ class SummaryBody extends SummaryFlow {
     private final Summary data;
     private final Summary.Section section;
     private BalanceResult rowsBalance;
+    private long settingsVersion = -1;
     private Summary.Mode rowsMode = null;
     private GuiHelper.RateUnit rowsUnit = GuiHelper.RateUnit.SECONDS;
 
@@ -58,12 +59,11 @@ class SummaryBody extends SummaryFlow {
     @Override
     public void onUpdate() {
         super.onUpdate();
-        final Summary.Mode mode = data.computedMode();
-        final GuiHelper.RateUnit unit = data.getRateUnit();
-        if (rowsBalance != data.balance() || rowsMode != mode || rowsUnit != unit) {
+        if (rowsBalance != data.balance() || settingsVersion != data.getSettingsVersion()) {
             rowsBalance = data.balance();
-            rowsMode = mode;
-            rowsUnit = unit;
+            settingsVersion = data.getSettingsVersion();
+            rowsMode = data.computedMode();
+            rowsUnit = data.getRateUnit();
             rebuildRows(null);
         }
     }
@@ -85,14 +85,14 @@ class SummaryBody extends SummaryFlow {
 
     private Widget<?> row(final Line<?> line, final SummaryWidget panel) {
         return switch (line) {
-            case Line.Measure<?> measure -> new MeasureRow(measure, rowSuffix(), amountScale());
+            case Line.Measure<?> measure -> new MeasureRow(measure, rowSuffix(), amountScale(), section, rowsMode);
             case Line.Message message -> new TextRow(IKey.str(message.displayName()),
-                severityColor(message.note().severity()), "summary.message");
+                severityColor(message.note().severity()), "summary.message", message.note().severity());
             case Line.Text(String key) -> new TextRow(IKey.lang(key), PlannhColors.SUMMARY_TEXT.getColor(),
-                "summary.text" );
+                "summary.text", null );
             case Line.Heading heading -> new TextRow(IKey.str(heading.displayName()),
-                PlannhColors.SUMMARY_TEXT_MUTED.getColor(), "summary.heading" );
-            case Line.Choice choice -> new ChoiceRow(choice).name("summary.choice" );
+                PlannhColors.SUMMARY_TEXT_MUTED.getColor(), "summary.heading", null );
+            case Line.Choice choice -> new ChoiceRow(choice, data.getChoiceNotes()).name("summary.choice" );
             case Line.Totals totals -> new TotalsRow(totals, rowsMode).name("summary.totals");
         };
     }

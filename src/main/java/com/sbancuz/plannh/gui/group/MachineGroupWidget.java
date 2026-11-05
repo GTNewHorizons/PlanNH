@@ -6,6 +6,7 @@ import org.jetbrains.annotations.Nullable;
 
 import com.cleanroommc.modularui.api.IPanelHandler;
 import com.cleanroommc.modularui.api.drawable.IKey;
+import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.utils.Color;
@@ -25,17 +26,12 @@ import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.node.NodeWidget;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
+import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
 public class MachineGroupWidget extends GroupWidget<MachineGroup> {
 
     @Nullable
     private Node mainNode;
-
-    /** The load label, kept so its tooltip can be invalidated without rebuilding the header. */
-    private TextWidget<?> loadLabel;
-
-    private double lastLoad = Double.NaN;
-    private String lastName = "";
 
     public MachineGroupWidget(CanvasWidget canvas, MachineGroup data) {
         super(canvas, data);
@@ -65,10 +61,7 @@ public class MachineGroupWidget extends GroupWidget<MachineGroup> {
      */
     public boolean acceptsNode(final Node node) {
         if (!node.isAvailable()) return true;
-        if (mainNode == null) {
-            mainNode = node;
-            return true;
-        }
+        if (mainNode == null) return true;
 
         return node.getMachineName()
             .equals(mainNode.getMachineName())
@@ -84,9 +77,12 @@ public class MachineGroupWidget extends GroupWidget<MachineGroup> {
         super.joinGroup(widget);
 
         if (widget instanceof NodeWidget nodeWidget && nodeWidget.getData()
-            .isAvailable() && mainNode != null && nodeWidget.getData() != mainNode) nodeWidget.getData()
+            .isAvailable()) {
+            if (mainNode == null) mainNode = nodeWidget.getData();
+            else if (nodeWidget.getData() != mainNode) nodeWidget.getData()
                 .getMachineConfig()
                 .copySettingsFrom(mainNode.getMachineConfig());
+        }
     }
 
     @Override
@@ -105,10 +101,13 @@ public class MachineGroupWidget extends GroupWidget<MachineGroup> {
     protected Flow getTopRow() {
         return super.getTopRow().child(
             0,
-            new TextWidget<>(IKey.lang("plannh.gui.group.machine_badge")).name("group.machine.badge")
-                .color(Color.WHITE.main)
-                .textAlign(Alignment.CenterLeft)
-                .addTooltipLine(IKey.lang("plannh.gui.group.machine_group_tooltip")));
+            GuiTextures.PROCESSOR.asWidget()
+                .name("group.machine.badge")
+                .size(16)
+                .margin(3, 0, 2, 2)
+                .tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE)
+                .tooltipBuilder(this::writeMachineTooltip)
+                .tooltipAutoUpdate(true));
     }
 
     @Override
@@ -116,11 +115,6 @@ public class MachineGroupWidget extends GroupWidget<MachineGroup> {
         return super.getButtonRow(colorPicker).child(capacityButton("+", 1))
             .child(capacityButton("-", -1))
             .child(loadLabel());
-    }
-
-    @Override
-    protected int getBorderWidth() {
-        return 4;
     }
 
     /**
@@ -140,53 +134,64 @@ public class MachineGroupWidget extends GroupWidget<MachineGroup> {
                 });
                 return true;
             })
-            .addTooltipLine(IKey.lang("plannh.gui.group.machine_capacity"));
+            .tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE)
+            .tooltipBuilder(tooltip -> {
+                final TooltipBuilder out = TooltipBuilder.create(tooltip)
+                    .row(
+                        IKey.lang(
+                            step > 0 ? "plannh.gui.group.capacity.increase" : "plannh.gui.group.capacity.decrease")
+                            .style(TooltipTheme.Role.LABEL.code()));
+                writeCapacity(out);
+                out.flush();
+            })
+            .tooltipAutoUpdate(true);
     }
 
-    /**
-     * The load next to the group's name, against the capacity when one is set. Machine names are as
-     * long as GregTech feels like and the row already holds the name field and the buttons, so the
-     * header carries the number and the machine is named in the tooltip, which is pinned below the
-     * row - the default position sits beside the widget and trims to whatever screen width is left
-     * there. Empty for a group with no solved nodes, which collapses the widget away.
-     */
+    /** Keep the header compact; the tooltip names the machine and explains its shared load. */
     private TextWidget<?> loadLabel() {
-        loadLabel = new TextWidget<>(IKey.dynamic(() -> {
+        return new TextWidget<>(IKey.dynamic(() -> {
             final double load = copyLoad();
             if (load <= 0) return "";
             final String used = "×" + GuiHelper.formatCount(load);
-            return data.getMachineCapacity() > 0 ? used + " / " + data.getMachineCapacity() : used;
+            return used + " / "
+                + (data.getMachineCapacity() > 0 ? Integer.toString(data.getMachineCapacity()) : "\u221e");
         })).name("group.load")
             .color(PlannhColors.SUMMARY_TEXT_MUTED.getColor())
             .textAlign(Alignment.CenterRight)
-            .tooltipPos(RichTooltip.Pos.BELOW)
-            .tooltipBuilder(
-                tooltip -> TooltipBuilder.create(tooltip)
-                    .langRow("plannh.gui.group.load", GuiHelper.formatCount(copyLoad()), machineName())
-                    .flush());
-        lastLoad = copyLoad();
-        lastName = machineName();
-        return loadLabel;
+            .tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE)
+            .tooltipBuilder(this::writeMachineTooltip)
+            .tooltipAutoUpdate(true);
     }
 
-    /**
-     * Keeps the load label's tooltip from going stale under the cursor.
-     *
-     * <p>
-     * The tooltip restates the load and names the machine, and both can move while the label stays
-     * exactly where it is - a re-solve moves the first, the name field the second. Neither rebuilds
-     * this widget, so the tooltip is what has to be told. Two comparisons a tick, and ModularUI only
-     * asks for them at all once the tooltip is on screen.
-     */
-    @Override
-    public void onUpdate() {
-        super.onUpdate();
-        final double load = copyLoad();
-        final String name = machineName();
-        if (load == lastLoad && name.equals(lastName)) return;
-        lastLoad = load;
-        lastName = name;
-        if (loadLabel != null) loadLabel.markTooltipDirty();
+    private void writeMachineTooltip(final RichTooltip tooltip) {
+        final TooltipBuilder out = TooltipBuilder.create(tooltip)
+            .row(
+                IKey.lang("plannh.gui.group.machine.title")
+                    .style(TooltipTheme.Role.LABEL.code()))
+            .entry(
+                IKey.lang("plannh.gui.node.machine"),
+                TooltipTheme.Role.IDENTITY,
+                mainNode == null ? IKey.lang("plannh.gui.group.machine.empty") : IKey.str(machineName()));
+        if (canvas.getGraph()
+            .balance() != null) {
+            out.entry(
+                IKey.lang("plannh.gui.group.load"),
+                TooltipTheme.Role.IDENTITY,
+                TooltipBuilder.multiple(copyLoad()));
+        } else {
+            out.langRow("plannh.gui.group.load.unbalanced");
+        }
+        writeCapacity(out);
+        out.separator()
+            .langRow("plannh.gui.group.machine.shared")
+            .flush();
+    }
+
+    private void writeCapacity(final TooltipBuilder out) {
+        out.entry(
+            IKey.lang("plannh.gui.group.machine_capacity"),
+            TooltipTheme.Role.TUNABLE,
+            data.getMachineCapacity() > 0 ? Integer.toString(data.getMachineCapacity()) : "\u221e");
     }
 
     /**

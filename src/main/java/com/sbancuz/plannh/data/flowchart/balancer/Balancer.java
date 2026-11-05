@@ -235,8 +235,8 @@ public final class Balancer {
     @Nonnull
     private static Map<UUID, Double> configuredCounts(final Graph graph) {
         final Map<UUID, Double> counts = new HashMap<>();
-        for (final Node node : graph.getNodes()
-            .values()) {
+        for (final Node node : graph.allNodes()
+            .toList()) {
             if (!node.isAvailable()) continue;
             counts.put(node.getId(), (double) node.configuredCopies());
         }
@@ -257,7 +257,7 @@ public final class Balancer {
         double totalOps = 0;
         int totalDuration = 0;
 
-        for (final Node node : graph.getNodes().values()) {
+        for (final Node node : graph.allNodes().toList()) {
             if (!node.isAvailable()) continue;
             final double count = copyCounts.getOrDefault(node.getId(), 0.0);
             totalOps += count;
@@ -290,13 +290,18 @@ public final class Balancer {
                 effIns.put(i, total);
             }
 
-            nodeBalances.put(node.getId(), new NodeBalance(count, totalEnergy, durPerOp, effOuts, effIns));
-
+            final Map<RecipeProperty<?>, Double> propertyContributions = new HashMap<>();
             for (final Map.Entry<RecipeProperty<?>, Object> entry : node.displayProperties(eff).entrySet()) {
                 if (entry.getValue() instanceof final Number num) {
-                    propertyTotals.merge(entry.getKey(), num.doubleValue() * count, Double::sum);
+                    final double contribution = num.doubleValue() * count;
+                    propertyContributions.put(entry.getKey(), contribution);
+                    propertyTotals.merge(entry.getKey(), contribution, Double::sum);
                 }
             }
+
+            nodeBalances.put(
+                node.getId(),
+                new NodeBalance(count, totalEnergy, durPerOp, effOuts, effIns, propertyContributions));
         }
 
         if (auto == null) {
@@ -307,6 +312,7 @@ public final class Balancer {
 
     /** One machine's share of a solved balance, for the node widget and the machine-count panel. */
     public record NodeBalance(double operations, long totalEnergy, int durationPerOp,
-        Map<Integer, Double> effectiveOutputs, Map<Integer, Double> effectiveInputs) {}
+        Map<Integer, Double> effectiveOutputs, Map<Integer, Double> effectiveInputs,
+        Map<RecipeProperty<?>, Double> propertyContributions) {}
 
 }

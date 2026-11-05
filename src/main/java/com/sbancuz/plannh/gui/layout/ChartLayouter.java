@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 import javax.annotation.Nullable;
@@ -37,7 +38,7 @@ public final class ChartLayouter {
     private final CanvasWidget canvas;
     private final LayoutStrategy strategy;
 
-    /** Immediate group of each machine and note, built by {@link #build()} and reused by apply. */
+    /** Immediate group of each group, machine and note, built by {@link #build()} and reused by apply. */
     private final Map<UUID, UUID> parentOf = new HashMap<>();
 
     public ChartLayouter(final CanvasWidget canvas, final LayoutStrategy strategy) {
@@ -75,30 +76,38 @@ public final class ChartLayouter {
 
         for (final Group group : canvas.getGraph()
             .getGroups()
-            .values()) {
-            groups.add(new LayoutGroup(group.getId(), new ArrayList<>(group.getChildren()
-                .keySet()), GROUP_PAD, headerOf(group)));
-            for (final GraphData child : group.getChildren()
-                .values()) {
-                if (child instanceof final Node node) {
-                    addNode(machines, node, group.getId());
-                } else if (child instanceof final Note note) {
-                    notes.add(note);
-                    parentOf.put(note.getId(), group.getId());
-                }
-            }
-        }
+            .values()) addGroup(groups, machines, notes, group, null);
 
         for (final Node node : canvas.getGraph()
             .getNodes()
             .values()) {
             addNode(machines, node, null);
         }
-        notes.addAll(canvas.getGraph()
-            .getNotes()
-            .values());
+        notes.addAll(
+            canvas.getGraph()
+                .getNotes()
+                .values());
 
         return new LayoutRequest(machines, relations(), groups, layoutNotes(notes, machines));
+    }
+
+    private void addGroup(final List<LayoutGroup> groups, final List<LayoutMachine> machines,
+        final List<Note> notes, final Group group, final @Nullable UUID parentId) {
+        groups.add(new LayoutGroup(group.getId(), new ArrayList<>(group.getChildren()
+            .keySet()), GROUP_PAD, headerOf(group)));
+        if (parentId != null) parentOf.put(group.getId(), parentId);
+
+        for (final GraphData child : group.getChildren()
+            .values()) {
+            if (child instanceof final Group nested) {
+                addGroup(groups, machines, notes, nested, group.getId());
+            } else if (child instanceof final Node node) {
+                addNode(machines, node, group.getId());
+            } else if (child instanceof final Note note) {
+                notes.add(note);
+                parentOf.put(note.getId(), group.getId());
+            }
+        }
     }
 
     /**
@@ -151,6 +160,7 @@ public final class ChartLayouter {
         UUID best = null;
         long bestDistance = Long.MAX_VALUE;
         for (final LayoutMachine machine : byId.values()) {
+            if (!Objects.equals(parentOf.get(note.getId()), parentOf.get(machine.id()))) continue;
             final GraphData at = dataOf(machine.id());
             if (at == null) continue;
             final long dx = at.getX() - note.getX();
@@ -214,17 +224,14 @@ private int[] noteSize(final Note note) {
     private void writeGroups(final LayoutPlan plan, final int shiftX, final int shiftY) {
         for (final Map.Entry<UUID, Area> entry : plan.groupFrames()
             .entrySet()) {
-            final Group group = canvas.getGraph()
-                .getGroups()
-                .get(entry.getKey());
-            if (group == null) continue;
+            if (!(dataOf(entry.getKey()) instanceof final Group group)) continue;
 
             final Area frame = entry.getValue();
-            final int header = headerOf(group);
-            group.setX(snap(frame.x + shiftX));
-            group.setY(snap(frame.y + shiftY));
+            final int[] at = toStored(plan, IntIntPair.of(frame.x, frame.y), entry.getKey(), shiftX, shiftY);
+            group.setX(at[0]);
+            group.setY(at[1]);
             group.setWidth(frame.width);
-            group.setHeight(frame.height - header);
+            group.setHeight(frame.height - headerOf(group));
         }
     }
 
@@ -233,7 +240,7 @@ private int[] noteSize(final Note note) {
             .entrySet()) {
             final GraphData data = dataOf(entry.getKey());
             if (data == null) continue;
-            final int[] at = toStored(entry.getValue(), entry.getKey(), shiftX, shiftY);
+            final int[] at = toStored(plan, entry.getValue(), entry.getKey(), shiftX, shiftY);
             data.setX(at[0]);
             data.setY(at[1]);
         }
@@ -241,7 +248,7 @@ private int[] noteSize(final Note note) {
             .entrySet()) {
             final GraphData data = dataOf(entry.getKey());
             if (data == null) continue;
-            final int[] at = toStored(entry.getValue(), entry.getKey(), shiftX, shiftY);
+            final int[] at = toStored(plan, entry.getValue(), entry.getKey(), shiftX, shiftY);
             data.setX(at[0]);
             data.setY(at[1]);
         }
@@ -250,17 +257,20 @@ private int[] noteSize(final Note note) {
     /**
      * A world position, snapped, converted into whatever the model stores for that thing.
      */
-    private int[] toStored(final IntIntPair world, final UUID id, final int shiftX, final int shiftY) {
+    private int[] toStored(final LayoutPlan plan, final IntIntPair world, final UUID id, final int shiftX,
+        final int shiftY) {
         final int x = snap(world.leftInt() + shiftX);
         final int y = snap(world.rightInt() + shiftY);
 
         final UUID groupId = parentOf.get(id);
-        final Group group = groupId == null ? null
-            : canvas.getGraph()
-                .getGroups()
-                .get(groupId);
-        if (group == null) return new int[] { x, y };
-        return new int[] { x - group.getX(), y - group.getY() - headerOf(group) };
+        if (groupId == null) return new int[] { x, y };
+
+        final Area parentFrame = plan.groupFrames()
+            .get(groupId);
+        if (!(dataOf(groupId) instanceof final Group group) || parentFrame == null) return new int[] { x, y };
+        final int parentX = snap(parentFrame.x + shiftX);
+        final int parentY = snap(parentFrame.y + shiftY);
+        return new int[] { x - parentX, y - parentY - headerOf(group) };
     }
 
     /**
@@ -274,7 +284,12 @@ private int[] noteSize(final Note note) {
             // A group's area measures its own children, and the children have just moved. Without the
             // resize the frame keeps the size it had, and the next layout reads that stale size instead of
             // the one just written.
-            if (widget instanceof final GroupWidget<?> group) group.scheduleResize();
+            if (widget instanceof final GroupWidget<?> group) {
+                if (!group.getData().isCoverChildren()) {
+                    group.getAreaWidget().size(group.getData().getWidth(), group.getData().getHeight());
+                }
+                group.scheduleResize();
+            }
         }
     }
 
@@ -351,6 +366,10 @@ private int[] noteSize(final Note note) {
 
     /** The model object behind an id, wherever it happens to live. */
     private GraphData dataOf(final UUID id) {
+        final FlowchartWidget<?, ?> widget = canvas.getFlowchartWidgets()
+            .get(id);
+        if (widget != null) return widget.getData();
+
         final GraphData loose = canvas.getGraph()
             .getNodes()
             .get(id);
@@ -359,14 +378,9 @@ private int[] noteSize(final Note note) {
             .getNotes()
             .get(id);
         if (looseNote != null) return looseNote;
-        for (final Group group : canvas.getGraph()
+        return canvas.getGraph()
             .getGroups()
-            .values()) {
-            final GraphData child = group.getChildren()
-                .get(id);
-            if (child != null) return child;
-        }
-        return null;
+            .get(id);
     }
 
     /**

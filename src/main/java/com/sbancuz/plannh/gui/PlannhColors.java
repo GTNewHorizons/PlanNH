@@ -23,6 +23,7 @@ public final class PlannhColors {
 
     // ── Borders / Lines / Separators ──
     public static final ColorResource
+        FRAME_BORDER       = C.rgb("frame_border",         "0x373737"),
         SLOT_BAR_LINE      = C.argb("slot_bar_line",       "0x6464A0DC"),
         SUMMARY_TITLE_LINE = C.argb("summary_title_line",  "0x5078A0DC"),
         SUMMARY_BORDER     = C.argb("summary_border",      "0x5A9CB8D0"),

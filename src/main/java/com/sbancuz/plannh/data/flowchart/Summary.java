@@ -129,7 +129,7 @@ public final class Summary extends GraphData {
         }
 
         /**
-         * The chart-wide run totals: how many operations and how long one cycle takes. Deliberately
+         * The selected recipes' totals: combined workload and how long one cycle takes. Deliberately
          * not a Measure - it has no per-row amount to sort by, and the GUI formats and localizes the
          * sentence from these two raw numbers, so the model never builds display text. It is appended
          * after the sorted machine rows and always sits at the bottom of the section.
@@ -197,6 +197,10 @@ public final class Summary extends GraphData {
     /** The {@code settingsVersion} the current rows were derived under. */
     transient private long atSettings = -1;
 
+    /** Optional node or group whose descendants are shown by the summary. */
+    @Nullable
+    transient private GraphData scope = null;
+
     /** Where a fresh chart's summary panel starts; kept in the GraphData so the spot is per-chart. */
     public static final int DEFAULT_X = 210;
     public static final int DEFAULT_Y = 46;
@@ -227,6 +231,13 @@ public final class Summary extends GraphData {
 
     public void setRateUnit(final GuiHelper.RateUnit rateUnit) {
         this.rateUnit = rateUnit;
+        settingsVersion++;
+    }
+
+    /** Selects a node/group scope; notes are canvas annotations and cannot be a summary scope. */
+    public void setScope(@Nullable final GraphData scope) {
+        if (scope instanceof com.sbancuz.plannh.data.flowchart.Note || this.scope == scope) return;
+        this.scope = scope;
         settingsVersion++;
     }
 
@@ -304,28 +315,44 @@ public final class Summary extends GraphData {
         .build();
 
     /**
-     * Re-derive this summary's lines from a fresh balance: every node's throughput is scaled up to
-     * the longest recipe on the chart (one cycle's rates) or to a per-second rate, per this
-     * summary's {@link Mode}.
+     * Filter and aggregate the full-chart balance for the selected recipes. Only graph edits solve
+     * again; scope and display changes reuse the existing per-node contributions.
      */
     public Summary recompute(final Graph graph) {
         if (atGraph == graph && atVersion == graph.getVersion() && atMode == mode && atSettings == settingsVersion)
             return this;
+
+        final boolean balanceChanged = atGraph != graph || atVersion != graph.getVersion() || balance == null;
+        if (balanceChanged) {
+            balance = Balancer.balance(graph, graph.getBalanceMode());
+        }
+
         atGraph = graph;
         atMode = mode;
         atSettings = settingsVersion;
 
-        this.balance = Balancer.balance(graph, graph.getBalanceMode());
+        final boolean wholeChart = scope == null;
+        final List<Node> selectedNodes = (wholeChart ? graph.allNodes() : Graph.nodesIn(scope)).toList();
 
         final Map<LineKey, Double> outputs = new HashMap<>();
         final Map<LineKey, Double> inputs = new HashMap<>();
         final Map<LineKey, Double> properties = new HashMap<>();
 
-        final int cycleTicks = balance.totalDurationTicks();
+        int cycleTicks = wholeChart ? balance.totalDurationTicks() : 0;
+        double totalOperations = wholeChart ? balance.totalOperations() : 0;
+        if (!wholeChart) {
+            for (final Node node : selectedNodes) {
+                if (!node.isAvailable()) continue;
+                final var nb = balance.nodeBalances()
+                    .get(node.id);
+                if (nb == null) continue;
+                totalOperations += nb.operations();
+                cycleTicks = Math.max(cycleTicks, nb.durationPerOp());
+            }
+        }
 
         // Accumulate scaled flows per resource across all ports, connected and unconnected alike.
-        for (final Node node : graph.getNodes()
-            .values()) {
+        for (final Node node : selectedNodes) {
             if (!node.isAvailable()) continue;
             final var nb = balance.nodeBalances()
                 .get(node.id);
@@ -339,22 +366,24 @@ public final class Summary extends GraphData {
         }
 
         net(inputs, outputs);
-        accumulateProperties(balance, properties);
+        accumulateProperties(selectedNodes, balance, properties);
 
         // Every ordering decision lives here; the panel never re-sorts. Outputs lead with the
         // headline product, inputs with the scarcest ingredient, properties and machine counts
-        // alike. Name breaks ties, or equal flows shuffle between frames. The chart-wide totals
-        // line is appended after the sorted machine rows so it always closes the section.
+        // alike. Name breaks ties, or equal flows shuffle between frames. The totals line is
+        // appended after the sorted machine rows so it always closes the section.
         setLines(Section.OUTPUTS, sortDesc(flatten(outputs)));
         setLines(Section.INPUTS, sortAsc(flatten(inputs)));
         setLines(Section.PROPERTIES, sortAsc(flatten(properties)));
-        final List<Line<?>> machineLines = sortDesc(machineLines(graph));
-        if (balance.totalOperations() > 0) {
-            machineLines.add(new Line.Totals(balance.totalOperations(), balance.totalDurationTicks()));
+        final List<Line<?>> machineLines = sortDesc(machineLines(selectedNodes));
+        if (totalOperations > 0) {
+            machineLines.add(new Line.Totals(totalOperations, cycleTicks));
         }
         setLines(Section.MACHINE_COUNTS, machineLines);
-        setLines(Section.CHOICES, choiceLines(graph));
-        setLines(Section.MESSAGES, messageLines());
+        if (balanceChanged) {
+            setLines(Section.CHOICES, choiceLines(graph));
+            setLines(Section.MESSAGES, messageLines());
+        }
 
         atVersion = graph.getVersion();
         return this;
@@ -396,15 +425,19 @@ public final class Summary extends GraphData {
         inputs.putAll(netInputs);
     }
 
-    private static void accumulateProperties(final BalanceResult balance, final Map<LineKey, Double> into) {
-        for (final var entry : balance.propertyTotals()
-            .entrySet()) {
-            if (!(entry.getKey() instanceof SummaryProperty<?>prop)) continue;
-            into.merge(
-                new LineKey.PropertyKey(prop),
-                entry.getValue()
-                    .doubleValue(),
-                Double::sum);
+    /** Accumulates the balancer's already-solved property contributions for selected nodes. */
+    private static void accumulateProperties(final List<Node> nodes, final BalanceResult balance,
+        final Map<LineKey, Double> into) {
+        for (final Node node : nodes) {
+            if (!node.isAvailable()) continue;
+            final var nb = balance.nodeBalances()
+                .get(node.id);
+            if (nb == null) continue;
+            for (final var entry : nb.propertyContributions()
+                .entrySet()) {
+                if (!(entry.getKey() instanceof SummaryProperty<?>prop)) continue;
+                into.merge(new LineKey.PropertyKey(prop), entry.getValue(), Double::sum);
+            }
         }
     }
 
@@ -423,19 +456,20 @@ public final class Summary extends GraphData {
         return result;
     }
 
-    /** One Measure row per machine with work to do; the chart-wide totals line is appended after. */
-    private List<Line<?>> machineLines(final Graph graph) {
-        final List<Line<?>> out = new ArrayList<>();
-        for (final Node node : graph.getNodes()
-            .values()) {
+    /** Combine selected recipes by machine name; the totals line is appended after. */
+    private List<Line<?>> machineLines(final List<Node> nodes) {
+        final Map<String, Double> counts = new HashMap<>();
+        for (final Node node : nodes) {
             if (!node.isAvailable()) continue;
             final var nb = balance.nodeBalances()
                 .get(node.id);
             if (nb == null) continue;
             final double ops = nb.operations();
             if (ops <= 0) continue;
-            out.add(new Line.Measure<>(MACHINE_LABEL, node.getMachineName(), ops));
+            counts.merge(node.getMachineName(), ops, Double::sum);
         }
+        final List<Line<?>> out = new ArrayList<>();
+        counts.forEach((name, count) -> out.add(new Line.Measure<>(MACHINE_LABEL, name, count)));
         return out;
     }
 
