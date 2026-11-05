@@ -86,7 +86,8 @@ public final class BalanceView {
     private static List<Boundary> configuredBoundary(final Graph graph) {
         final Set<PortRef> wired = new HashSet<>();
         final Map<UUID, Node> nodes = new HashMap<>();
-        graph.allNodes().forEach(node -> nodes.put(node.getId(), node));
+        graph.allNodes()
+            .forEach(node -> nodes.put(node.getId(), node));
         for (final Edge edge : graph.getEdges()
             .values()) {
             final Node source = nodes.get(edge.getSourceNodeId());
@@ -96,7 +97,8 @@ public final class BalanceView {
             wired.add(new PortRef(edge.getTargetNodeId(), edge.getTargetInputItemIndex(), true));
         }
         final List<Boundary> out = new ArrayList<>();
-        for (final Node node : graph.allNodes().toList()) {
+        for (final Node node : graph.allNodes()
+            .toList()) {
             if (!node.isAvailable()) continue;
             final double count = node.configuredCopies();
             if (count <= 0) continue;
@@ -291,7 +293,11 @@ public final class BalanceView {
 
     private static Port<?> portOf(final Graph graph, final External external) {
         final Node node = graph.allNodes()
-            .filter(candidate -> candidate.getId().equals(external.port().nodeId()))
+            .filter(
+                candidate -> candidate.getId()
+                    .equals(
+                        external.port()
+                            .nodeId()))
             .findFirst()
             .orElse(null);
         if (node == null) return null;

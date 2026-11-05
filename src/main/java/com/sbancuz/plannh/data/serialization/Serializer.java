@@ -143,7 +143,8 @@ public final class Serializer {
     @Nonnull
     public static String toMermaid(final Graph graph) {
         final StringBuilder sb = new StringBuilder("flowchart LR\n");
-        for (final Node node : graph.allNodes().toList()) {
+        for (final Node node : graph.allNodes()
+            .toList()) {
             final String id = mermaidId(node.getId());
             final String label = node.getMachineName()
                 .isEmpty() ? "?" : node.getMachineName();

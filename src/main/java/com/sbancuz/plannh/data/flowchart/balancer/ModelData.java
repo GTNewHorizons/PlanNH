@@ -116,7 +116,8 @@ public final class ModelData {
     final double[] gateWeights;
 
     ModelData(final Graph graph, final Heuristics heuristics) {
-        for (final Node node : graph.allNodes().toList()) {
+        for (final Node node : graph.allNodes()
+            .toList()) {
             if (!node.isAvailable()) continue;
             machineIndex.put(node.getId(), machines.size());
             machines.add(new Machine(node));

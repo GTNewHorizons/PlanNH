@@ -10,7 +10,6 @@ import com.cleanroommc.modularui.api.widget.IDragResizeable;
 import com.cleanroommc.modularui.api.widget.IGuiAction;
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.api.widget.ResizeDragArea;
-import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.sbancuz.plannh.api.PlanAPI;
