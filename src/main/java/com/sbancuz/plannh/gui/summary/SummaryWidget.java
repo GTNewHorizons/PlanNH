@@ -6,6 +6,7 @@ import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.IDraggable;
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.drawable.Rectangle;
+import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.value.EnumValue;
@@ -22,6 +23,9 @@ import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.FlowchartList;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.PlannhColors;
+import com.sbancuz.plannh.gui.common.FlowchartWidget;
+import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
+import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
 /**
  * The summary HUD: a draggable, screen-fixed panel that reads the global {@link Summary} from
@@ -106,7 +110,21 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
                         .background(new Rectangle().color(PlannhColors.SUMMARY_TITLE_BG.getColor()))
                         .child(
                             new TextWidget<>(IKey.lang(Summary.Section.ALL.titleKey()))
-                                .color(PlannhColors.TEXT_WHITE.getColor()))
+                                .color(PlannhColors.TEXT_WHITE.getColor())
+                                .tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE)
+                                .tooltipBuilder(tooltip -> {
+                                    final TooltipBuilder out = TooltipBuilder.create(tooltip)
+                                        .entry(
+                                            IKey.lang("plannh.summary.tooltip.scope"),
+                                            TooltipTheme.Role.IDENTITY,
+                                            data.getScope() == null ? IKey.lang("plannh.summary.tooltip.scope.chart")
+                                                : IKey.str(
+                                                    data.getScope()
+                                                        .getHeader()));
+                                    if (data.getScope() != null) out.langRow("plannh.summary.scope.clear_hint");
+                                    out.flush();
+                                })
+                                .tooltipAutoUpdate(true))
                         .child(
                             SummaryFlow.row()
                                 .coverChildren()
@@ -127,10 +145,27 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
         final Summary summary = Plan.getInstance()
             .getSummary();
         final CycleButtonWidget toggle = new CycleButtonWidget().name("summary.rate")
+            .stateCount(GuiHelper.RateUnit.VALUES.length)
             .size(SummaryHeader.HEADER_H, SummaryHeader.HEADER_H)
-            .tooltipStatic(
-                t -> t.addLine(IKey.lang("plannh.summary.rate.title"))
-                    .addLine(IKey.lang("plannh.summary.mode.switch_hint")))
+            .tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE)
+            .tooltipBuilder(tooltip -> {
+                final TooltipBuilder out = TooltipBuilder.create(tooltip)
+                    .row(
+                        IKey.lang("plannh.summary.rate.title")
+                            .style(TooltipTheme.Role.LABEL.code()));
+                for (final GuiHelper.RateUnit unit : GuiHelper.RateUnit.VALUES) {
+                    final boolean active = summary.getRateUnit() == unit;
+                    out.marker(
+                        active ? ">" : " ",
+                        IKey.lang("plannh.summary.rate." + unit.name)
+                            .get(),
+                        active);
+                }
+                out.separator()
+                    .langRow("plannh.summary.mode.switch_hint")
+                    .flush();
+            })
+            .tooltipAutoUpdate(true)
             .value(new EnumValue.Dynamic<>(GuiHelper.RateUnit.class, summary::getRateUnit, summary::setRateUnit))
             .setEnabledIf(_ -> summary.getMode() == Summary.Mode.THROUGHPUT);
         for (final GuiHelper.RateUnit unit : GuiHelper.RateUnit.VALUES) {
@@ -143,10 +178,31 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
         final Summary summary = Plan.getInstance()
             .getSummary();
         return new CycleButtonWidget().name("summary.mode")
+            .stateCount(Summary.Mode.values().length)
             .size(SummaryHeader.HEADER_H, SummaryHeader.HEADER_H)
-            .tooltipStatic(
-                t -> t.addLine(IKey.lang("plannh.summary.mode.title"))
-                    .addLine(IKey.lang("plannh.summary.mode.switch_hint")))
+            .tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE)
+            .tooltipBuilder(
+                tooltip -> TooltipBuilder.create(tooltip)
+                    .row(
+                        IKey.lang("plannh.summary.mode.title")
+                            .style(TooltipTheme.Role.LABEL.code()))
+                    .marker(
+                        summary.getMode() == Summary.Mode.CYCLES ? ">" : " ",
+                        IKey.lang("plannh.summary.mode.cycles")
+                            .get(),
+                        summary.getMode() == Summary.Mode.CYCLES)
+                    .marker(
+                        summary.getMode() == Summary.Mode.THROUGHPUT ? ">" : " ",
+                        IKey.lang("plannh.summary.mode.throughput")
+                            .get(),
+                        summary.getMode() == Summary.Mode.THROUGHPUT)
+                    .separator()
+                    .langRow(
+                        summary.getMode() == Summary.Mode.CYCLES ? "plannh.summary.mode.cycles.hint"
+                            : "plannh.summary.mode.throughput.hint")
+                    .langRow("plannh.summary.mode.switch_hint")
+                    .flush())
+            .tooltipAutoUpdate(true)
             .value(new EnumValue.Dynamic<>(Summary.Mode.class, summary::getMode, val -> {
                 summary.setMode(val);
                 summary.recompute(canvas.getGraph());
@@ -164,6 +220,8 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
     @Override
     public void onUpdate() {
         super.onUpdate();
+        final FlowchartWidget<?, ?> selected = canvas.getSelectedWidget();
+        data.setScope(selected == null ? null : selected.getData());
         data.recompute(canvas.getGraph());
     }
 

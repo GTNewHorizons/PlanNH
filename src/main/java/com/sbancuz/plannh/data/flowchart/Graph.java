@@ -99,7 +99,8 @@ public class Graph {
             .flatMap(Graph::nodesIn);
     }
 
-    private static Stream<Node> nodesIn(final GraphData data) {
+    /** Recipe descendants of a node or group; annotations do not contribute to calculations. */
+    public static Stream<Node> nodesIn(final GraphData data) {
         if (data.invalid()) return Stream.empty();
         if (data instanceof Node node) return Stream.of(node);
         if (data instanceof Group group) {

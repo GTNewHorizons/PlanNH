@@ -9,7 +9,9 @@ import org.jetbrains.annotations.Nullable;
 import com.cleanroommc.modularui.api.widget.IDraggable;
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.api.widget.Interactable;
+import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
+import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.TreeUtil;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.sizer.Area;
@@ -19,6 +21,7 @@ import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Note;
 import com.sbancuz.plannh.gui.CanvasWidget;
+import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.group.GroupAreaWidget;
 import com.sbancuz.plannh.gui.group.GroupWidget;
 import com.sbancuz.plannh.gui.node.NodeWidget;
@@ -55,6 +58,22 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
 
     @Override
     public void drawMovingState(ModularGuiContext context, float partialTicks) {}
+
+    @Override
+    public void drawOverlay(final ModularGuiContext context, final WidgetThemeEntry<?> widgetTheme) {
+        super.drawOverlay(context, widgetTheme);
+        if (canvas.getSelectedWidget() == this) {
+            new Rectangle().hollow(1)
+                .color(PlannhColors.ACCENT_GREEN.getColor())
+                .draw(
+                    context,
+                    -1,
+                    -1,
+                    getArea().width + 2,
+                    getArea().height + 2,
+                    getActiveWidgetTheme(widgetTheme, isHovering()));
+        }
+    }
 
     @Override
     public boolean onDragStart(int mouseButton) {
@@ -144,6 +163,7 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
     }
 
     public void removeFromGraph() {
+        if (canvas.getSelectedWidget() == this) canvas.select(null);
         canvas.getFlowchartWidgets()
             .remove(data.getId());
         dataContainer.remove(data.getId());
