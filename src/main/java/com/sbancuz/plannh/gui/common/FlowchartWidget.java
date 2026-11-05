@@ -1,8 +1,8 @@
 package com.sbancuz.plannh.gui.common;
 
+import java.util.Comparator;
 import java.util.SortedMap;
 import java.util.UUID;
-import java.util.stream.StreamSupport;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -10,6 +10,7 @@ import com.cleanroommc.modularui.api.widget.IDraggable;
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
+import com.cleanroommc.modularui.utils.TreeUtil;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.sbancuz.plannh.api.PlanAPI;
@@ -18,6 +19,7 @@ import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Note;
 import com.sbancuz.plannh.gui.CanvasWidget;
+import com.sbancuz.plannh.gui.group.GroupAreaWidget;
 import com.sbancuz.plannh.gui.group.GroupWidget;
 import com.sbancuz.plannh.gui.node.NodeWidget;
 import com.sbancuz.plannh.gui.note.NoteWidget;
@@ -34,7 +36,6 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
     protected final CanvasWidget canvas;
     private boolean moving = false;
     private int dragStartMouseX, dragStartMouseY;
-    private int dragOffsetX, dragOffsetY;
     private int dragStartX, dragStartY;
     private int lastWidth = -1, lastHeight = -1;
     @Getter
@@ -67,8 +68,6 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
                 .beginEdit(canvas.getGraph());
             dragStartX = data.getX();
             dragStartY = data.getY();
-            dragOffsetX = x + context.getMouseX();
-            dragOffsetY = y + context.getMouseY();
             dragStartMouseX = context.getAbsMouseX();
             dragStartMouseY = context.getAbsMouseY();
             return true;
@@ -78,18 +77,20 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
 
     @Override
     public void onDragEnd(boolean successful) {
-        if (!successful) {
-            data.setX(dragStartX);
-            data.setY(dragStartY);
-            reposition();
-        } else {
+        if (successful) {
             if (canvas.getGraph()
                 .isSnapToGrid()) {
                 data.setX((int) (Math.round((double) data.getX() / CanvasWidget.GRID_SIZE) * CanvasWidget.GRID_SIZE));
                 data.setY((int) (Math.round((double) data.getY() / CanvasWidget.GRID_SIZE) * CanvasWidget.GRID_SIZE));
                 reposition();
             }
-            adjustGroupMembership();
+            successful = canDropHere(0, 0, null);
+            if (successful) adjustGroupMembership();
+        }
+        if (!successful) {
+            data.setX(dragStartX);
+            data.setY(dragStartY);
+            reposition();
         }
         PlanAPI.undoHistory()
             .commitEdit(dragEditToken, canvas.getGraph());
@@ -129,14 +130,17 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
 
     @Override
     public boolean canDropHere(int x, int y, @Nullable IWidget widget) {
-        // we can only intersect with ourselves or groups that accept us
+        // Only our descendants and groups fully containing us may overlap the drop.
+        Area dropArea = getPositionedArea();
         return canvas.isMouseInsideCanvas() && canvas.getFlowchartWidgets()
             .values()
             .stream()
             .filter(
                 f -> f.getArea()
-                    .intersects(getArea()))
-            .allMatch(f -> f == this || f instanceof GroupWidget<?>groupWidget && groupWidget.canAddToGroup(this));
+                    .intersects(dropArea))
+            .allMatch(
+                f -> TreeUtil.findParent(f, w -> w == this) != null
+                    || f instanceof GroupWidget<?>groupWidget && groupWidget.canContain(this));
     }
 
     public void removeFromGraph() {
@@ -169,37 +173,52 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
     }
 
     private void adjustGroupMembership() {
+        ParentWidget<?> newParent = canvas.getFlowchartWidgets()
+            .values()
+            .stream()
+            .filter(w -> w instanceof GroupWidget<?>group && group.canContain(this))
+            .map(w -> (GroupWidget<?>) w)
+            .min(Comparator.comparingLong(w -> (long) w.getArea().width * w.getArea().height))
+            .<ParentWidget<?>>map(GroupWidget::getAreaWidget)
+            .orElse(canvas);
+        moveTo(newParent);
+    }
+
+    public Area getPositionedArea() {
+        return new Area(
+            getParent().getArea().x + data.getX(),
+            getParent().getArea().y + data.getY(),
+            getArea().width,
+            getArea().height);
+    }
+
+    public void moveTo(ParentWidget<?> newParent) {
         ParentWidget<?> oldParent = (ParentWidget<?>) getParent();
-        ParentWidget<?> newParent = StreamSupport.stream(
-            getContext().getAllBelowMouse()
-                .spliterator(),
-            false)
-            .filter(w -> (w instanceof FlowchartWidget<?, ?> || w instanceof CanvasWidget) && w != this)
-            .map(w -> (ParentWidget<?>) w)
-            .findFirst() // this should always find at least 1 match (the canvas)
-            .orElseThrow();
+        if (oldParent == newParent) return;
+        if (newParent instanceof GroupAreaWidget groupArea && !groupArea.getFlowchartParent()
+            .canContain(this)) return;
 
-        if (oldParent != newParent && (newParent instanceof CanvasWidget || newParent instanceof GroupWidget<?>)) {
-            dataContainer.remove(data.getId());
-            oldParent.remove(this);
-
-            if (newParent instanceof GroupWidget<?>groupWidget) {
-                groupWidget.joinGroup(this);
-                data.setX(groupWidget.getMouseGroupX() - dragOffsetX);
-                data.setY(groupWidget.getMouseGroupY() - dragOffsetY);
-            } else {
-                newParent.child(
-                    canvas.getArrowWidgets()
-                        .size(),
-                    this);
-                dataContainer = getDefaultContainer();
-                data.setX(canvas.getCanvasMouseX() - dragOffsetX);
-                data.setY(canvas.getCanvasMouseY() - dragOffsetY);
-            }
-
-            dataContainer.put(data.getId(), data);
-            reposition();
+        Area area = getPositionedArea();
+        int x = area.x - newParent.getArea().x;
+        int y = area.y - newParent.getArea().y;
+        dataContainer.remove(data.getId());
+        oldParent.remove(this);
+        data.setX(x);
+        data.setY(y);
+        if (newParent instanceof GroupAreaWidget groupArea) {
+            groupArea.getFlowchartParent()
+                .joinGroup(this);
+        } else {
+            dataContainer = getDefaultContainer();
+            newParent.child(
+                canvas.getArrowWidgets()
+                    .size(),
+                this);
         }
+        dataContainer.put(data.getId(), data);
+        reposition();
+        oldParent.scheduleResize();
+        newParent.scheduleResize();
     }
 
     public static FlowchartWidget<?, ?> getFlowchartWidgetFromData(CanvasWidget canvas, GraphData data) {

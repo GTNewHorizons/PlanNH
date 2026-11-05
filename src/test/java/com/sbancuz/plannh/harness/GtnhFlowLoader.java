@@ -126,7 +126,7 @@ public final class GtnhFlowLoader {
 
             for (final Map.Entry<String, Double> io : ioMap(entry.get("I")).entrySet()) {
                 consumers.computeIfAbsent(io.getKey(), k -> new ArrayList<>())
-                    .add(new int[] { machineIndex, recipe.inputs().size() });
+                    .add(new int[]{machineIndex, recipe.inputs().size()});
                 recipe.input(TestIngredients.port(io.getKey(), io.getValue()));
             }
             for (final Map.Entry<String, Double> io : ioMap(entry.get("O")).entrySet()) {

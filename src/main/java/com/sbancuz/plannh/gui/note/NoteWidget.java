@@ -3,7 +3,9 @@ package com.sbancuz.plannh.gui.note;
 import java.util.SortedMap;
 import java.util.UUID;
 
+import com.cleanroommc.modularui.drawable.DynamicDrawable;
 import com.cleanroommc.modularui.drawable.Rectangle;
+import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.sbancuz.plannh.data.flowchart.Note;
 import com.sbancuz.plannh.gui.CanvasWidget;
@@ -20,6 +22,14 @@ public class NoteWidget extends FlowchartWidget<NoteWidget, Note> {
 
         name("note");
         coverChildren();
+        padding(2);
+        background(
+            new DynamicDrawable(
+                () -> new Rectangle().hollow(2)
+                    .color(Color.withAlpha(PlannhColors.NOTE_BORDER.getColor(), 255))),
+            new DynamicDrawable(
+                () -> new Rectangle().hollow(1)
+                    .color(PlannhColors.FRAME_BORDER.getColor())));
 
         Flow mainColumn = Flow.column()
             .name("note.column")

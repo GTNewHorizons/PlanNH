@@ -17,13 +17,7 @@ public class NoteTextWidget extends FlowchartTextFieldWidget {
     public NoteTextWidget(NoteWidget parent) {
         super(parent);
         name("note.text");
-        background(
-            new DynamicDrawable(
-                () -> new Rectangle()
-                    .color((isEditing ? PlannhColors.NOTE_BG_EDITING : PlannhColors.NOTE_BG).getColor())),
-            new DynamicDrawable(
-                () -> new Rectangle().hollow()
-                    .color((isEditing ? PlannhColors.NOTE_BORDER_EDIT : PlannhColors.NOTE_BORDER).getColor())));
+        background(new DynamicDrawable(() -> new Rectangle().color(PlannhColors.NOTE_BG.getColor())));
 
         Note note = parent.getData();
         // add loaded note text if not empty, initialize it otherwise
@@ -40,7 +34,7 @@ public class NoteTextWidget extends FlowchartTextFieldWidget {
         handler.setMaxLines(1000);
         setTextAlignment(Alignment.TopLeft);
         setTextColor(PlannhColors.TEXT_NOTE.getColor());
-        paddingTop(4);
+        padding(4);
 
         resize(
             renderer.getMaxWidth(handler.getText()),
@@ -61,6 +55,6 @@ public class NoteTextWidget extends FlowchartTextFieldWidget {
     }
 
     protected void resize(int w, int h) {
-        size(Math.max(w + 5, NOTE_MIN_W), Math.max(h + 5, NOTE_MIN_H));
+        size(Math.max(w + 8, NOTE_MIN_W), Math.max(h + 8, NOTE_MIN_H));
     }
 }

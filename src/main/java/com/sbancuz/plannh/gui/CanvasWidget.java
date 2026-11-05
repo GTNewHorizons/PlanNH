@@ -172,13 +172,14 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             addedFeedsOrigin ? origin.getX() - originW - AUTO_PLACE_GAP_X : origin.getX() + originW + AUTO_PLACE_GAP_X);
         final int baseY = Math.round(origin.getY());
 
-        final int[] spot = findFreeSpot(baseX, baseY, NODE_W_ESTIMATE, NODE_H_ESTIMATE);
+        final int[] spot = findFreeSpot(baseX, baseY, NODE_W_ESTIMATE, NODE_H_ESTIMATE, this);
         added.setX(spot[0]);
         added.setY(spot[1]);
     }
 
-    private boolean overlapsAnyNode(final int x, final int y, final int w, final int h) {
+    private boolean overlapsAnyNode(final int x, final int y, final int w, final int h, final ParentWidget<?> parent) {
         for (final FlowchartWidget<?, ?> widget : flowchartWidgets.values()) {
+            if (widget.getParent() != parent) continue;
             final GraphData n = widget.getData();
             final int nw = widget.getArea().width;
             final int nh = widget.getArea().height;
@@ -194,8 +195,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
      * Finds a non-overlapping position near the given point, searching outward in a grid pattern.
      * Checks positions at increasing distances, preferring spots closer to the ideal location.
      */
-    private int[] findFreeSpot(final int x, final int y, final int w, final int h) {
-        if (!overlapsAnyNode(x, y, w, h)) return new int[] { x, y };
+    private int[] findFreeSpot(final int x, final int y, final int w, final int h, final ParentWidget<?> parent) {
+        if (!overlapsAnyNode(x, y, w, h, parent)) return new int[] { x, y };
         final int step = GRID_SIZE;
         for (int ring = 1; ring <= 15; ring++) {
             for (int ox = -ring; ox <= ring; ox++) {
@@ -203,7 +204,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                     if (Math.max(Math.abs(ox), Math.abs(oy)) != ring) continue;
                     final int cx = x + ox * step;
                     final int cy = y + oy * step;
-                    if (!overlapsAnyNode(cx, cy, w, h)) return new int[] { cx, cy };
+                    if (!overlapsAnyNode(cx, cy, w, h, parent)) return new int[] { cx, cy };
                 }
             }
         }
@@ -215,12 +216,13 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
      * Checks if the resized widget now overlaps any neighbor, and if so, pushes the neighbor away.
      */
     public void resolveOverlapsFrom(final FlowchartWidget<?, ?> source) {
+        if (source instanceof GroupWidget<?>) return;
         final GraphData srcData = source.getData();
         final int srcW = source.getArea().width;
         final int srcH = source.getArea().height;
 
         for (final FlowchartWidget<?, ?> other : flowchartWidgets.values()) {
-            if (other == source) continue;
+            if (other == source || other instanceof GroupWidget<?> || other.getParent() != source.getParent()) continue;
             final GraphData dstData = other.getData();
             final int dstW = other.getArea().width;
             final int dstH = other.getArea().height;
@@ -228,7 +230,12 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             if (srcData.getX() < dstData.getX() + dstW && dstData.getX() < srcData.getX() + srcW
                 && srcData.getY() < dstData.getY() + dstH
                 && dstData.getY() < srcData.getY() + srcH) {
-                final int[] spot = findFreeSpot(dstData.getX(), dstData.getY(), dstW, dstH);
+                final int[] spot = findFreeSpot(
+                    dstData.getX(),
+                    dstData.getY(),
+                    dstW,
+                    dstH,
+                    (ParentWidget<?>) other.getParent());
 
                 PlanAPI.recordEdit(graph, () -> {
                     dstData.setX(spot[0]);
@@ -690,7 +697,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                     .isEdgeSource();
                 placeBesideOrigin(node, origin, addedFeedsOrigin);
             } else {
-                final int[] spot = findFreeSpot(x, y, NODE_W_ESTIMATE, NODE_H_ESTIMATE);
+                final int[] spot = findFreeSpot(x, y, NODE_W_ESTIMATE, NODE_H_ESTIMATE, this);
                 node.setX(spot[0]);
                 node.setY(spot[1]);
             }
