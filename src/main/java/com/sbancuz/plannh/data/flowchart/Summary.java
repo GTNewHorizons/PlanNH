@@ -456,9 +456,9 @@ public final class Summary extends GraphData {
         return result;
     }
 
-    /** One Measure row per selected machine with work to do; the totals line is appended after. */
+    /** Combine selected recipes by machine name; the totals line is appended after. */
     private List<Line<?>> machineLines(final List<Node> nodes) {
-        final List<Line<?>> out = new ArrayList<>();
+        final Map<String, Double> counts = new HashMap<>();
         for (final Node node : nodes) {
             if (!node.isAvailable()) continue;
             final var nb = balance.nodeBalances()
@@ -466,8 +466,10 @@ public final class Summary extends GraphData {
             if (nb == null) continue;
             final double ops = nb.operations();
             if (ops <= 0) continue;
-            out.add(new Line.Measure<>(MACHINE_LABEL, node.getMachineName(), ops));
+            counts.merge(node.getMachineName(), ops, Double::sum);
         }
+        final List<Line<?>> out = new ArrayList<>();
+        counts.forEach((name, count) -> out.add(new Line.Measure<>(MACHINE_LABEL, name, count)));
         return out;
     }
 
