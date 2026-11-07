@@ -100,11 +100,10 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
             .background(
                 new Rectangle().color(PlannhColors.titleColor(data.getMachineName())),
                 new DynamicDrawable(
-                    () -> getParent() instanceof GroupAreaWidget group
-                        ? new Brackets(
-                            group.getFlowchartParent()
-                                .getData()
-                                .getColor())
+                    () -> getParent() instanceof GroupAreaWidget group ? new Brackets(
+                        group.getFlowchartParent()
+                            .getData()
+                            .getColor())
                         : IDrawable.EMPTY))
             .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN);
 
@@ -154,7 +153,11 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
                 .child(new ExtractorWidget(this));
             mainColumn.child(optionRow);
             mainColumn.child(new ThroughputInfoWidget(this));
-            mainColumn.child(new ConfigurationAreaWidget(this));
+            mainColumn.child(
+                new ConfigurationAreaWidget().child(new ThroughputFold(this))
+                    .child(new PropertiesFold(this))
+                    .child(new TargetFold(this))
+                    .child(new SettingsFold(this)));
         } else {
             throughputFold = null;
             propertiesFold = null;

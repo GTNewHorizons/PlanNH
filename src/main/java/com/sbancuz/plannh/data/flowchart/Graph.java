@@ -102,15 +102,23 @@ public class Graph {
     /** All current graph data, including groups and their nested children. */
     public Stream<GraphData> allData() {
         return Stream.concat(
-            Stream.concat(nodes.values().stream(), notes.values().stream()),
-            groups.values().stream().flatMap(Graph::dataIn));
+            Stream.concat(
+                nodes.values()
+                    .stream(),
+                notes.values()
+                    .stream()),
+            groups.values()
+                .stream()
+                .flatMap(Graph::dataIn));
     }
 
     private static Stream<GraphData> dataIn(final GraphData data) {
-        if (data instanceof Group group)
-            return Stream.concat(
-                Stream.of(group),
-                group.getChildren().values().stream().flatMap(Graph::dataIn));
+        if (data instanceof Group group) return Stream.concat(
+            Stream.of(group),
+            group.getChildren()
+                .values()
+                .stream()
+                .flatMap(Graph::dataIn));
         return Stream.of(data);
     }
 

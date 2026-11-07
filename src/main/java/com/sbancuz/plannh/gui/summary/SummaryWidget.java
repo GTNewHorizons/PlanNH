@@ -117,7 +117,8 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
                                 .color(PlannhColors.TEXT_WHITE.getColor())
                                 .tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE)
                                 .tooltipBuilder(tooltip -> {
-                                    final var scopes = canvas.getGraph().allData()
+                                    final var scopes = canvas.getGraph()
+                                        .allData()
                                         .filter(GraphData::isSummaryFiltered)
                                         .toList();
                                     final TooltipBuilder out = TooltipBuilder.create(tooltip)
@@ -223,14 +224,21 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
     private ButtonWidget<?> scopeClearButton() {
         return new ButtonWidget<>().name("summary.scope.clear")
             .size(SummaryHeader.HEADER_H, SummaryHeader.HEADER_H)
-            .overlay(new FilterOff().asIcon().size(12))
+            .overlay(
+                new FilterOff().asIcon()
+                    .size(12))
             .tooltipBuilder(
                 tooltip -> TooltipBuilder.create(tooltip)
                     .langRow("plannh.summary.scope.clear")
                     .flush())
-            .setEnabledIf(_ -> canvas.getGraph().allData().anyMatch(GraphData::isSummaryFiltered))
+            .setEnabledIf(
+                _ -> canvas.getGraph()
+                    .allData()
+                    .anyMatch(GraphData::isSummaryFiltered))
             .onMousePressed(mouseButton -> {
-                if (mouseButton == 0) canvas.getGraph().allData().forEach(value -> value.setSummaryFiltered(false));
+                if (mouseButton == 0) canvas.getGraph()
+                    .allData()
+                    .forEach(value -> value.setSummaryFiltered(false));
                 return true;
             });
     }

@@ -38,7 +38,7 @@ class SummarySection extends ParentWidget<SummarySection> {
                 .childPadding(INNER_GAP)
                 .collapseDisabledChild()
                 .child(new SummaryHeader(panel, data, section, sectionsList))
-                .child(new SummaryBody(panel, data, section).setEnabledIf(_ -> !data.isSummaryFold(section))));
+                .child(new SummaryBody(panel, data, section)));
     }
 
     Summary.Section section() {

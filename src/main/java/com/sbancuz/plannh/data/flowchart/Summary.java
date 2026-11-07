@@ -317,9 +317,10 @@ public final class Summary extends GraphData {
             .filter(GraphData::isSummaryFiltered)
             .toList();
         final boolean scopeChanged = !selectedScopes.equals(atScopes);
-        if (atGraph == graph && atVersion == graph.getVersion() && atMode == mode && atSettings == settingsVersion
-            && !scopeChanged)
-            return this;
+        if (atGraph == graph && atVersion == graph.getVersion()
+            && atMode == mode
+            && atSettings == settingsVersion
+            && !scopeChanged) return this;
 
         final boolean balanceChanged = atGraph != graph || atVersion != graph.getVersion() || balance == null;
         if (balanceChanged) {
@@ -334,7 +335,9 @@ public final class Summary extends GraphData {
 
         final boolean wholeChart = selectedScopes.isEmpty();
         final List<Node> selectedNodes = (wholeChart ? graph.allNodes()
-            : selectedScopes.stream().flatMap(Graph::nodesIn).distinct()).toList();
+            : selectedScopes.stream()
+                .flatMap(Graph::nodesIn)
+                .distinct()).toList();
 
         final Map<LineKey, Double> outputs = new HashMap<>();
         final Map<LineKey, Double> inputs = new HashMap<>();

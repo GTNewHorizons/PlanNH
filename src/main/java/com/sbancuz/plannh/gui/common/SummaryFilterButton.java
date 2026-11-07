@@ -32,20 +32,21 @@ public class SummaryFilterButton extends ButtonWidget<SummaryFilterButton> {
                             .size(10)))
             .tooltipBuilder(
                 tooltip -> TooltipBuilder.create(tooltip)
-                    .langRow(
-                        isActive() ? "plannh.summary.scope.filter.remove" : "plannh.summary.scope.filter.action")
+                    .langRow(isActive() ? "plannh.summary.scope.filter.remove" : "plannh.summary.scope.filter.action")
                     .langRow("plannh.summary.scope.filter.ctrl_hint")
                     .flush())
             .tooltipAutoUpdate(true);
     }
 
     private boolean isActive() {
-        return owner.getData().isSummaryFiltered();
+        return owner.getData()
+            .isSummaryFiltered();
     }
 
     @Override
     public @NotNull Result onMousePressed(final int mouseButton) {
-        if (mouseButton == 0 && canvas.isMouseInsideCanvas()) owner.getData().setSummaryFiltered(!isActive());
+        if (mouseButton == 0 && canvas.isMouseInsideCanvas()) owner.getData()
+            .setSummaryFiltered(!isActive());
         return Result.SUCCESS;
     }
 }

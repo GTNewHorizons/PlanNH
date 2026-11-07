@@ -130,7 +130,8 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
             filterClick = false;
             if (!isValid()) return;
             updateFilterClickMovement();
-            if (!filterClickMoved && getContext().getMouseButton() == 0 && canvas.isMouseInsideCanvas()
+            if (!filterClickMoved && getContext().getMouseButton() == 0
+                && canvas.isMouseInsideCanvas()
                 && summaryFilterTarget(getContext().getTopHovered()) == this) {
                 data.setSummaryFiltered(!data.isSummaryFiltered());
             }

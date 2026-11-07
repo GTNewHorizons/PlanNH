@@ -15,7 +15,6 @@ import com.cleanroommc.modularui.api.UpOrDown;
 import com.cleanroommc.modularui.api.layout.IViewport;
 import com.cleanroommc.modularui.api.layout.IViewportStack;
 import com.cleanroommc.modularui.api.widget.IDraggable;
-import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.DynamicDrawable;
 import com.cleanroommc.modularui.drawable.GuiDraw;
@@ -828,10 +827,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         if (!transformed) {
             Stencil.remove();
             // Draw after children so nodes cannot cover the frame.
-            FRAME.drawAtZero(
-                context,
-                getArea(),
-                getWidgetTheme(getPanel().getTheme()).getTheme());
+            FRAME.drawAtZero(context, getArea(), getWidgetTheme(getPanel().getTheme()).getTheme());
         }
     }
 

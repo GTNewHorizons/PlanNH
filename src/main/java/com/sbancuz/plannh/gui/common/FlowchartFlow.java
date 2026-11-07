@@ -1,9 +1,8 @@
 package com.sbancuz.plannh.gui.common;
 
 import com.cleanroommc.modularui.api.GuiAxis;
-import com.cleanroommc.modularui.widgets.layout.Flow;
 
-public class FlowchartFlow extends Flow implements IFlowchartDraggable {
+public class FlowchartFlow extends ContentFlow implements IFlowchartDraggable {
 
     private final FlowchartWidget<?, ?> parent;
 
