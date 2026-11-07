@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- Pixel-art adaptation of Lucide's network icon; see licenses/lucide-icons.txt. -->
+  <path fill="#000000" d="M5 0h6v6H5z M6 6h3v1H6z M1 7h13v3h2v6h-6v-6H6v6H0v-6h1z"/>
+  <path fill="#707070" d="M6 1h4v4H6z M1 11h4v4H1z M11 11h4v4h-4z"/>
+  <path fill="#b0b0b0" d="M6 1h4v1H7v2H6z M1 11h4v1H2v2H1z M11 11h4v1h-3v2h-1z"/>
+  <path fill="#505050" d="M9 2h1v3H6V4h3z M4 12h1v3H1v-1h3z M14 12h1v3h-4v-1h3z"/>
+  <path fill="#909090" d="M7 6h1v2h5v2h-1V9H3v1H2V8h5z"/>
+</svg>

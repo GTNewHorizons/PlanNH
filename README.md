@@ -40,6 +40,12 @@ To use the separate window in another modpack:
 - **[FlyToSpace](https://github.com/FlyToSpace)** for the logo design
 - **[OrderedSet86](https://github.com/OrderedSet86)** for the production balancer
 
+### External icons
+
+- **[Gerrit Halfmann](https://github.com/halfmage)** for the [Pixelarticons](https://github.com/halfmage/pixelarticons) UI icons, used under the [MIT license](src/main/resources/assets/plannh/licenses/pixelarticons.txt).
+- **[shuqikhor](https://github.com/shuqikhor)** for the native 9x9 [Pixel Icons](https://github.com/shuqikhor/pixel-icons), used under the [MIT license](src/main/resources/assets/plannh/licenses/pixel-icons.txt).
+- **[Lucide contributors](https://lucide.dev)** for the [network](https://lucide.dev/icons/network) launcher icon, used under the [ISC license](src/main/resources/assets/plannh/licenses/lucide-icons.txt) and shaded to match NEI.
+
 ## Building
 
 ```bash

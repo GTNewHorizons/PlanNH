@@ -1,0 +1,49 @@
+Pixelarticons by Gerrit Halfmann
+https://github.com/halfmage/pixelarticons
+
+Version: 2.4.2
+Upstream commit: c9ecc2da61afde85dbe539025e3d931c6152ad75
+
+PlanNH assets derived from this project:
+- textures/gui/undo.png, from svg/undo.svg
+- textures/gui/redo.png, from svg/redo.svg
+- textures/gui/grid-3x3.png, from svg/grid-3x3.svg
+- textures/gui/folder.png, from svg/folder.svg
+- textures/gui/note.png, from svg/note.svg
+- textures/gui/share.png, from svg/share.svg
+- textures/gui/copy.png, from svg/copy.svg
+- textures/gui/clipboard.png, from svg/clipboard.svg
+- textures/gui/cpu.png, from svg/cpu.svg
+
+Sources:
+https://raw.githubusercontent.com/halfmage/pixelarticons/c9ecc2da61afde85dbe539025e3d931c6152ad75/svg/
+https://github.com/halfmage/pixelarticons/blob/c9ecc2da61afde85dbe539025e3d931c6152ad75/svg/undo.svg
+https://github.com/halfmage/pixelarticons/blob/c9ecc2da61afde85dbe539025e3d931c6152ad75/svg/redo.svg
+https://github.com/halfmage/pixelarticons/blob/c9ecc2da61afde85dbe539025e3d931c6152ad75/LICENSE
+
+Changes by PlanNH: rasterized the 24x24 SVGs to transparent 12x12 PNGs
+using nearest-neighbor sampling and a white fill. The geometry is unchanged.
+
+Upstream license follows in full:
+
+MIT License
+
+Copyright (c) 2019 Gerrit Halfmann
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
