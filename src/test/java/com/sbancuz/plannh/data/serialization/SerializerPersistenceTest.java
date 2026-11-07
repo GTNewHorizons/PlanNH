@@ -81,6 +81,7 @@ class SerializerPersistenceTest {
             0,
             0,
             GtnhFlowLoader.defaultProfile(),
+            Recipe.RecipeId.of(null, "invalid", List.of()),
             RecipeContext.builder()
                 .build());
         set(invalid, "machineConfig", null);
@@ -131,9 +132,9 @@ class SerializerPersistenceTest {
             7,
             11,
             GtnhFlowLoader.defaultProfile(),
+            Recipe.RecipeId.of(null, "test", List.of()),
             RecipeContext.builder()
                 .build());
-        set(node, "recipeId", Recipe.RecipeId.of(null, "test", List.of()));
         set(node, "selectedProfile", null);
         set(node, "initialized", true);
         return node;

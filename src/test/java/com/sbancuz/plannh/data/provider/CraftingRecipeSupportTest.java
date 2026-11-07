@@ -1,6 +1,8 @@
 package com.sbancuz.plannh.data.provider;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -55,10 +57,69 @@ class CraftingRecipeSupportTest {
             Arrays.asList(output, alternateOutput));
 
         final CraftingRecipeSupport support = new CraftingRecipeSupport(dynamicHandler, 0);
-        assertTrue(support.isEligible());
         dynamicHandler.getResultStack(0).item = null;
+        assertTrue(support.isEligible());
         support.selectMissingPermutations();
-        assertTrue(dynamicHandler.getResultStack(0).item != null);
+        assertSame(Items.iron_ingot, dynamicHandler.getResultStack(0).item.getItem());
+    }
+
+    @Test
+    void selectsMissingIngredientBeforeAccountingForContainerReturns() {
+        final ShapedRecipeHandler handler = handler(new ItemStack(Items.water_bucket), new ItemStack(Items.iron_ingot));
+        handler.getIngredientStacks(0)
+            .getFirst().item = null;
+        final CraftingRecipeSupport support = new CraftingRecipeSupport(handler, 0);
+
+        assertTrue(support.isEligible());
+        support.selectMissingPermutations();
+        final RecipeContext.Builder recipe = RecipeContext.builder();
+        support.addContainerReturns(recipe);
+
+        assertSame(
+            Items.water_bucket,
+            handler.getIngredientStacks(0)
+                .getFirst().item.getItem());
+        assertEquals(
+            1,
+            recipe.outputs()
+                .size());
+        assertSame(
+            Items.bucket,
+            ((LongItemStack) recipe.outputs()
+                .getFirst()
+                .getValue()).stack.getItem());
+    }
+
+    @Test
+    void keepsAnAlreadySelectedPermutation() {
+        final ShapedRecipeHandler handler = handler(
+            new ItemStack(Items.redstone),
+            Arrays.asList(new ItemStack(Items.iron_ingot), new ItemStack(Items.gold_ingot)));
+        handler.getResultStack(0)
+            .setPermutationToRender(1);
+        final ItemStack selected = handler.getResultStack(0).item;
+
+        new CraftingRecipeSupport(handler, 0).selectMissingPermutations();
+
+        assertSame(selected, handler.getResultStack(0).item);
+    }
+
+    @Test
+    void skipsNullPermutationsAndRejectsOutputsWithoutUsablePermutations() {
+        final ShapedRecipeHandler handler = handler(new ItemStack(Items.redstone), new ItemStack(Items.iron_ingot));
+        final CraftingRecipeSupport support = new CraftingRecipeSupport(handler, 0);
+        handler.getResultStack(0).items = new ItemStack[] { null, new ItemStack(Items.gold_ingot) };
+        handler.getResultStack(0).item = null;
+
+        assertTrue(support.isEligible());
+        support.selectMissingPermutations();
+        assertSame(Items.gold_ingot, handler.getResultStack(0).item.getItem());
+
+        handler.getResultStack(0).item = null;
+        handler.getResultStack(0).items = new ItemStack[] { null };
+        assertFalse(support.isEligible());
+        support.selectMissingPermutations();
+        assertNull(handler.getResultStack(0).item);
     }
 
     private static ShapedRecipeHandler handler(final ItemStack input, final ItemStack output) {

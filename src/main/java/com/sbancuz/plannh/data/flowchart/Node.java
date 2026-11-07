@@ -253,10 +253,9 @@ public class Node extends GraphData {
             || machineConfig == null;
     }
 
-    // TODO: Find a better way to make the tests work
-    /** Creates a detached node from an already extracted recipe. */
+    /** Creates a detached node from a recipe identity and extracted data, without resolving a handler. */
     public Node(final UUID id, final String name, final int x, final int y, final MachineProfile profile,
-        final RecipeContext context) {
+        final Recipe.RecipeId recipeId, final RecipeContext context) {
         super(id);
         this.x = x;
         this.y = y;
@@ -264,7 +263,7 @@ public class Node extends GraphData {
         this.context = context;
         selectedProfile = profile;
         availableProfiles = List.of(profile);
-        recipeId = null;
+        this.recipeId = recipeId;
         machineName = name;
         initialized = true;
     }

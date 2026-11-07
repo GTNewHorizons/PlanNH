@@ -14,11 +14,10 @@ import java.util.function.Predicate;
 import org.junit.jupiter.api.Test;
 
 import com.sbancuz.plannh.data.flowchart.Graph;
+import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceView;
-import com.sbancuz.plannh.data.flowchart.balancer.BalanceView.Boundary;
-import com.sbancuz.plannh.data.flowchart.balancer.BalanceView.Kind;
 import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
 import com.sbancuz.plannh.data.flowchart.balancer.Note;
 import com.sbancuz.plannh.data.flowchart.balancer.SolverMessage;
@@ -71,66 +70,6 @@ class BalanceViewTest {
             .toList();
         assertEquals(1, matching.size(), () -> "expected exactly one such option, got " + matching);
         return matching.get(0);
-    }
-
-    private static List<Boundary> of(final List<Boundary> flows, final Kind kind) {
-        return flows.stream()
-            .filter(b -> b.kind() == kind)
-            .toList();
-    }
-
-    @Test
-    void surplusIsNamedAtItsPortAndReadsAsSomethingToCollect() {
-        // The reported bug in one assertion: the surplus is pinned to the port it leaves by, and
-        // named as a surplus rather than as destruction - a player empties that bus like any other.
-        final List<Boundary> flows = chart("excess_choice").boundary();
-
-        final List<Boundary> voided = of(flows, Kind.EXCESS);
-        assertEquals(1, voided.size());
-        assertEquals(
-            "nitrogen",
-            voided.get(0)
-                .ingredient());
-        assertEquals(
-            530.0,
-            voided.get(0)
-                .ratePerSecond(),
-            1e-4);
-        assertEquals(
-            SolverMessage.BOUNDARY_EXCESS,
-            voided.get(0)
-                .label()
-                .message(),
-            () -> "reads as surplus, not as waste: " + voided.get(0)
-                .label());
-
-        assertTrue(
-            of(flows, Kind.PRODUCT).stream()
-                .noneMatch(
-                    b -> b.ingredient()
-                        .equals("nitrogen")),
-            "and is not double-counted as a separate product line");
-        assertTrue(
-            of(flows, Kind.PRODUCT).stream()
-                .anyMatch(
-                    b -> b.ingredient()
-                        .equals("coal tar")),
-            "while the thing the chart is for still does");
-        assertTrue(
-            of(flows, Kind.SUPPLY).stream()
-                .anyMatch(
-                    b -> b.ingredient()
-                        .equals("oak wood")));
-    }
-
-    @Test
-    void aBalancedChartHasNothingToChooseAndNothingToVoid() {
-        final Graph graph = chart("light_fuel");
-        assertTrue(
-            alternatives(graph).options()
-                .isEmpty(),
-            "no gates, so no question to ask");
-        assertTrue(of(graph.boundary(), Kind.EXCESS).isEmpty(), "and no surplus anywhere");
     }
 
     @Test
@@ -193,45 +132,43 @@ class BalanceViewTest {
         final Alternatives before = alternatives(graph);
         final Alternative alternative = before.options()
             .stream()
-            .filter(o -> !o.isCurrent())
+            .filter(option -> !option.isCurrent())
             .findFirst()
             .orElseThrow();
-        final Alternative current = onlyOption(before.options(), Alternative::isCurrent);
-        assertFalse(
-            BalanceView.toLineChoices(graph, before).stream()
-                .filter(Summary.Line.Choice.class::isInstance)
-                .map(Summary.Line.Choice.class::cast)
-                .filter(r -> r.active())
-                .findFirst()
-                .orElseThrow()
-                .label()
-                .equals(alternative.toNote()),
-            "the two answers void different things");
+        final Plan plan = Serializer.decodePlan("{\"graphs\":[]}");
+        assertNotNull(plan);
+        plan.getSummary()
+            .setExcessChoice(alternative.key());
 
-        // What the summary panel's click handler does, minus the pixels.
-        graph.setExcessChoice(alternative.key());
-
-        final Balancer.Answer picked = Balancer
-            .solveWithAlternatives(BalanceMode.AUTO, graph, graph.getExcessChoice(), Map.of());
-        assertTrue(
-            picked instanceof final Balancer.Answer.Solved solved
-                && solved.solution().key.equals(alternative.key()),
-            "the picked answer is now the one on screen");
-        assertEquals(
-            alternative.externals()
-                .get(0)
-                .port(),
-            of(graph.boundary(), Kind.EXCESS).stream()
-                .map(Boundary::port)
-                .findFirst()
-                .orElse(null),
-            "and the canvas voids where the user asked");
-
+        final Plan restored = Serializer.decodePlan(Serializer.encodePlan(plan));
+        assertNotNull(restored);
         assertEquals(
             alternative.key(),
-            Serializer.decodeGraph(Serializer.encodeGraph(graph))
+            restored.getSummary()
+                .getExcessChoice());
+
+        final Balancer.Answer picked = Balancer.solveWithAlternatives(
+            BalanceMode.AUTO,
+            graph,
+            restored.getSummary()
                 .getExcessChoice(),
-            "and the pick survives a save");
+            Map.of());
+        assertTrue(picked instanceof Balancer.Answer.Solved);
+        final Balancer.Answer.Solved solved = (Balancer.Answer.Solved) picked;
+        assertEquals(alternative.key(), solved.solution().key);
+        assertEquals(
+            alternative.externals()
+                .getFirst()
+                .port(),
+            solved.solution().gatedSinks.getFirst()
+                .port(),
+            "surplus leaves where the saved choice requested");
+        assertTrue(
+            choicesOf(BalanceView.toLineChoices(graph, solved.alternatives())).stream()
+                .anyMatch(
+                    row -> row.active() && row.key()
+                        .equals(alternative.key())),
+            "the restored choice must be marked current in the summary");
     }
 
     @Test

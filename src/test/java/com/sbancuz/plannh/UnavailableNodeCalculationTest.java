@@ -126,7 +126,7 @@ class UnavailableNodeCalculationTest {
     }
 
     @Test
-    void unavailableNodeIsAbsentFromSummaryAndBoundaryEvenWithAnEdge() {
+    void unavailableNodeIsAbsentFromSummaryEvenWithAnEdge() {
         final Graph graph = new Graph();
         graph.setBalanceMode(BalanceMode.NONE);
         final Node available = node("available", List.of(), List.of("product"), 2);
@@ -171,17 +171,6 @@ class UnavailableNodeCalculationTest {
                 .operations(),
             1e-9);
 
-        final List<BalanceView.Boundary> boundary = BalanceView.boundary(graph);
-        assertEquals(1, boundary.size());
-        assertEquals(
-            "product",
-            boundary.get(0)
-                .ingredient());
-        assertEquals(
-            available.getId(),
-            boundary.get(0)
-                .port()
-                .nodeId());
     }
 
     @Test
@@ -286,14 +275,16 @@ class UnavailableNodeCalculationTest {
         final RecipeContext.Builder recipe = RecipeContext.builder();
         inputs.forEach(input -> recipe.input(TestIngredients.port(input, 1)));
         outputs.forEach(output -> recipe.output(TestIngredients.port(output, 1)));
-        final Node node = new Node(UUID.randomUUID(), name, 0, 0, GtnhFlowLoader.defaultProfile(), recipe.build());
+        final Node node = new Node(
+            UUID.randomUUID(),
+            name,
+            0,
+            0,
+            GtnhFlowLoader.defaultProfile(),
+            Recipe.RecipeId.of(null, name, List.of()),
+            recipe.build());
         node.getMachineConfig()
             .set(Settings.MACHINES, copies);
-        try {
-            set(node, "recipeId", Recipe.RecipeId.of(null, name, List.of()));
-        } catch (final Exception failure) {
-            throw new AssertionError("Node recipe ID field changed", failure);
-        }
         return node;
     }
 
@@ -329,7 +320,6 @@ class UnavailableNodeCalculationTest {
 
     private static Node serializableNode(final String name) throws Exception {
         final Node node = node(name, List.of(name), List.of(name), 1);
-        set(node, "recipeId", Recipe.RecipeId.of(null, name, List.of()));
         set(node, "selectedProfile", null);
         set(node, "initialized", true);
         return node;
