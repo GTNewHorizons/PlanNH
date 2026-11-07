@@ -20,6 +20,7 @@ import com.sbancuz.plannh.data.flowchart.balancer.alternatives.Alternatives;
 import com.sbancuz.plannh.data.properties.SummaryProperty;
 import com.sbancuz.plannh.gui.GuiHelper;
 
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -197,9 +198,9 @@ public final class Summary extends GraphData {
     /** The {@code settingsVersion} the current rows were derived under. */
     transient private long atSettings = -1;
 
-    /** Optional node or group whose descendants are shown by the summary. */
-    @Nullable
-    transient private GraphData scope = null;
+    /** Selected scopes from the graph when the current rows were derived. */
+    @Getter(AccessLevel.NONE)
+    transient private List<GraphData> atScopes = List.of();
 
     /** Where a fresh chart's summary panel starts; kept in the GraphData so the spot is per-chart. */
     public static final int DEFAULT_X = 210;
@@ -231,13 +232,6 @@ public final class Summary extends GraphData {
 
     public void setRateUnit(final GuiHelper.RateUnit rateUnit) {
         this.rateUnit = rateUnit;
-        settingsVersion++;
-    }
-
-    /** Selects a node/group scope; notes are canvas annotations and cannot be a summary scope. */
-    public void setScope(@Nullable final GraphData scope) {
-        if (scope instanceof com.sbancuz.plannh.data.flowchart.Note || this.scope == scope) return;
-        this.scope = scope;
         settingsVersion++;
     }
 
@@ -319,20 +313,28 @@ public final class Summary extends GraphData {
      * again; scope and display changes reuse the existing per-node contributions.
      */
     public Summary recompute(final Graph graph) {
-        if (atGraph == graph && atVersion == graph.getVersion() && atMode == mode && atSettings == settingsVersion)
+        final List<GraphData> selectedScopes = graph.allData()
+            .filter(GraphData::isSummaryFiltered)
+            .toList();
+        final boolean scopeChanged = !selectedScopes.equals(atScopes);
+        if (atGraph == graph && atVersion == graph.getVersion() && atMode == mode && atSettings == settingsVersion
+            && !scopeChanged)
             return this;
 
         final boolean balanceChanged = atGraph != graph || atVersion != graph.getVersion() || balance == null;
         if (balanceChanged) {
             balance = Balancer.balance(graph, graph.getBalanceMode());
         }
+        if (scopeChanged) settingsVersion++;
 
         atGraph = graph;
         atMode = mode;
         atSettings = settingsVersion;
+        atScopes = selectedScopes;
 
-        final boolean wholeChart = scope == null;
-        final List<Node> selectedNodes = (wholeChart ? graph.allNodes() : Graph.nodesIn(scope)).toList();
+        final boolean wholeChart = selectedScopes.isEmpty();
+        final List<Node> selectedNodes = (wholeChart ? graph.allNodes()
+            : selectedScopes.stream().flatMap(Graph::nodesIn).distinct()).toList();
 
         final Map<LineKey, Double> outputs = new HashMap<>();
         final Map<LineKey, Double> inputs = new HashMap<>();

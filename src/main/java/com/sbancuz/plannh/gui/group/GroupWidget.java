@@ -26,6 +26,7 @@ import com.sbancuz.plannh.gui.common.CloseButtonWidget;
 import com.sbancuz.plannh.gui.common.FlowchartFlow;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.common.HeaderTextWidget;
+import com.sbancuz.plannh.gui.common.SummaryFilterButton;
 
 import lombok.Getter;
 
@@ -115,6 +116,7 @@ public abstract class GroupWidget<G extends Group> extends FlowchartWidget<Group
             .child(
                 new CloseButtonWidget(this).size(HEADER_BUTTON_SIZE)
                     .marginRight(0))
+            .child(new SummaryFilterButton(this).size(HEADER_BUTTON_SIZE))
             .child(
                 new ToggleButton().name("group.coverChildren")
                     .size(HEADER_BUTTON_SIZE)

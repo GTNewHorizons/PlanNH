@@ -1,5 +1,7 @@
 package com.sbancuz.plannh.gui.summary;
 
+import java.util.stream.Collectors;
+
 import org.jetbrains.annotations.Nullable;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
@@ -14,16 +16,18 @@ import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widget.scroll.VerticalScrollData;
 import com.cleanroommc.modularui.widget.sizer.Area;
+import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.CycleButtonWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.sbancuz.plannh.api.PlanAPI;
+import com.sbancuz.plannh.data.flowchart.GraphData;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.FlowchartList;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.PlannhColors;
-import com.sbancuz.plannh.gui.common.FlowchartWidget;
+import com.sbancuz.plannh.gui.drawable.FilterOff;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
@@ -113,15 +117,19 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
                                 .color(PlannhColors.TEXT_WHITE.getColor())
                                 .tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE)
                                 .tooltipBuilder(tooltip -> {
+                                    final var scopes = canvas.getGraph().allData()
+                                        .filter(GraphData::isSummaryFiltered)
+                                        .toList();
                                     final TooltipBuilder out = TooltipBuilder.create(tooltip)
                                         .entry(
                                             IKey.lang("plannh.summary.tooltip.scope"),
                                             TooltipTheme.Role.IDENTITY,
-                                            data.getScope() == null ? IKey.lang("plannh.summary.tooltip.scope.chart")
+                                            scopes.isEmpty() ? IKey.lang("plannh.summary.tooltip.scope.chart")
                                                 : IKey.str(
-                                                    data.getScope()
-                                                        .getHeader()));
-                                    if (data.getScope() != null) out.langRow("plannh.summary.scope.clear_hint");
+                                                    scopes.stream()
+                                                        .map(GraphData::getHeader)
+                                                        .collect(Collectors.joining(", "))));
+                                    if (!scopes.isEmpty()) out.langRow("plannh.summary.scope.clear_hint");
                                     out.flush();
                                 })
                                 .tooltipAutoUpdate(true))
@@ -132,6 +140,7 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
                                 .collapseDisabledChild()
                                 .child(modeToggle())
                                 .child(rateToggle())
+                                .child(scopeClearButton())
                                 .child(SummaryHeader.foldToggle(data, Summary.Section.ALL))))
                 .child(
                     new Widget<>().name("summary.header.rule")
@@ -211,6 +220,21 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
             .stateOverlay(Summary.Mode.THROUGHPUT, IKey.lang("plannh.summary.mode.throughput.short"));
     }
 
+    private ButtonWidget<?> scopeClearButton() {
+        return new ButtonWidget<>().name("summary.scope.clear")
+            .size(SummaryHeader.HEADER_H, SummaryHeader.HEADER_H)
+            .overlay(new FilterOff().asIcon().size(12))
+            .tooltipBuilder(
+                tooltip -> TooltipBuilder.create(tooltip)
+                    .langRow("plannh.summary.scope.clear")
+                    .flush())
+            .setEnabledIf(_ -> canvas.getGraph().allData().anyMatch(GraphData::isSummaryFiltered))
+            .onMousePressed(mouseButton -> {
+                if (mouseButton == 0) canvas.getGraph().allData().forEach(value -> value.setSummaryFiltered(false));
+                return true;
+            });
+    }
+
     private int minHeight() {
         final int list = sectionsList.getArea().height;
         final int panel = getArea().height;
@@ -220,8 +244,6 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
     @Override
     public void onUpdate() {
         super.onUpdate();
-        final FlowchartWidget<?, ?> selected = canvas.getSelectedWidget();
-        data.setScope(selected == null ? null : selected.getData());
         data.recompute(canvas.getGraph());
     }
 

@@ -15,7 +15,6 @@ import com.cleanroommc.modularui.api.UpOrDown;
 import com.cleanroommc.modularui.api.layout.IViewport;
 import com.cleanroommc.modularui.api.layout.IViewportStack;
 import com.cleanroommc.modularui.api.widget.IDraggable;
-import com.cleanroommc.modularui.api.widget.IGuiAction;
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.DynamicDrawable;
@@ -26,7 +25,6 @@ import com.cleanroommc.modularui.drawable.Stencil;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
-import com.cleanroommc.modularui.utils.TreeUtil;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widgets.menu.Menu;
@@ -135,8 +133,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private final ConfigTag backgroundColor;
 
     private boolean needsReroute = true;
-    @Nullable
-    private UUID selectedWidgetId;
 
     public CanvasWidget(Menu<?> menu, ModularPanel panel) {
         this(menu, panel, new ElkLayoutStrategy());
@@ -165,32 +161,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         rebuildWidgets();
 
         background(new DynamicDrawable(() -> new Rectangle().color(getBackgroundColor())));
-        listenGuiAction((IGuiAction.MousePressed) button -> {
-            if (button == 0) selectFrom(getContext().getTopHovered());
-            return false;
-        });
-    }
-
-    /** Use MUI's hit-tested widget tree, including controls inside a recipe or group. */
-    public void selectFrom(@Nullable final IWidget hovered) {
-        final IWidget owner = TreeUtil.findParent(hovered, w -> w instanceof FlowchartWidget<?, ?> || w == this);
-        if (owner instanceof FlowchartWidget<?, ?>widget) select(widget);
-        else if (owner == this) select(null);
-    }
-
-    public void select(@Nullable final FlowchartWidget<?, ?> widget) {
-        if (widget != null && (widget.getCanvas() != this || widget.getData() instanceof Note)) return;
-        selectedWidgetId = widget == null ? null
-            : widget.getData()
-                .getId();
-        Plan.getInstance()
-            .getSummary()
-            .setScope(widget == null ? null : widget.getData());
-    }
-
-    @Nullable
-    public FlowchartWidget<?, ?> getSelectedWidget() {
-        return selectedWidgetId == null ? null : flowchartWidgets.get(selectedWidgetId);
     }
 
     /**
@@ -301,7 +271,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
      * One entry point, not three: removeAll() drops every child, so a partial rebuild loses the rest.
      */
     private void rebuildWidgets() {
-        select(null);
         removeAll();
         flowchartWidgets.clear();
         nodeWidgets.clear(); // needs to be here since groups can also add nodes

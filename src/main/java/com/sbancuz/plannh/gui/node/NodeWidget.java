@@ -32,6 +32,7 @@ import com.sbancuz.plannh.gui.common.CloseButtonWidget;
 import com.sbancuz.plannh.gui.common.FlowchartFlow;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.common.HeaderTextWidget;
+import com.sbancuz.plannh.gui.common.SummaryFilterButton;
 import com.sbancuz.plannh.gui.drawable.Brackets;
 import com.sbancuz.plannh.gui.edge.ArrowWidget;
 import com.sbancuz.plannh.gui.group.GroupAreaWidget;
@@ -112,7 +113,13 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
                 .background()
                 .setTextColor(Color.BLACK.main));
 
-        topRow.child(new CloseButtonWidget(this));
+        topRow.child(
+            FlowchartFlow.row(this)
+                .name("node.header.buttons")
+                .coverChildren()
+                .childPadding(2)
+                .child(new SummaryFilterButton(this).size(FOLD_BUTTON))
+                .child(new CloseButtonWidget(this)));
         mainColumn.child(topRow);
         mainColumn.child(recipeAreaWidget);
 

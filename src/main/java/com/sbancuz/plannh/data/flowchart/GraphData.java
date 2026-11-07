@@ -16,6 +16,7 @@ public abstract class GraphData implements IValidated {
     protected int y;
     protected String header;
     protected final String type = getType();
+    private boolean summaryFiltered;
 
     protected GraphData(UUID id) {
         this.id = id;

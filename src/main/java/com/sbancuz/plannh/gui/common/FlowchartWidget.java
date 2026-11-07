@@ -12,6 +12,7 @@ import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
+import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.utils.TreeUtil;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.sizer.Area;
@@ -45,6 +46,8 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
     @Setter
     private SortedMap<UUID, ? super D> dataContainer;
     private String dragEditToken;
+    private boolean filterClick;
+    private boolean filterClickMoved;
 
     protected FlowchartWidget(CanvasWidget canvas, D data) {
         this.canvas = canvas;
@@ -62,9 +65,9 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
     @Override
     public void drawOverlay(final ModularGuiContext context, final WidgetThemeEntry<?> widgetTheme) {
         super.drawOverlay(context, widgetTheme);
-        if (canvas.getSelectedWidget() == this) {
+        if (data.isSummaryFiltered()) {
             new Rectangle().hollow(1)
-                .color(PlannhColors.ACCENT_GREEN.getColor())
+                .color(getSummaryFilterColor())
                 .draw(
                     context,
                     -1,
@@ -75,6 +78,30 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
         }
     }
 
+    public int getSummaryFilterColor() {
+        final int color = data instanceof Group group ? group.getColor()
+            : data instanceof Node node ? PlannhColors.titleColor(node.getMachineName())
+                : PlannhColors.TEXT_WHITE.getColor();
+        return Color.withAlpha(color, 0xFF);
+    }
+
+    /** Only passive surfaces may filter; never promote an embedded control to its owning node. */
+    @Nullable
+    public static FlowchartWidget<?, ?> summaryFilterTarget(@Nullable final IWidget hovered) {
+        final FlowchartWidget<?, ?> owner;
+        switch (hovered) {
+            case FlowchartWidget<?, ?> widget -> owner = widget;
+            case HeaderTextWidget header when !header.isFocused() -> owner = header.getFlowchartParent();
+            case IFlowchartDraggable surface when !(hovered instanceof Interactable) ->
+                owner = surface.getFlowchartParent();
+            case null, default -> {
+                return null;
+            }
+        }
+        return (owner.data instanceof Node || owner.data instanceof Group)
+            && owner.canvas.getFlowchartWidgets().get(owner.data.getId()) == owner ? owner : null;
+    }
+
     @Override
     public boolean onDragStart(int mouseButton) {
         return onDragStartWithOffset(mouseButton, 0, 0);
@@ -83,12 +110,15 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
     public boolean onDragStartWithOffset(int mouseButton, int x, int y) {
         if (mouseButton == 0 && canvas.isMouseInsideCanvas()) {
             ModularGuiContext context = getContext();
+            dragStartMouseX = context.getAbsMouseX();
+            dragStartMouseY = context.getAbsMouseY();
+            filterClick = Interactable.hasControlDown() && summaryFilterTarget(context.getTopHovered()) == this;
+            filterClickMoved = false;
+            if (filterClick) return true;
             dragEditToken = PlanAPI.undoHistory()
                 .beginEdit(canvas.getGraph());
             dragStartX = data.getX();
             dragStartY = data.getY();
-            dragStartMouseX = context.getAbsMouseX();
-            dragStartMouseY = context.getAbsMouseY();
             return true;
         }
         return false;
@@ -96,6 +126,16 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
 
     @Override
     public void onDragEnd(boolean successful) {
+        if (filterClick) {
+            filterClick = false;
+            if (!isValid()) return;
+            updateFilterClickMovement();
+            if (!filterClickMoved && getContext().getMouseButton() == 0 && canvas.isMouseInsideCanvas()
+                && summaryFilterTarget(getContext().getTopHovered()) == this) {
+                data.setSummaryFiltered(!data.isSummaryFiltered());
+            }
+            return;
+        }
         if (successful) {
             if (canvas.getGraph()
                 .isSnapToGrid()) {
@@ -123,6 +163,10 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
 
     @Override
     public void onDrag(int mouseButton, long timeSinceLastClick) {
+        if (filterClick) {
+            if (isValid()) updateFilterClickMovement();
+            return;
+        }
         final int dx = getContext().getAbsMouseX() - dragStartMouseX;
         final int dy = getContext().getAbsMouseY() - dragStartMouseY;
         final float z = canvas.getGraph()
@@ -130,6 +174,11 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
         data.setX(dragStartX + Math.round(dx / z));
         data.setY(dragStartY + Math.round(dy / z));
         reposition();
+    }
+
+    private void updateFilterClickMovement() {
+        filterClickMoved |= Math.abs(getContext().getAbsMouseX() - dragStartMouseX) > 3
+            || Math.abs(getContext().getAbsMouseY() - dragStartMouseY) > 3;
     }
 
     @Override
@@ -149,6 +198,7 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
 
     @Override
     public boolean canDropHere(int x, int y, @Nullable IWidget widget) {
+        if (filterClick) return isValid() && canvas.isMouseInsideCanvas();
         // Only our descendants and groups fully containing us may overlap the drop.
         Area dropArea = getPositionedArea();
         return canvas.isMouseInsideCanvas() && canvas.getFlowchartWidgets()
@@ -163,7 +213,6 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
     }
 
     public void removeFromGraph() {
-        if (canvas.getSelectedWidget() == this) canvas.select(null);
         canvas.getFlowchartWidgets()
             .remove(data.getId());
         dataContainer.remove(data.getId());
