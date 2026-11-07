@@ -2,6 +2,7 @@ package com.sbancuz.plannh;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -9,7 +10,7 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-import com.sbancuz.plannh.data.flowchart.Graph;
+import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
 import com.sbancuz.plannh.data.flowchart.balancer.Balancer.Answer;
@@ -277,22 +278,23 @@ class AlternativesTest {
 
     @Test
     void aChoiceSurvivesEncodeAndDecode() {
-        final LoadedChart chart = GtnhFlowLoader.load("symmetric_choice");
-        final Alternatives a = alternatives("symmetric_choice");
-        final ChoiceKey picked = a.options()
+        final ChoiceKey picked = alternatives("symmetric_choice").options()
             .get(1)
             .key();
-        // Graph speaks the balancer package's ChoiceKey directly: gate anchors are ports, not gate
-        // indices, so the key itself survives a save with nothing in it a rebuild could invalidate.
-        chart.graph()
+        // The choice is saved in the plan's summary, not in an individual graph.
+        final Plan plan = Serializer.decodePlan("{\"graphs\":[]}");
+        assertNotNull(plan);
+        plan.getSummary()
             .setExcessChoice(picked);
 
-        // Only the key is asserted here: Serializer cannot rebuild ports for the harness's
-        // Minecraft-free ingredient type, so a reloaded corpus chart has no ports to re-solve
-        // against. What matters is that the key itself is node ids and port indices, with nothing
-        // in it that a rebuild could invalidate.
-        final Graph reloaded = Serializer.decodeGraph(Serializer.encodeGraph(chart.graph()));
-        assertEquals(picked, reloaded.getExcessChoice(), "gate anchors are ports, so they survive a save");
+        final Plan restored = Serializer.decodePlan(Serializer.encodePlan(plan));
+
+        assertNotNull(restored);
+        assertEquals(
+            picked,
+            restored.getSummary()
+                .getExcessChoice(),
+            "gate anchors must survive a real save round trip");
     }
 
     @Test

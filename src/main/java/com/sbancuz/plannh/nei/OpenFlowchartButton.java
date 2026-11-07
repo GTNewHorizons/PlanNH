@@ -11,13 +11,28 @@ import net.minecraft.client.gui.inventory.GuiInventory;
 import com.cleanroommc.modularui.screen.GuiContainerWrapper;
 import com.cleanroommc.modularui.screen.ModularContainer;
 import com.sbancuz.plannh.gui.FlowchartScreen;
+import com.sbancuz.plannh.gui.GuiIcon;
 
 import codechicken.nei.Button;
+import codechicken.nei.drawable.DrawableResource;
 
 public class OpenFlowchartButton extends Button {
 
     public OpenFlowchartButton() {
-        super("FC");
+        final int size = GuiIcon.FLOWCHART.size();
+        icon = new DrawableResource(
+            GuiIcon.FLOWCHART.texture()
+                .getLocation(),
+            0,
+            0,
+            size,
+            size,
+            0,
+            0,
+            0,
+            0,
+            size,
+            size);
     }
 
     @Nullable

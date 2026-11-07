@@ -4,6 +4,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.item.ItemStack;
 
 import com.sbancuz.plannh.data.RecipeContext;
@@ -65,7 +67,7 @@ record CraftingRecipeSupport(IRecipeHandler handler, int recipeIndex) {
     void addContainerReturns(final RecipeContext.Builder recipe) {
         int index = 0;
         for (final PositionedStack ingredient : handler.getIngredientStacks(recipeIndex)) {
-            if (ingredient == null || ingredient.item.getItem() == null) continue;
+            if (ingredient == null || ingredient.item == null || ingredient.item.getItem() == null) continue;
             final ItemStack consumed = ingredient.item.copy();
             consumed.stackSize = 1;
             if (!consumed.getItem()
@@ -78,20 +80,21 @@ record CraftingRecipeSupport(IRecipeHandler handler, int recipeIndex) {
         }
     }
 
-    private static boolean hasUsableStack(final PositionedStack stack) {
-        if (stack.item.getItem() != null) return true;
+    private static boolean hasUsableStack(@Nullable final PositionedStack stack) {
+        if (stack == null) return false;
+        if (stack.item != null && stack.item.getItem() != null) return true;
         if (stack.items == null) return false;
         for (final ItemStack permutation : stack.items) {
-            if (permutation.getItem() != null) return true;
+            if (permutation != null && permutation.getItem() != null) return true;
         }
         return false;
     }
 
-    private static void selectMissingPermutation(final PositionedStack stack) {
-        if (stack.item.getItem() != null || stack.items == null) return;
+    private static void selectMissingPermutation(@Nullable final PositionedStack stack) {
+        if (stack == null || stack.items == null || (stack.item != null && stack.item.getItem() != null)) return;
         for (int index = 0; index < stack.items.length; index++) {
             final ItemStack permutation = stack.items[index];
-            if (permutation.getItem() != null) {
+            if (permutation != null && permutation.getItem() != null) {
                 stack.setPermutationToRender(index);
                 return;
             }

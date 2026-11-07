@@ -3,6 +3,7 @@ package com.sbancuz.plannh.gui.summary;
 import com.cleanroommc.modularui.api.GuiAxis;
 import com.cleanroommc.modularui.api.widget.IDraggable;
 import com.cleanroommc.modularui.widgets.layout.Flow;
+import com.sbancuz.plannh.gui.common.ContentFlow;
 
 /**
  * A {@link Flow} that lets clicks pass through to widgets behind it in the hover list.
@@ -11,7 +12,7 @@ import com.cleanroommc.modularui.widgets.layout.Flow;
  * {@link IDraggable} on any parent that wraps its content in
  * a backed {@link Flow}.
  */
-class SummaryFlow extends Flow {
+class SummaryFlow extends ContentFlow {
 
     SummaryFlow(final GuiAxis axis) {
         super(axis);

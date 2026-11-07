@@ -18,7 +18,6 @@ import javax.annotation.Nonnull;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
-import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.cleanroommc.modularui.screen.RichTooltip;
 import com.sbancuz.plannh.data.effect.EffectComputer;
@@ -31,6 +30,7 @@ import com.sbancuz.plannh.data.setting.ChoiceSettingDef;
 import com.sbancuz.plannh.data.setting.IntegerSettingDef;
 import com.sbancuz.plannh.data.setting.SettingDef;
 import com.sbancuz.plannh.data.setting.Settings;
+import com.sbancuz.plannh.gui.GuiIcon;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 
 import codechicken.nei.recipe.IRecipeHandler;
@@ -201,7 +201,7 @@ public final class MachineProfile {
     public IDrawable getIcon(final RecipeHandlerRef ref) {
         final IDrawable drawable = icon == null ? null : icon.apply(ref.handler, ref.recipeIndex);
         if (drawable == null || drawable instanceof ItemDrawable item && !hasItem(item)
-            || !IDrawable.isVisible(drawable)) return GuiTextures.PROCESSOR;
+            || !IDrawable.isVisible(drawable)) return GuiIcon.MACHINE;
         return drawable;
     }
 

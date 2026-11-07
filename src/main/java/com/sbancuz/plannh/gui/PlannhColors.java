@@ -115,8 +115,8 @@ public final class PlannhColors {
 
     // ── Ingredient Edge/Pin Contrast Outlines ──
     public static final ColorResource
-        EDGE_OUTLINE_DARK  = C.argb("edge_outline_dark",   "0xF00A0A0A"),
-        EDGE_OUTLINE_LIGHT = C.argb("edge_outline_light",  "0xF0F2F2F2");
+        EDGE_OUTLINE_DARK  = C.argb("edge_outline_dark",   "0xC00A0A0A"),
+        EDGE_OUTLINE_LIGHT = C.argb("edge_outline_light",  "0xC0F2F2F2");
 
     // ── Context Menu ──
     public static final ColorResource

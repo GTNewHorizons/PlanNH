@@ -371,6 +371,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
             }
 
             PlanAPI.recordEdit(canvas.getGraph(), () -> addArrow(canvas, source, target));
+            PlanAPI.save();
         }
     }
 

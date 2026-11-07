@@ -2,13 +2,12 @@ package com.sbancuz.plannh.gui.common;
 
 import org.jetbrains.annotations.NotNull;
 
-import com.cleanroommc.modularui.api.drawable.IKey;
-import com.cleanroommc.modularui.drawable.Rectangle;
-import com.cleanroommc.modularui.utils.Color;
+import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.gui.CanvasWidget;
+import com.sbancuz.plannh.gui.GuiIcon;
 import com.sbancuz.plannh.gui.PlannhColors;
 
 public class CloseButtonWidget extends ButtonWidget<CloseButtonWidget> {
@@ -18,14 +17,16 @@ public class CloseButtonWidget extends ButtonWidget<CloseButtonWidget> {
     public CloseButtonWidget(FlowchartWidget<?, ?> parent) {
         this.parent = parent;
         name("close");
-        background(
-            new Rectangle().color(PlannhColors.NOTE_CLOSE_BG.getColor()),
-            new Rectangle().color(Color.BLACK.main)
-                .asIcon()
-                .size(8));
+        background(GuiTextures.MC_BUTTON);
+        hoverBackground(GuiTextures.MC_BUTTON_HOVERED);
         overlay(
-            IKey.str("x")
-                .color(Color.WHITE.main));
+            GuiIcon.DELETE.asIcon()
+                .size(GuiIcon.DELETE.size()));
+        hoverOverlay(
+            GuiIcon.DELETE.texture()
+                .withColorOverride(PlannhColors.ACCENT_RED.getColor())
+                .asIcon()
+                .size(GuiIcon.DELETE.size()));
         size(12);
         addTooltipLine("Delete this widget");
         marginRight(2);

@@ -20,10 +20,12 @@ import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.flowchart.balancer.ChoiceKey;
 import com.sbancuz.plannh.data.flowchart.balancer.Pin;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.setting.Settings;
 
+import codechicken.nei.recipe.Recipe;
 import it.unimi.dsi.fastutil.ints.IntIntMutablePair;
 
 /**
@@ -104,7 +106,14 @@ public final class GtnhFlowLoader {
         Objects.requireNonNull(in, "null yaml stream for chart: " + name);
         final List<Map<String, Object>> raw = new Yaml().load(in);
 
-        final Graph graph = new Graph();
+        final Graph graph = new Graph() {
+
+            @Override
+            public ChoiceKey getExcessChoice() {
+                // Corpus solves have no UI selection and must not load the global client Plan.
+                return null;
+            }
+        };
         final List<Node> machines = new ArrayList<>();
         final List<FixturePin> pins = new ArrayList<>();
 
@@ -139,6 +148,7 @@ public final class GtnhFlowLoader {
                 0,
                 0,
                 defaultProfile(),
+                Recipe.RecipeId.of(null, name + "#node" + machineIndex, List.of()),
                 recipe.build());
 
             if (entry.containsKey("number")) {

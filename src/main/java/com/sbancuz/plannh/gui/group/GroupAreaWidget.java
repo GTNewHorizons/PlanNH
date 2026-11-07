@@ -47,6 +47,10 @@ public class GroupAreaWidget extends ParentWidget<GroupAreaWidget> implements IF
         return !data.isCoverChildren();
     }
 
+    public boolean isResizing() {
+        return resizeEditToken != null;
+    }
+
     @Override
     public int getDragAreaSize() {
         return 10;
@@ -141,6 +145,18 @@ public class GroupAreaWidget extends ParentWidget<GroupAreaWidget> implements IF
             data.setWidth(area.width);
             data.setHeight(area.height);
         }
+    }
+
+    @Override
+    public void postResize() {
+        super.postResize();
+        if (data.isCoverChildren()) return;
+        final int width = Math.max(getArea().width, getMinDragWidth());
+        final int height = Math.max(getArea().height, getMinDragHeight());
+        if (width == getArea().width && height == getArea().height) return;
+        // Fixed-size groups must still grow when an expanded child no longer fits.
+        size(width, height);
+        parent.scheduleResize();
     }
 
     public void configureCoverChildren() {

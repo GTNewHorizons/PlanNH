@@ -128,8 +128,7 @@ public class ArrowWidget extends ParentWidget<ArrowWidget> {
 
     public void removeFromGraph() {
         canvas.getGraph()
-            .getEdges()
-            .remove(edge.getId());
+            .removeEdge(edge.getId());
         canvas.getArrowWidgets()
             .remove(edge.getId());
         canvas.remove(this);

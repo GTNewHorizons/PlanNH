@@ -2,6 +2,7 @@ package com.sbancuz.plannh.data;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -16,6 +17,7 @@ import com.sbancuz.plannh.data.flowchart.balancer.ModelData;
 import com.sbancuz.plannh.data.setting.Settings;
 import com.sbancuz.plannh.harness.TestIngredients;
 
+import codechicken.nei.recipe.Recipe;
 import it.unimi.dsi.fastutil.ints.IntIntMutablePair;
 
 class MachineProfileTimedInputsTest {
@@ -74,6 +76,6 @@ class MachineProfileTimedInputsTest {
     }
 
     private static Node syntheticNode(final String name, final MachineProfile profile, final RecipeContext context) {
-        return new Node(UUID.randomUUID(), name, 0, 0, profile, context);
+        return new Node(UUID.randomUUID(), name, 0, 0, profile, Recipe.RecipeId.of(null, name, List.of()), context);
     }
 }

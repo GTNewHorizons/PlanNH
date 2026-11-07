@@ -32,9 +32,40 @@ import com.sbancuz.plannh.harness.GtnhFlowLoader;
 import com.sbancuz.plannh.harness.TestIngredients;
 
 import codechicken.nei.recipe.IRecipeHandler;
+import codechicken.nei.recipe.Recipe;
 import codechicken.nei.recipe.RecipeHandlerRef;
 
 class NodeFailureTest {
+
+    @Test
+    void detachedRecipeIsValidWithoutResolvingANeiHandler() {
+        final RecipeContext context = RecipeContext.builder()
+            .output(TestIngredients.port("product", 1))
+            .build();
+        final Node node = syntheticNode("detached", GtnhFlowLoader.defaultProfile(), context);
+
+        node.init();
+
+        assertFalse(node.invalid());
+        assertTrue(node.isAvailable());
+        assertSame(context, node.recipeContext());
+        assertNull(node.getHandlerRef());
+    }
+
+    @Test
+    void detachedRecipeWithoutAnIdentityRemainsInvalid() {
+        final Node node = new Node(
+            UUID.randomUUID(),
+            "missing identity",
+            0,
+            0,
+            GtnhFlowLoader.defaultProfile(),
+            null,
+            RecipeContext.builder()
+                .build());
+
+        assertTrue(node.invalid());
+    }
 
     @Test
     void constructorRejectsUnresolvedInputlessRecipe() {
@@ -298,7 +329,7 @@ class NodeFailureTest {
     }
 
     private static Node syntheticNode(final String name, final MachineProfile profile, final RecipeContext context) {
-        return new Node(UUID.randomUUID(), name, 0, 0, profile, context);
+        return new Node(UUID.randomUUID(), name, 0, 0, profile, Recipe.RecipeId.of(null, name, List.of()), context);
     }
 
     private static Fixture fixture(final Populate populate) {

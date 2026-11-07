@@ -17,7 +17,7 @@ class ConfigurationAreaWidget extends ClampedListWidget<IWidget, ConfigurationAr
 
     private int avgRow;
 
-    ConfigurationAreaWidget(final NodeWidget node) {
+    ConfigurationAreaWidget() {
         name("node.config");
         showScrollShadows(false);
 
@@ -25,22 +25,17 @@ class ConfigurationAreaWidget extends ClampedListWidget<IWidget, ConfigurationAr
             .paddingRight(SCROLLBAR_GAP)
             .scrollDirection(new VerticalScrollData())
             .maxSize(() -> avgRow == 0 ? Integer.MAX_VALUE : VISIBLE_ROWS * avgRow);
-
-        child(new ThroughputFold(node));
-        child(new PropertiesFold(node));
-        child(new TargetFold(node));
-        child(new SettingsFold(node));
     }
 
     @Override
-    public boolean postLayoutWidgets() {
-        final boolean done = super.postLayoutWidgets();
+    public void postResize() {
+        super.postResize();
         final int avg = averageRowHeight();
         if (avg != avgRow) {
             avgRow = avg;
+            // postLayoutWidgets runs before MUI clears dirty flags; postResize runs after.
             scheduleResize();
         }
-        return done;
     }
 
     @Override
@@ -49,7 +44,7 @@ class ConfigurationAreaWidget extends ClampedListWidget<IWidget, ConfigurationAr
     }
 
     /**
-     * The tallest row any open fold is showing, which is the unit the region's height is counted in.
+     * The average row height of the open folds, measured after their layout has finished.
      */
     private int averageRowHeight() {
         int height = 0, count = 0;

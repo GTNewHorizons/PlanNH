@@ -321,9 +321,9 @@ plannh.gui.group.load.unbalanced=No solved load yet
 ## GUI - Balancer
 plannh.gui.balancer_mode=Mode: %s
 plannh.gui.balancer_mode.none=Normal
-plannh.gui.balancer_mode.input=Fixed Machines (input%s)
-plannh.gui.balancer_mode.output=Fixed Machines (output%s)
-plannh.gui.balancer_mode.auto=Auto%s
+plannh.gui.balancer_mode.input=Fixed Machines (input)
+plannh.gui.balancer_mode.output=Fixed Machines (output)
+plannh.gui.balancer_mode.auto=Auto
 
 ## GUI - Balancer messages
 ## Failures
@@ -417,7 +417,11 @@ plannh.summary.rate.second=Per second
 plannh.summary.rate.minute=Per minute
 plannh.summary.rate.hour=Per hour
 plannh.summary.rate.day=Per day
-plannh.summary.scope.clear_hint=Click empty canvas to show the entire chart.
+plannh.summary.scope.clear_hint=Use the clear-all button to show the entire chart.
+plannh.summary.scope.filter.action=Add to summary filter
+plannh.summary.scope.filter.remove=Remove from summary filter
+plannh.summary.scope.filter.ctrl_hint=Ctrl-click to add/remove this node/group.
+plannh.summary.scope.clear=Clear all summary filters
 plannh.summary.totals.cycles=Ops: %s Time: %d t (%ss/cycle)
 plannh.summary.totals.throughput=Ops: %s Cycle: %ss
 plannh.summary.help.zoom=[Scroll] zoom
@@ -465,3 +469,46 @@ plannh.gui.number.multiple=×%s
 plannh.unsupported_pack.header=PlanNH %s needs newer versions of these mods:
 plannh.unsupported_pack.outdated_mod=%s %s is older than %s
 plannh.unsupported_pack.footer=Remove PlanNH from the mods folder, or update to GT New Horizons %s or newer.
+
+## GUI - Flowchart toolbar
+plannh.gui.toolbar.balance.label=Balance: %s
+plannh.gui.toolbar.graph.previous.title=Previous graph
+plannh.gui.toolbar.graph.next.title=Next graph
+plannh.gui.toolbar.graph.add.title=Add graph
+plannh.gui.toolbar.graph.add.shift=Shift + left-click: add a graph
+plannh.gui.toolbar.graph.delete.title=Delete graph
+plannh.gui.toolbar.graph.delete.shift=Shift + left-click: delete this graph
+plannh.gui.toolbar.graph.delete.last=The last graph cannot be deleted.
+plannh.gui.toolbar.graph.delete.warning=Warning: this permanently removes the active graph.
+plannh.gui.toolbar.graph.delete.confirm=Delete graph "%s"?
+plannh.gui.toolbar.graph.delete.irreversible=This cannot be undone.
+plannh.gui.toolbar.graph.delete.button=Delete
+
+plannh.gui.toolbar.undo.title=Undo edit
+plannh.gui.toolbar.redo.title=Redo edit
+plannh.gui.toolbar.shortcut=Shortcut: %s
+plannh.gui.toolbar.alternate=Alternate: %s
+
+plannh.gui.toolbar.layout.title=Auto-layout
+plannh.gui.toolbar.snap.title=Snap to grid
+
+plannh.gui.toolbar.balance.title=Balance mode
+plannh.gui.toolbar.balance.cycle=Left-click: next / Right-click: previous
+plannh.gui.toolbar.balance.off=Off
+plannh.gui.toolbar.balance.input=In
+plannh.gui.toolbar.balance.output=Out
+plannh.gui.toolbar.balance.auto=Auto
+plannh.gui.toolbar.balance.mode.none=Displays configured machine counts without balancing.
+plannh.gui.toolbar.balance.mode.input=Uses whole machines; connected inputs are consumed exactly.
+plannh.gui.toolbar.balance.mode.output=Uses whole machines; connected output demand is supplied exactly.
+plannh.gui.toolbar.balance.mode.auto=Balances connected recipes and loops with fractional machine counts.
+plannh.gui.toolbar.balance.pins.none=No machine count or rate target is required.
+plannh.gui.toolbar.balance.pins.fixed=Fix at least one machine count; rate targets are ignored.
+plannh.gui.toolbar.balance.pins.auto=Fix a machine count or set a target rate to start balancing.
+
+plannh.gui.toolbar.add.group.title=Add group
+plannh.gui.toolbar.add.note.title=Add note
+
+plannh.gui.toolbar.share.title=Share graph
+plannh.gui.toolbar.copy.title=Copy graph
+plannh.gui.toolbar.import.title=Import graph

@@ -107,7 +107,7 @@ public final class PlanAPI {
     public static Graph importFromClipboard() {
         try {
             final String data = GuiScreen.getClipboardString();
-            if (data == null || data.isEmpty()) return null;
+            if (data.isEmpty()) return null;
             final Graph graph = Serializer.decodeGraph(data);
             if (graph == null) showMessage("plannh.error.import");
             return graph;

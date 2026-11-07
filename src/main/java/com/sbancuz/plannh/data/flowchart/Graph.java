@@ -99,6 +99,29 @@ public class Graph {
             .flatMap(Graph::nodesIn);
     }
 
+    /** All current graph data, including groups and their nested children. */
+    public Stream<GraphData> allData() {
+        return Stream.concat(
+            Stream.concat(
+                nodes.values()
+                    .stream(),
+                notes.values()
+                    .stream()),
+            groups.values()
+                .stream()
+                .flatMap(Graph::dataIn));
+    }
+
+    private static Stream<GraphData> dataIn(final GraphData data) {
+        if (data instanceof Group group) return Stream.concat(
+            Stream.of(group),
+            group.getChildren()
+                .values()
+                .stream()
+                .flatMap(Graph::dataIn));
+        return Stream.of(data);
+    }
+
     /** Recipe descendants of a node or group; annotations do not contribute to calculations. */
     public static Stream<Node> nodesIn(final GraphData data) {
         if (data.invalid()) return Stream.empty();

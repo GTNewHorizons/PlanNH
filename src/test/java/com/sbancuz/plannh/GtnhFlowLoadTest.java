@@ -1,6 +1,7 @@
 package com.sbancuz.plannh;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -24,6 +25,24 @@ import com.sbancuz.plannh.harness.TestIngredients;
  * source charts, pooled ingredients materialized as explicit edges, pins preserved.
  */
 class GtnhFlowLoadTest {
+
+    @Test
+    void everyFixtureNodeParticipatesInRuntimeTraversal() {
+        for (final String name : GtnhFlowLoader.CORPUS) {
+            final LoadedChart chart = GtnhFlowLoader.load(name);
+            assertEquals(
+                chart.machines()
+                    .size(),
+                chart.graph()
+                    .allNodes()
+                    .count(),
+                name);
+            for (final Node node : chart.machines()) {
+                assertFalse(node.invalid(), name + ": invalid fixture node " + node.getMachineName());
+                assertTrue(node.isAvailable());
+            }
+        }
+    }
 
     @Test
     void mk1Structure() {
