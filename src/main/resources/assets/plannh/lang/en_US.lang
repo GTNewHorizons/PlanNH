@@ -480,6 +480,9 @@ plannh.gui.toolbar.graph.delete.title=Delete graph
 plannh.gui.toolbar.graph.delete.shift=Shift + left-click: delete this graph
 plannh.gui.toolbar.graph.delete.last=The last graph cannot be deleted.
 plannh.gui.toolbar.graph.delete.warning=Warning: this permanently removes the active graph.
+plannh.gui.toolbar.graph.delete.confirm=Delete graph "%s"?
+plannh.gui.toolbar.graph.delete.irreversible=This cannot be undone.
+plannh.gui.toolbar.graph.delete.button=Delete
 
 plannh.gui.toolbar.undo.title=Undo edit
 plannh.gui.toolbar.redo.title=Redo edit

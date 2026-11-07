@@ -3,6 +3,7 @@ package com.sbancuz.plannh.gui;
 import net.minecraft.util.EnumChatFormatting;
 
 import com.cleanroommc.modularui.api.GuiAxis;
+import com.cleanroommc.modularui.api.IPanelHandler;
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.drawable.DynamicDrawable;
@@ -14,6 +15,7 @@ import com.cleanroommc.modularui.value.EnumValue;
 import com.cleanroommc.modularui.value.StringValue;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.CycleButtonWidget;
+import com.cleanroommc.modularui.widgets.Dialog;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.ToggleButton;
 import com.cleanroommc.modularui.widgets.layout.Flow;
@@ -93,12 +95,21 @@ public final class FlowchartToolbar extends Flow {
     }
 
     private static ButtonWidget<?> graphStep(final CanvasWidget canvas, final int direction) {
+        final IPanelHandler deleteConfirmation = direction < 0
+            ? IPanelHandler.simple(canvas.getPanel(), (_, _) -> deleteGraphDialog(canvas), true)
+            : null;
+
         return leftButton(direction < 0 ? "graph.prev" : "graph.next", IKey.EMPTY, () -> {
             canvas.getContext()
                 .removeFocus();
             if (!GuiHelper.shiftHeld()) cycleGraphs(canvas, direction);
-            else if (direction < 0) deleteGraph(canvas);
-            else addGraph(canvas);
+            else if (direction < 0) {
+                if (Plan.getInstance()
+                    .getGraphs()
+                    .size() <= 1 || deleteConfirmation.isPanelOpen()) return;
+                deleteConfirmation.deleteCachedPanel();
+                deleteConfirmation.openPanel();
+            } else addGraph(canvas);
         }).overlay(IKey.dynamicKey(() -> {
             if (!GuiHelper.shiftHeld()) {
                 return IKey.str(direction < 0 ? "<" : ">")
@@ -338,16 +349,54 @@ public final class FlowchartToolbar extends Flow {
         refreshGraph(canvas);
     }
 
-    private static void deleteGraph(final CanvasWidget canvas) {
-        if (!GuiHelper.shiftHeld()) return;
+    private static Dialog<Boolean> deleteGraphDialog(final CanvasWidget canvas) {
         final Plan plan = Plan.getInstance();
-        final int size = plan.getGraphs()
-            .size();
-        if (size <= 1) return;
-        final int active = plan.getActiveIndex();
-        plan.getGraphs()
-            .remove(active);
-        if (active >= size - 1) plan.setActiveIndex(size - 2);
-        refreshGraph(canvas);
+        final Graph graph = Plan.getActiveGraph();
+        final Dialog<Boolean> dialog = new Dialog<>("graph.delete.confirmation", confirmed -> {
+            if (!confirmed || Plan.getInstance() != plan || Plan.getActiveGraph() != graph) return;
+            final int size = plan.getGraphs()
+                .size();
+            if (size <= 1) return;
+            final int active = plan.getActiveIndex();
+            plan.getGraphs()
+                .remove(active);
+            if (active >= size - 1) plan.setActiveIndex(size - 2);
+            refreshGraph(canvas);
+        });
+        dialog.width(260)
+            .coverChildrenHeight()
+            .padding(10)
+            .background(GuiTextures.MC_BACKGROUND)
+            .child(
+                Flow.column()
+                    .mainAxisAlignment(Alignment.MainAxis.CENTER)
+                    .fullWidth()
+                    .coverChildrenHeight()
+                    .childPadding(8)
+                    .child(
+                        new TextWidget<>(IKey.lang("plannh.gui.toolbar.graph.delete.confirm", graph.getName()))
+                            .fullWidth()
+                            .textAlign(Alignment.Center)
+                            .color(PlannhColors.TEXT_WHITE.getColor()))
+                    .child(
+                        new TextWidget<>(IKey.lang("plannh.gui.toolbar.graph.delete.irreversible")).fullWidth()
+                            .textAlign(Alignment.Center)
+                            .color(PlannhColors.ACCENT_RED.getColor()))
+                    .child(
+                        Flow.row()
+                            .fullWidth()
+                            .coverChildrenHeight()
+                            .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
+                            .child(
+                                leftButton("graph.delete.cancel", IKey.EMPTY, () -> dialog.closeWith(false))
+                                    .size(110, 20)
+                                    .overlay(IKey.lang("gui.cancel")))
+                            .child(
+                                leftButton("graph.delete.confirm", IKey.EMPTY, () -> dialog.closeWith(true))
+                                    .size(110, 20)
+                                    .overlay(
+                                        IKey.lang("plannh.gui.toolbar.graph.delete.button")
+                                            .color(PlannhColors.ACCENT_RED.getColor())))));
+        return dialog;
     }
 }
