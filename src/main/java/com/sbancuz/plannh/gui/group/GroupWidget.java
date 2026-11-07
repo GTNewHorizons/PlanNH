@@ -6,7 +6,6 @@ import java.util.SortedMap;
 import java.util.UUID;
 
 import com.cleanroommc.modularui.api.IPanelHandler;
-import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.drawable.DynamicDrawable;
 import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.drawable.Rectangle;
@@ -21,6 +20,7 @@ import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.MachineGroup;
 import com.sbancuz.plannh.gui.CanvasWidget;
+import com.sbancuz.plannh.gui.GuiIcon;
 import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.common.CloseButtonWidget;
 import com.sbancuz.plannh.gui.common.FlowchartFlow;
@@ -30,6 +30,8 @@ import com.sbancuz.plannh.gui.common.HeaderTextWidget;
 import lombok.Getter;
 
 public abstract class GroupWidget<G extends Group> extends FlowchartWidget<GroupWidget<G>, G> {
+
+    protected static final int HEADER_BUTTON_SIZE = 16;
 
     @Getter
     protected final GroupAreaWidget areaWidget;
@@ -92,13 +94,16 @@ public abstract class GroupWidget<G extends Group> extends FlowchartWidget<Group
             .name("group.header")
             .coverChildrenHeight()
             .fullWidth()
-            .childPadding(4)
+            .childPadding(2)
+            .padding(2, 0)
             .background(
                 new DynamicDrawable(() -> new Rectangle().color(data.getColor())),
                 new DynamicDrawable(
                     () -> new Rectangle().hollow(1)
                         .color(PlannhColors.FRAME_BORDER.getColor())))
-            .child(new HeaderTextWidget(this, data::getColor));
+            .child(
+                new HeaderTextWidget(this, data::getColor).height(20)
+                    .setScale(1.5f));
     }
 
     protected Flow getButtonRow(IPanelHandler colorPicker) {
@@ -107,20 +112,26 @@ public abstract class GroupWidget<G extends Group> extends FlowchartWidget<Group
             .coverChildren()
             .childPadding(2)
             .reverseLayout()
-            .child(new CloseButtonWidget(this))
+            .child(
+                new CloseButtonWidget(this).size(HEADER_BUTTON_SIZE)
+                    .marginRight(0))
             .child(
                 new ToggleButton().name("group.coverChildren")
+                    .size(HEADER_BUTTON_SIZE)
                     .value(new BoolValue.Dynamic(data::isCoverChildren, val -> {
                         data.setCoverChildren(val);
                         areaWidget.configureCoverChildren();
                     }))
                     .overlay(
-                        IKey.str("CC")
-                            .color(Color.WHITE.main))
+                        GuiIcon.COVER_CHILDREN.asIcon()
+                            .size(GuiIcon.COVER_CHILDREN.size()))
                     .addTooltipLine("Toggle Cover Children"))
             .child(
                 new ButtonWidget<>().name("group.color")
-                    .overlay(GuiTextures.COLOR_WHEEL)
+                    .size(HEADER_BUTTON_SIZE)
+                    .overlay(
+                        GuiTextures.COLOR_WHEEL.asIcon()
+                            .size(10))
                     .onMousePressed(_ -> {
                         if (!colorPicker.isPanelOpen()) colorPicker.openPanel();
                         else colorPicker.closePanel();

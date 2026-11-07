@@ -16,14 +16,15 @@ public class HeaderTextWidget extends FlowchartTextFieldWidget {
      * the button row beside it, so the real height is the taller of the two — see
      * {@code GroupWidget.contentAreaOffset()}, which measures it.
      */
-    public static final int HEIGHT = 20;
+    public static final int HEIGHT = 14;
 
     public HeaderTextWidget(FlowchartWidget<?, ?> parent, IntSupplier bgColor) {
         super(parent);
         name("header");
 
         height(HEIGHT);
-        setScale(1.5f);
+        margin(1);
+        setScale(1f);
         expanded();
         background(
             new DynamicDrawable(

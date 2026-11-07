@@ -35,16 +35,17 @@ public abstract class ScreenEffect {
         if (width <= 0 || height <= 0) return;
 
         final Minecraft mc = Minecraft.getMinecraft();
-        boolean resolutionChanged = false;
-        if (prevDisplayHeight != mc.displayHeight || prevDisplayWidth != mc.displayWidth) {
-            final ScaledResolution sr = new ScaledResolution(mc, mc.displayWidth, mc.displayHeight);
-
+        final int currentScale = new ScaledResolution(mc, mc.displayWidth, mc.displayHeight).getScaleFactor();
+        final boolean resolutionChanged = prevDisplayHeight != mc.displayHeight || prevDisplayWidth != mc.displayWidth
+            || scaleFactor != currentScale
+            || textureWidth != width * currentScale
+            || textureHeight != height * currentScale;
+        if (resolutionChanged) {
             prevDisplayWidth = mc.displayWidth;
             prevDisplayHeight = mc.displayHeight;
-            scaleFactor = sr.getScaleFactor();
+            scaleFactor = currentScale;
             textureWidth = width * scaleFactor;
             textureHeight = height * scaleFactor;
-            resolutionChanged = true;
         }
 
         // Ensure screen capture texture exists BEFORE onResolutionChange

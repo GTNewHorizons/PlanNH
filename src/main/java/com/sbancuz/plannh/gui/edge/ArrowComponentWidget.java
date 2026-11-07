@@ -22,6 +22,7 @@ public abstract class ArrowComponentWidget extends Widget<ArrowComponentWidget> 
             parent.getCanvas()
                 .getGraph(),
             parent::removeFromGraph);
+        PlanAPI.save();
         return Result.SUCCESS;
     }
 

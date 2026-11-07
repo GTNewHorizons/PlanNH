@@ -2,6 +2,7 @@ package com.sbancuz.plannh.gui.summary;
 
 import com.cleanroommc.modularui.api.GuiAxis;
 import com.cleanroommc.modularui.api.widget.IDraggable;
+import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 
 /**
@@ -27,6 +28,12 @@ class SummaryFlow extends Flow {
 
     public static SummaryFlow row() {
         return new SummaryFlow(GuiAxis.X);
+    }
+
+    @Override
+    public void onChildChangeEnabled(final IWidget child, final boolean enabled) {
+        super.onChildChangeEnabled(child, enabled);
+        scheduleResize();
     }
 
     @Override

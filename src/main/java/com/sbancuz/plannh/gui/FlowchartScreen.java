@@ -1,7 +1,5 @@
 package com.sbancuz.plannh.gui;
 
-import net.minecraft.client.Minecraft;
-
 import com.cleanroommc.modularui.api.UpOrDown;
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
@@ -9,37 +7,20 @@ import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.ModularScreen;
 import com.cleanroommc.modularui.screen.UISettings;
-import com.cleanroommc.modularui.utils.Alignment;
-import com.cleanroommc.modularui.utils.Color;
-import com.cleanroommc.modularui.value.BoolValue;
-import com.cleanroommc.modularui.value.EnumValue;
-import com.cleanroommc.modularui.value.StringValue;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
-import com.cleanroommc.modularui.widgets.CycleButtonWidget;
 import com.cleanroommc.modularui.widgets.ListWidget;
-import com.cleanroommc.modularui.widgets.ToggleButton;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.cleanroommc.modularui.widgets.menu.Menu;
-import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
-import com.sbancuz.plannh.data.flowchart.Graph;
-import com.sbancuz.plannh.data.flowchart.Plan;
-import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 import com.sbancuz.plannh.gui.summary.SummaryWidget;
 import com.sbancuz.plannh.nei.NEIPlanConfig;
 
-import codechicken.nei.LayoutManager;
 import codechicken.nei.NEIClientConfig;
 import lombok.Getter;
 
 public class FlowchartScreen extends ModularScreen {
-
-    private static final int LEFT_MARGIN = 5;
-    private static final int RIGHT_MARGIN = 15;
-    private static final int TOP_MARGIN = 30;
-    private static final int BOTTOM_MARGIN = 30;
 
     @Getter
     private final CanvasWidget canvas;
@@ -52,255 +33,111 @@ public class FlowchartScreen extends ModularScreen {
         getContext().getUISettings()
             .getRecipeViewerSettings()
             .enable();
-
         this.messages = messages;
         this.canvas = canvas;
     }
 
     public static FlowchartScreen create() {
         final ModularPanel panel = ModularPanel.defaultPanel("flowchart_main")
-            .fullScreenInvisible()
-            .left(LEFT_MARGIN)
-            .marginBottom(BOTTOM_MARGIN)
-            .marginTop(TOP_MARGIN)
-            .widthRelOffset(
-                () -> (double) (LayoutManager.itemPanel.x - RIGHT_MARGIN)
-                    / Minecraft.getMinecraft().currentScreen.width,
-                0);
+            .fullScreenInvisible();
+        final Menu<?> contextMenu = new Menu<>();
+        final CanvasWidget canvas = new CanvasWidget(contextMenu, panel);
 
-        final Flow mainColumn = Flow.column()
-            .name("screen.column")
-            .full();
-
-        Menu<?> contextMenu = new Menu<>();
-
-        CanvasWidget canvas = new CanvasWidget(contextMenu, panel);
-
+        final var actions = new ListWidget<>().name("context.menu")
+            .coverChildrenHeight()
+            .width(110);
+        actions.child(
+            contextAction(
+                "context.addNote",
+                "plannh.gui.toolbar.add.note.title",
+                () -> { canvas.addNote(canvas.getCanvasMouseX(), canvas.getCanvasMouseY()); }));
+        actions.child(
+            contextAction(
+                "context.addGroup",
+                "plannh.gui.toolbar.add.group.title",
+                () -> { canvas.addGroup(canvas.getCanvasMouseX(), canvas.getCanvasMouseY()); }));
+        actions.child(
+            contextAction(
+                "context.addMachineGroup",
+                "plannh.gui.group.add_machine_group",
+                () -> { canvas.addMachineGroup(canvas.getCanvasMouseX(), canvas.getCanvasMouseY()); }));
         contextMenu.setEnabledIf(_ -> canvas.isMenuOpen())
             .coverChildren()
             .background()
             .relativeToScreen()
-            .child(
-                new ListWidget<>().name("context.menu")
-                    .coverChildrenHeight()
-                    .width(100)
-                    .child(
-                        new ButtonWidget<>().name("context.addNote")
-                            .onMousePressed(_ -> {
-                                canvas.addNote(canvas.getCanvasMouseX(), canvas.getCanvasMouseY());
-                                return true;
-                            })
-                            .fullWidth()
-                            .background(
-                                new Rectangle().color(PlannhColors.CONTEXT_BG.getColor()),
-                                new Rectangle().hollow()
-                                    .color(PlannhColors.CONTEXT_BORDER.getColor()))
-                            .overlay(IKey.str("Add Note")))
-                    .child(
-                        new ButtonWidget<>().name("context.addGroup")
-                            .onMousePressed(_ -> {
-                                canvas.addGroup(canvas.getCanvasMouseX(), canvas.getCanvasMouseY());
-                                return true;
-                            })
-                            .fullWidth()
-                            .background(
-                                new Rectangle().color(PlannhColors.CONTEXT_BG.getColor()),
-                                new Rectangle().hollow()
-                                    .color(PlannhColors.CONTEXT_BORDER.getColor()))
-                            .overlay(IKey.str("Add Group")))
-                    .child(
-                        new ButtonWidget<>().name("context.addMachineGroup")
-                            .onMousePressed(_ -> {
-                                canvas.addMachineGroup(canvas.getCanvasMouseX(), canvas.getCanvasMouseY());
-                                return true;
-                            })
-                            .fullWidth()
-                            .background(
-                                new Rectangle().color(PlannhColors.CONTEXT_BG.getColor()),
-                                new Rectangle().hollow()
-                                    .color(PlannhColors.CONTEXT_BORDER.getColor()))
-                            .overlay(
-                                IKey.lang("plannh.gui.group.add_machine_group")
-                                    .color(Color.WHITE.main))));
-
-        mainColumn.child(
-            Flow.row()
-                .name("screen.toolbar")
-                .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
-                .coverChildrenHeight()
-                .fullWidth()
-                .child(
-                    Flow.row()
-                        .name("screen.toolbar.graphs")
-                        .coverChildren()
-                        .childPadding(2)
-                        .child(
-                            new ButtonWidget<>().name("graph.prev")
-                                .onMousePressed(_ -> {
-                                    cycleGraphs(canvas, -1);
-                                    return true;
-                                })
-                                .overlay(IKey.str("<"))
-                                .addTooltipLine("Previous Graph"))
-                        .child(
-                            new TextFieldWidget().name("graph.name")
-                                .value(
-                                    new StringValue.Dynamic(
-                                        () -> Plan.getActiveGraph()
-                                            .getName(),
-                                        val -> Plan.getActiveGraph()
-                                            .setName(val)))
-                                .background()
-                                .hoverBackground())
-                        .child(
-                            new ButtonWidget<>().name("graph.next")
-                                .onMousePressed(_ -> {
-                                    cycleGraphs(canvas, 1);
-                                    return true;
-                                })
-                                .overlay(IKey.str(">"))
-                                .addTooltipLine("Next Graph"))
-                        .child(
-                            new ButtonWidget<>().name("graph.add")
-                                .onMousePressed(_ -> {
-                                    addGraph(canvas);
-                                    return true;
-                                })
-                                .overlay(
-                                    IKey.str("+")
-                                        .color(Color.GREEN.main))
-                                .addTooltipLine("Add Graph"))
-                        .child(
-                            new ButtonWidget<>().name("graph.remove")
-                                .onMousePressed(_ -> {
-                                    deleteGraph(canvas);
-                                    return true;
-                                })
-                                .overlay(
-                                    IKey.str("x")
-                                        .color(Color.RED.main))
-                                .addTooltipLine("Remove Graph")))
-                .child(
-                    Flow.row()
-                        .name("screen.toolbar.edit")
-                        .coverChildren()
-                        .childPadding(2)
-                        .child(
-                            new ButtonWidget<>().name("edit.undo")
-                                .overlay(
-                                    IKey.str("↺")
-                                        .scale(2f))
-                                .addTooltipLine("Undo")
-                                .onMousePressed(_ -> {
-                                    canvas.undoGraph();
-                                    return true;
-                                }))
-                        .child(
-                            new ButtonWidget<>().name("edit.redo")
-                                .overlay(
-                                    IKey.str("↻")
-                                        .scale(2f))
-                                .addTooltipLine("Redo")
-                                .onMousePressed(_ -> {
-                                    canvas.redoGraph();
-                                    return true;
-                                }))
-                        .child(
-                            new ButtonWidget<>().name("edit.autoLayout")
-                                .overlay(IKey.str("AL"))
-                                .addTooltipLine("Auto layout")
-                                .onMousePressed(_ -> {
-                                    canvas.autoLayout();
-                                    return true;
-                                }))
-                        .child(
-                            new ToggleButton().name("edit.snapToGrid")
-                                .value(
-                                    new BoolValue.Dynamic(
-                                        () -> canvas.getGraph()
-                                            .isSnapToGrid(),
-                                        val -> canvas.getGraph()
-                                            .setSnapToGrid(val)))
-                                .overlay(IKey.str("S2G"))
-                                .addTooltipLine("Snap to Grid"))
-                        .child(
-                            new CycleButtonWidget().name("edit.balanceMode")
-                                .value(
-                                    new EnumValue.Dynamic<>(
-                                        BalanceMode.class,
-                                        () -> canvas.getGraph()
-                                            .getBalanceMode(),
-                                        val -> canvas.getGraph()
-                                            .setBalanceMode(val)))
-                                .stateOverlay(BalanceMode.NONE, IKey.str("M:-"))
-                                .stateOverlay(BalanceMode.INPUT, IKey.str("M:F"))
-                                .stateOverlay(BalanceMode.OUTPUT, IKey.str("M:B"))
-                                .stateOverlay(BalanceMode.AUTO, IKey.str("M:A"))
-                                .addTooltipLine("Cycle Balance Modes"))
-                        .child(
-                            new ButtonWidget<>().name("add.group")
-                                .onMousePressed(_ -> {
-                                    canvas.addGroup(canvas.getCanvasScreenCenterX(), canvas.getCanvasScreenCenterY());
-                                    return true;
-                                })
-                                .overlay(IKey.str("G"))
-                                .addTooltipLine("Add Group"))
-                        .child(
-                            new ButtonWidget<>().name("add.note")
-                                .onMousePressed(_ -> {
-                                    canvas.addNote(canvas.getCanvasScreenCenterX(), canvas.getCanvasScreenCenterY());
-                                    return true;
-                                })
-                                .overlay(IKey.str("N"))
-                                .addTooltipLine("Add Note"))
-                        .child(
-                            new ButtonWidget<>().name("share.link")
-                                .onMousePressed(_ -> {
-                                    PlanAPI.shareGraph(canvas.getGraph());
-                                    return true;
-                                })
-                                .overlay(
-                                    IKey.str("Sh")
-                                        .color(Color.GREEN_ACCENT.main))
-                                .addTooltipLine("Share Graph"))
-                        .child(
-                            new ButtonWidget<>().name("share.copy")
-                                .onMousePressed(_ -> {
-                                    if (!PlanAPI.copyToClipboard(canvas.getGraph())) return true;
-                                    PlanAPI.showMessage("plannh.share.copy_to_clipboard");
-                                    return true;
-                                })
-                                .overlay(
-                                    IKey.str("Cp")
-                                        .color(Color.BLUE_ACCENT.main))
-                                .addTooltipLine("Copy Graph"))
-                        .child(
-                            new ButtonWidget<>().name("share.import")
-                                .onMousePressed(_ -> {
-                                    final Graph graph = PlanAPI.importFromClipboard();
-                                    if (graph == null) return true;
-                                    PlanAPI.importGraph(graph);
-                                    canvas.setGraph(graph);
-                                    PlanAPI.showMessage("plannh.share.copy_from_clipboard");
-                                    return true;
-                                })
-                                .overlay(
-                                    IKey.str("Im")
-                                        .color(Color.YELLOW_ACCENT.main))
-                                .addTooltipLine("Import Graph"))))
-            .child(canvas);
+            .child(actions);
 
         final ParentWidget<?> messages = new ParentWidget<>().name("screen.messages")
             .relativeToScreen()
             .background(IDrawable.EMPTY)
             .hoverBackground(IDrawable.EMPTY);
 
-        panel.child(mainColumn);
+        panel.child(
+            Flow.column()
+                .name("screen.column")
+                .full()
+                .childPadding(FlowchartBounds.TOOLBAR_GAP)
+                .child(new FlowchartToolbar(canvas))
+                .child(canvas));
         panel.child(new SummaryWidget(canvas));
         panel.child(contextMenu);
         panel.child(messages);
-
         return new FlowchartScreen(panel, canvas, messages);
+    }
+
+    private static ButtonWidget<?> contextAction(final String name, final String key, final Runnable action) {
+        return new ButtonWidget<>().name(name)
+            .fullWidth()
+            .background(
+                new Rectangle().color(PlannhColors.CONTEXT_BG.getColor()),
+                new Rectangle().hollow()
+                    .color(PlannhColors.CONTEXT_BORDER.getColor()))
+            .hoverBackground(new Rectangle().color(PlannhColors.CONTEXT_HOVER.getColor()))
+            .overlay(IKey.lang(key))
+            .onMousePressed(button -> {
+                if (button != 0) return false;
+                action.run();
+                return true;
+            });
+    }
+
+    @Override
+    public void onResize(final int width, final int height) {
+        final FlowchartBounds bounds = bounds(width, height);
+        updateLayout(bounds);
+        super.onResize(width, height);
+    }
+
+    @Override
+    public void onFrameUpdate() {
+        // NEI does not run its layout while hidden or disabled.
+        if (!NEIClientConfig.isEnabled() || NEIClientConfig.isHidden()) {
+            final FlowchartBounds bounds = bounds(getScreenArea().width, getScreenArea().height);
+            updateLayout(bounds);
+        }
+        super.onFrameUpdate();
+    }
+
+    private static FlowchartBounds bounds(final int width, final int height) {
+        return FlowchartBounds.calculate(
+            width,
+            height,
+            Math.max(
+                NEIPlanConfig.ConfigItemColumns.min,
+                NEIClientConfig.getSetting(NEIPlanConfig.ConfigItemColumns.KEY)
+                    .getIntValue(NEIPlanConfig.ConfigItemColumns.defVal)),
+            NEIClientConfig.isEnabled() && !NEIClientConfig.isHidden());
+    }
+
+    /** Receives NEI's final bounds, including user-configured item-panel padding. */
+    public void updateLayout(final FlowchartBounds bounds) {
+        final ModularPanel panel = getMainPanel();
+        if (panel.getArea().x == bounds.x() && panel.getArea().y == bounds.y()
+            && panel.getArea().width == bounds.width()
+            && panel.getArea().height == bounds.height()) return;
+        panel.pos(bounds.x(), bounds.y())
+            .size(bounds.width(), bounds.height());
+        panel.scheduleResize();
     }
 
     @Override
@@ -321,15 +158,10 @@ public class FlowchartScreen extends ModularScreen {
 
     @Override
     public boolean onMouseScroll(final UpOrDown direction, final int amount) {
-        // This for some reason fixes a bug when you scroll to increase the upgrades in a machine, then zoom doesn't
-        // happen
         super.onFrameUpdate();
         return super.onMouseScroll(direction, amount);
     }
 
-    // Screen level, not canvas level: the panel only offers keys to the hovered widget, so the
-    // canvas never sees them while the cursor sits on the toolbar or a text field holds focus.
-    // isKeyHashDown reads the live LWJGL event, which is still the one being dispatched here.
     @Override
     public boolean onKeyPressed(final char typedChar, final int keyCode) {
         final boolean undo = NEIClientConfig.isKeyHashDown(NEIPlanConfig.ConfigUndoKey.KEY);
@@ -340,40 +172,5 @@ public class FlowchartScreen extends ModularScreen {
             return true;
         }
         return super.onKeyPressed(typedChar, keyCode);
-    }
-
-    private static void refreshGraph(CanvasWidget canvas) {
-        canvas.setGraph(Plan.getActiveGraph());
-    }
-
-    private static void cycleGraphs(CanvasWidget canvas, final int dir) {
-        final Plan plan = Plan.getInstance();
-        final int size = plan.getGraphs()
-            .size();
-        if (size <= 1) return;
-        plan.setActiveIndex((plan.getActiveIndex() + dir + size) % size);
-        refreshGraph(canvas);
-    }
-
-    private static void addGraph(CanvasWidget canvas) {
-        final Plan plan = Plan.getInstance();
-        final int size = plan.getGraphs()
-            .size();
-        plan.getGraphs()
-            .add(new Graph("Slot " + (size + 1)));
-        plan.setActiveIndex(size);
-        refreshGraph(canvas);
-    }
-
-    private static void deleteGraph(CanvasWidget canvas) {
-        final Plan plan = Plan.getInstance();
-        final int size = plan.getGraphs()
-            .size();
-        if (size <= 1) return;
-        final int active = plan.getActiveIndex();
-        plan.getGraphs()
-            .remove(active);
-        if (active >= size - 1) plan.setActiveIndex(size - 2);
-        refreshGraph(canvas);
     }
 }

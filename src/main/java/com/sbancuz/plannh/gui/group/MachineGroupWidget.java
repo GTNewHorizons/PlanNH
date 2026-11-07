@@ -6,7 +6,6 @@ import org.jetbrains.annotations.Nullable;
 
 import com.cleanroommc.modularui.api.IPanelHandler;
 import com.cleanroommc.modularui.api.drawable.IKey;
-import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.utils.Color;
@@ -22,6 +21,7 @@ import com.sbancuz.plannh.data.flowchart.balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.GuiHelper;
+import com.sbancuz.plannh.gui.GuiIcon;
 import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.node.NodeWidget;
@@ -101,10 +101,12 @@ public class MachineGroupWidget extends GroupWidget<MachineGroup> {
     protected Flow getTopRow() {
         return super.getTopRow().child(
             0,
-            GuiTextures.PROCESSOR.asWidget()
+            GuiIcon.MACHINE.asIcon()
+                .size(12)
+                .asWidget()
                 .name("group.machine.badge")
                 .size(16)
-                .margin(3, 0, 2, 2)
+                .margin(2, 0, 0, 0)
                 .tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE)
                 .tooltipBuilder(this::writeMachineTooltip)
                 .tooltipAutoUpdate(true));
@@ -124,6 +126,7 @@ public class MachineGroupWidget extends GroupWidget<MachineGroup> {
      */
     private ButtonWidget<?> capacityButton(final String label, final int step) {
         return new ButtonWidget<>().name(step > 0 ? "group.capacity.add" : "group.capacity.remove")
+            .size(HEADER_BUTTON_SIZE)
             .overlay(
                 IKey.str(label)
                     .color(Color.WHITE.main))

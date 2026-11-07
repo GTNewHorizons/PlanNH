@@ -9,6 +9,7 @@ import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.gui.GuiIcon;
 import com.sbancuz.plannh.gui.common.SelectionGrid;
 import com.sbancuz.plannh.gui.common.SelectionPicker;
 
@@ -29,7 +30,7 @@ final class ExtractorWidget extends ButtonWidget<ExtractorWidget> {
                         .background(GuiTextures.SLOT_ITEM)
                         .overlay(
                             icon.asIcon()
-                                .size(16))
+                                .size(icon instanceof GuiIcon ? 12 : 16))
                         .tooltipBuilder(tooltip -> profile.addIconTooltip(icon, tooltip))
                         .tooltipAutoUpdate(true)
                         .onMousePressed(mouse -> {
@@ -55,10 +56,10 @@ final class ExtractorWidget extends ButtonWidget<ExtractorWidget> {
         size(SelectionGrid.SLOT);
         background(GuiTextures.SLOT_ITEM);
         final MachineProfile selected = data.getSelectedProfile();
-        final IDrawable icon = selected == null ? GuiTextures.PROCESSOR : selected.getIcon(data.getHandlerRef());
+        final IDrawable icon = selected == null ? GuiIcon.MACHINE : selected.getIcon(data.getHandlerRef());
         overlay(
             icon.asIcon()
-                .size(16));
+                .size(icon instanceof GuiIcon ? 12 : 16));
         if (selected != null) tooltipBuilder(tooltip -> selected.addIconTooltip(icon, tooltip));
         tooltipAutoUpdate(true);
         onMousePressed(mouse -> {

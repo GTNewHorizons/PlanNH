@@ -15,6 +15,7 @@ public class FlowchartGuiHandler extends INEIGuiAdapter {
         if (gui instanceof GuiContainerWrapper && ((GuiContainerWrapper) gui).getScreen() instanceof FlowchartScreen) {
             currentVisibility.showSearchSection = true;
             currentVisibility.showWidgets = true;
+            currentVisibility.showUtilityButtons = false;
             currentVisibility.showBookmarkPanel = false;
             currentVisibility.showItemSection = true;
         }

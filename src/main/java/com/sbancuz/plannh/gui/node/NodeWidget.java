@@ -10,6 +10,7 @@ import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
+import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.drawable.DynamicDrawable;
 import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.drawable.Rectangle;
@@ -26,12 +27,12 @@ import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
 import com.sbancuz.plannh.gui.CanvasWidget;
-import com.sbancuz.plannh.gui.IngredientColors;
 import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.common.CloseButtonWidget;
 import com.sbancuz.plannh.gui.common.FlowchartFlow;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.common.HeaderTextWidget;
+import com.sbancuz.plannh.gui.drawable.Brackets;
 import com.sbancuz.plannh.gui.edge.ArrowWidget;
 import com.sbancuz.plannh.gui.group.GroupAreaWidget;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
@@ -92,32 +93,18 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
         Flow topRow = FlowchartFlow.row(this)
             .name("node.header")
             .coverChildrenHeight()
-            .childPadding(4)
-            .padding(4)
+            .childPadding(2)
+            .padding(2, 1)
             .fullWidth()
             .background(
                 new Rectangle().color(PlannhColors.titleColor(data.getMachineName())),
                 new DynamicDrawable(
-                    () -> new Rectangle().hollow(4)
-                        .color(
-                            getParent() instanceof GroupAreaWidget groupArea ? IngredientColors.outlineFor(
-                                groupArea.getFlowchartParent()
-                                    .getData()
-                                    .getColor())
-                                : PlannhColors.TRANSPARENT.getColor())),
-                new DynamicDrawable(
-                    () -> new Rectangle().hollow(3)
-                        .color(
-                            getParent() instanceof GroupAreaWidget groupArea ? Color.withAlpha(
-                                groupArea.getFlowchartParent()
-                                    .getData()
-                                    .getColor(),
-                                255) : PlannhColors.TRANSPARENT.getColor())),
-                new DynamicDrawable(
-                    () -> new Rectangle().hollow(1)
-                        .color(
-                            getParent() instanceof GroupAreaWidget ? PlannhColors.FRAME_BORDER.getColor()
-                                : PlannhColors.TRANSPARENT.getColor())))
+                    () -> getParent() instanceof GroupAreaWidget group
+                        ? new Brackets(
+                            group.getFlowchartParent()
+                                .getData()
+                                .getColor())
+                        : IDrawable.EMPTY))
             .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN);
 
         topRow.child(
