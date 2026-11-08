@@ -6,10 +6,7 @@ import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
 import org.lwjgl.opengl.GL30;
 
-import com.sbancuz.plannh.nei.NEIPlanConfig;
-
-import codechicken.lib.config.ConfigTag;
-import codechicken.nei.NEIClientConfig;
+import com.sbancuz.plannh.nei.config.AppearanceConfig;
 
 public class UIBlurEffect extends ScreenEffect {
 
@@ -21,12 +18,8 @@ public class UIBlurEffect extends ScreenEffect {
     private int fboWidth;
     private int fboHeight;
 
-    private final ConfigTag sigmaSetting;
-
     public UIBlurEffect() {
         super(GPUProgram.BLUR);
-
-        sigmaSetting = NEIClientConfig.getSetting(NEIPlanConfig.ConfigBlurStrength.KEY);
     }
 
     public void updateSigma(int sigma) {
@@ -92,7 +85,7 @@ public class UIBlurEffect extends ScreenEffect {
     protected void renderEffect(int width, int height) {
         if (fboId < 0) return;
 
-        int sigma = sigmaSetting.getIntValue(NEIPlanConfig.ConfigBlurStrength.defVal);
+        int sigma = AppearanceConfig.blurStrength();
         if (sigma <= 0) return;
         if (sigma != this.sigma) updateSigma(sigma);
 

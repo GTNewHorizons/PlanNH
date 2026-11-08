@@ -8,9 +8,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import com.sbancuz.plannh.Config;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
+import com.sbancuz.plannh.nei.config.SolverConfig;
 
 /**
  * The whole solve's answer, shaped for the GUI: per-node extents and machine counts, per-edge
@@ -128,7 +128,7 @@ public final class SolutionView {
      * Severities differ because the two smells do: importing from outside while the chart also
      * makes some is routine, so smell 1 is an observation. Two unlinked islands of the SAME
      * ingredient is a chart that does not describe one factory, so smell 2 is a warning.
-     * Ingredients the pack gives away are filtered out of both - see {@link Config#isFreeIngredient}.
+     * Ingredients the pack gives away are filtered out of both - see {@link SolverConfig#isFreeIngredient}.
      */
     private List<Note> wiringDiagnostics(final SolveContext ctx, final double tol, final List<External> terminalIn) {
         final ModelData model = ctx.model;
@@ -137,7 +137,7 @@ public final class SolutionView {
         final Set<Note> result = new LinkedHashSet<>();
         for (final External in : terminalIn) {
             final String ingredient = ingredientNameOf(ctx, in);
-            if (Config.isFreeIngredient(ingredient)) continue;
+            if (SolverConfig.isFreeIngredient(ingredient)) continue;
             final String match = findProduction(ctx, in, -1);
             if (match != null) {
                 result.add(new Note(SolverMessage.WIRING_IMPORT, machineNameOf(ctx, in), ingredient, match));
@@ -148,7 +148,7 @@ public final class SolutionView {
             if (!port.input() || ctx.externals()[p] <= tol) continue;
             final External src = new External(ctx.refOf(p), ctx.externals()[p]);
             final String ingredient = ingredientNameOf(ctx, src);
-            if (Config.isFreeIngredient(ingredient)) continue;
+            if (SolverConfig.isFreeIngredient(ingredient)) continue;
             final String match = findProduction(ctx, src, model.portComponent[p]);
             if (match != null) {
                 result.add(new Note(SolverMessage.WIRING_UNLINKED, machineNameOf(ctx, src), ingredient, match));

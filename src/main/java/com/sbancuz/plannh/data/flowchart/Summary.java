@@ -19,6 +19,7 @@ import com.sbancuz.plannh.data.flowchart.balancer.Note;
 import com.sbancuz.plannh.data.flowchart.balancer.alternatives.Alternatives;
 import com.sbancuz.plannh.data.properties.SummaryProperty;
 import com.sbancuz.plannh.gui.GuiHelper;
+import com.sbancuz.plannh.nei.config.SolverConfig;
 
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -189,6 +190,9 @@ public final class Summary extends GraphData {
 
     transient private long atVersion = -1;
 
+    @Getter(AccessLevel.NONE)
+    transient private String atFreeIngredients;
+
     /** The {@link Graph} the current rows were derived for; a switch re-derives. */
     transient private Graph atGraph = null;
 
@@ -309,20 +313,25 @@ public final class Summary extends GraphData {
         .build();
 
     /**
-     * Filter and aggregate the full-chart balance for the selected recipes. Only graph edits solve
-     * again; scope and display changes reuse the existing per-node contributions.
+     * Filter and aggregate the full-chart balance for the selected recipes. Graph edits and diagnostic
+     * filter changes solve again; scope and display changes reuse the existing per-node contributions.
      */
     public Summary recompute(final Graph graph) {
         final List<GraphData> selectedScopes = graph.allData()
             .filter(GraphData::isSummaryFiltered)
             .toList();
         final boolean scopeChanged = !selectedScopes.equals(atScopes);
+        final String freeIngredients = SolverConfig.freeIngredients();
+        final boolean filterChanged = !freeIngredients.equals(atFreeIngredients);
         if (atGraph == graph && atVersion == graph.getVersion()
             && atMode == mode
             && atSettings == settingsVersion
+            && !filterChanged
             && !scopeChanged) return this;
 
-        final boolean balanceChanged = atGraph != graph || atVersion != graph.getVersion() || balance == null;
+        final boolean balanceChanged = atGraph != graph || atVersion != graph.getVersion()
+            || balance == null
+            || filterChanged;
         if (balanceChanged) {
             balance = Balancer.balance(graph, graph.getBalanceMode());
         }
@@ -332,6 +341,7 @@ public final class Summary extends GraphData {
         atMode = mode;
         atSettings = settingsVersion;
         atScopes = selectedScopes;
+        atFreeIngredients = freeIngredients;
 
         final boolean wholeChart = selectedScopes.isEmpty();
         final List<Node> selectedNodes = (wholeChart ? graph.allNodes()

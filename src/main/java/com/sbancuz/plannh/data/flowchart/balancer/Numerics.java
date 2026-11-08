@@ -1,6 +1,6 @@
 package com.sbancuz.plannh.data.flowchart.balancer;
 
-import com.sbancuz.plannh.Config;
+import com.sbancuz.plannh.nei.config.SolverConfig;
 
 /**
  * The numeric knobs of a solve: feast/sensitivity tolerances, model time limits and node budgets,
@@ -72,12 +72,12 @@ public final class Numerics {
     public final double gateWeightFloor = GATE_WEIGHT_FLOOR;
 
     /**
-     * How much of a tuned effort number {@link Config#solverEffortPercent} buys. Applied where each
+     * How much of a tuned effort number {@link SolverConfig#effort()} buys. Applied where each
      * number is used rather than folded into the constants, so nothing depends on whether this class
      * initialized before the config loaded. Only numbers that trade time for a better answer are
      * scaled.
      */
     public long effort(final long tuned) {
-        return Math.max(1, tuned * Config.solverEffort() / 100);
+        return Math.max(1, tuned * SolverConfig.effort() / 100);
     }
 }
