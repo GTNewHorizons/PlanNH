@@ -15,7 +15,8 @@ import com.cleanroommc.modularui.widgets.menu.Menu;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.gui.summary.SummaryWidget;
-import com.sbancuz.plannh.nei.NEIPlanConfig;
+import com.sbancuz.plannh.nei.config.AppearanceConfig;
+import com.sbancuz.plannh.nei.config.KeybindsConfig;
 
 import codechicken.nei.NEIClientConfig;
 import lombok.Getter;
@@ -122,10 +123,7 @@ public class FlowchartScreen extends ModularScreen {
         return FlowchartBounds.calculate(
             width,
             height,
-            Math.max(
-                NEIPlanConfig.ConfigItemColumns.min,
-                NEIClientConfig.getSetting(NEIPlanConfig.ConfigItemColumns.KEY)
-                    .getIntValue(NEIPlanConfig.ConfigItemColumns.defVal)),
+            AppearanceConfig.itemColumns(),
             NEIClientConfig.isEnabled() && !NEIClientConfig.isHidden());
     }
 
@@ -164,9 +162,8 @@ public class FlowchartScreen extends ModularScreen {
 
     @Override
     public boolean onKeyPressed(final char typedChar, final int keyCode) {
-        final boolean undo = NEIClientConfig.isKeyHashDown(NEIPlanConfig.ConfigUndoKey.KEY);
-        if (undo || NEIClientConfig.isKeyHashDown(NEIPlanConfig.ConfigRedoKey.KEY)
-            || NEIClientConfig.isKeyHashDown(NEIPlanConfig.ConfigRedoAltKey.KEY)) {
+        final boolean undo = KeybindsConfig.isUndo(keyCode);
+        if (undo || KeybindsConfig.isRedo(keyCode)) {
             if (undo) canvas.undoGraph();
             else canvas.redoGraph();
             return true;

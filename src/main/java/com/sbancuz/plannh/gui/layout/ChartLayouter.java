@@ -10,7 +10,6 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 
 import com.cleanroommc.modularui.widget.sizer.Area;
-import com.sbancuz.plannh.Config;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Edge;
@@ -24,6 +23,7 @@ import com.sbancuz.plannh.gui.common.HeaderTextWidget;
 import com.sbancuz.plannh.gui.group.GroupWidget;
 import com.sbancuz.plannh.gui.node.NodeWidget;
 import com.sbancuz.plannh.gui.note.NoteWidget;
+import com.sbancuz.plannh.nei.config.LayoutConfig;
 
 import it.unimi.dsi.fastutil.ints.IntIntPair;
 
@@ -361,7 +361,7 @@ private int[] noteSize(final Note note) {
     // ===========================================================================================
 
     private LayoutSettings settings() {
-        return Config.layoutSettings(CanvasWidget.requiredRouteCorridor(), Group.GROUP_MIN_W, Group.GROUP_MIN_H);
+        return LayoutConfig.settings(CanvasWidget.requiredRouteCorridor(), Group.GROUP_MIN_W, Group.GROUP_MIN_H);
     }
 
     /** The model object behind an id, wherever it happens to live. */

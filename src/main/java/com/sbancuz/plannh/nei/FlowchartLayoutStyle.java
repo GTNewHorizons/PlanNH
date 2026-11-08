@@ -6,6 +6,7 @@ import com.cleanroommc.modularui.screen.GuiContainerWrapper;
 import com.sbancuz.plannh.gui.FlowchartBounds;
 import com.sbancuz.plannh.gui.FlowchartScreen;
 import com.sbancuz.plannh.mixins.GuiContainerAccessor;
+import com.sbancuz.plannh.nei.config.AppearanceConfig;
 
 import codechicken.lib.vec.Rectangle4i;
 import codechicken.nei.LayoutManager;
@@ -28,10 +29,7 @@ public class FlowchartLayoutStyle extends LayoutStyleMinecraft {
         final int screenW = accessor.getWidth();
         final int screenH = accessor.getHeight();
 
-        final int columns = Math.max(
-            NEIPlanConfig.ConfigItemColumns.min,
-            NEIClientConfig.getSetting(NEIPlanConfig.ConfigItemColumns.KEY)
-                .getIntValue(NEIPlanConfig.ConfigItemColumns.defVal));
+        final int columns = AppearanceConfig.itemColumns();
         final FlowchartBounds bounds = FlowchartBounds.calculate(
             screenW,
             screenH,

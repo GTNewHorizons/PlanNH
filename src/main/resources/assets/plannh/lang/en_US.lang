@@ -379,20 +379,38 @@ plannh.solver.boundary_nothing=nothing crosses the boundary
 
 ## NEI config
 nei.options.plannh=PlanNH
-nei.options.plannh.item_columns=Item Columns
-nei.options.plannh.item_columns.tip=Number of columns in the NEI item panel (minimum: 6)
-nei.options.plannh.blur_strength=Blur Strength
-nei.options.plannh.blur_strength.tip=How much should the background be blurred (0 = off)
+nei.options.plannh.appearance=Appearance
+nei.options.plannh.appearance.item_columns=Item Columns
+nei.options.plannh.appearance.item_columns.tip=NEI item-panel columns.\nMin: 6
+nei.options.plannh.appearance.blur_strength=Blur Strength
+nei.options.plannh.appearance.blur_strength.tip=Background blur.\nRange: 0-255 (0 = off)
 nei.options.keys.plannh=PlanNH
-nei.options.keys.plannh.undo=Undo
-nei.options.keys.plannh.redo=Redo
-nei.options.keys.plannh.redo_alt=Redo (alternate)
-nei.options.plannh.show_grid=Show grid
-nei.options.plannh.show_grid.0=Off
-nei.options.plannh.show_grid.1=On
-nei.options.plannh.show_grid.tip=Hide/Show grid in the canvas
-nei.options.plannh.background_color=Background Color
-nei.options.plannh.background_color.tip=Canvas background color
+nei.options.keys.plannh.undo=Undo (Ctrl + key)
+nei.options.keys.plannh.redo=Redo (Ctrl + Shift + key)
+nei.options.keys.plannh.redo_alt=Redo alternate (Ctrl + key)
+nei.options.plannh.appearance.show_grid=Show Grid
+nei.options.plannh.appearance.show_grid.0=Off
+nei.options.plannh.appearance.show_grid.1=On
+nei.options.plannh.appearance.show_grid.tip=Show the canvas grid.
+nei.options.plannh.appearance.background_color=Background Color
+nei.options.plannh.appearance.background_color.tip=Canvas background color.\nFormat: 0xAARRGGBB
+nei.options.plannh.solver=Solver
+nei.options.plannh.solver.free_ingredients=Free Ingredients
+nei.options.plannh.solver.free_ingredients.tip=Skip missing-wire warnings for these ingredients.\nNames ignore case. Separate with semicolons.
+nei.options.plannh.solver.effort_percent=Solver Effort (%%)
+nei.options.plannh.solver.effort_percent.tip=Solver time budget. Higher takes longer.\nRange: 25-200%% (100%% = default)
+nei.options.plannh.layout=Auto-Layout
+nei.options.plannh.layout.node_spacing=Node Spacing
+nei.options.plannh.layout.node_spacing.tip=Gap between machines in a column.\nRange: 10-80
+nei.options.plannh.layout.layer_spacing=Layer Spacing
+nei.options.plannh.layout.layer_spacing.tip=Column gap. Raised if arrows need more room.\nRange: 40-200
+nei.options.plannh.layout.thoroughness=Thoroughness
+nei.options.plannh.layout.thoroughness.tip=Untangling effort. Higher takes longer.\nRange: 1-30
+nei.options.plannh.debug=Debug
+nei.options.plannh.debug.route_dump=Log Arrow Routing
+nei.options.plannh.debug.route_dump.true=On
+nei.options.plannh.debug.route_dump.false=Off
+nei.options.plannh.debug.route_dump.tip=Log routing inputs for replay.
 
 ## Summary panel
 plannh.summary.title.summary=Summary

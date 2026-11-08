@@ -32,6 +32,10 @@ import com.sbancuz.plannh.harness.GtnhFlowLoader;
 import com.sbancuz.plannh.harness.GtnhFlowLoader.FixturePin;
 import com.sbancuz.plannh.harness.GtnhFlowLoader.LoadedChart;
 import com.sbancuz.plannh.harness.TestIngredients;
+import com.sbancuz.plannh.nei.config.NEISettings;
+import com.sbancuz.plannh.nei.config.SolverConfig;
+
+import codechicken.lib.config.ConfigTag;
 
 /**
  * Corpus ground truths asserted against the balancer engine. Every expected number is
@@ -65,18 +69,18 @@ class GroundTruthTest {
     @Test
     void solverEffortIsClampedToItsAdvertisedRange() {
         // Out of range has to mean the nearest value in range, not a budget of zero and not a
-        // twenty-second budget multiplied by two billion. Forge clamps what it parses, but the
-        // field is public and this is what the solver actually multiplies by.
-        final int restore = Config.solverEffortPercent;
+        // twenty-second budget multiplied by two billion, even when the config is edited by hand.
+        final ConfigTag setting = NEISettings.setting(SolverConfig.EFFORT_KEY);
+        final String restore = setting.getValue();
         try {
-            Config.solverEffortPercent = Integer.MAX_VALUE;
-            assertEquals(Config.SOLVER_EFFORT_MAX, Config.solverEffort(), "above the ceiling reads as the ceiling");
-            Config.solverEffortPercent = Integer.MIN_VALUE;
-            assertEquals(Config.SOLVER_EFFORT_MIN, Config.solverEffort(), "below the floor reads as the floor");
-            Config.solverEffortPercent = 100;
-            assertEquals(100, Config.solverEffort(), "and the default passes through untouched");
+            setting.setIntValue(Integer.MAX_VALUE);
+            assertEquals(SolverConfig.EFFORT_MAX, SolverConfig.effort(), "above the ceiling reads as the ceiling");
+            setting.setIntValue(Integer.MIN_VALUE);
+            assertEquals(SolverConfig.EFFORT_MIN, SolverConfig.effort(), "below the floor reads as the floor");
+            setting.setIntValue(100);
+            assertEquals(100, SolverConfig.effort(), "and the default passes through untouched");
         } finally {
-            Config.solverEffortPercent = restore;
+            setting.setValue(restore);
         }
     }
 
@@ -349,7 +353,9 @@ class GroundTruthTest {
         // Same chart and same missing edge as above. Water is the real case - a chart pulling it
         // from outside while some machine makes a little is not a mistake anyone wants told about -
         // and the list is the pack's answer to which ingredients those are.
-        Config.setFreeIngredients("heavy naquadah fuel");
+        final ConfigTag setting = NEISettings.setting(SolverConfig.FREE_INGREDIENTS_KEY);
+        final String restore = setting.getValue();
+        setting.setValue("heavy naquadah fuel");
         try {
             final LoadedChart chart = GtnhFlowLoader.load("mk1_tiberium");
             GtnhFlowLoader.removeEdgesInto(chart, chart.machine(0), 0);
@@ -363,7 +369,7 @@ class GroundTruthTest {
                             || n.message() == SolverMessage.WIRING_UNLINKED),
                 "free ingredients are wired up by hand or not at all, got notes: " + s.notes);
         } finally {
-            Config.resetFreeIngredients();
+            setting.setValue(restore);
         }
     }
 

@@ -10,6 +10,7 @@ import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceView;
 import com.sbancuz.plannh.data.flowchart.balancer.ChoiceKey;
+import com.sbancuz.plannh.nei.config.SolverConfig;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -64,6 +65,7 @@ public class Graph {
      * The graph version the solve caches above were built from.
      */
     private transient long solvedAt = -1;
+    private transient String solvedFreeIngredients;
 
     public Graph() {
         this.name = "";
@@ -181,11 +183,14 @@ public class Graph {
     }
 
     public BalanceResult balance() {
-        if (solvedAt != version) {
+        final String freeIngredients = SolverConfig.freeIngredients();
+        if (solvedAt != version || !freeIngredients.equals(solvedFreeIngredients)) {
             Plan.getInstance()
                 .getSummary()
                 .recompute(this);
             solvedAt = version;
+            solvedFreeIngredients = freeIngredients;
+            boundaryView = null;
         }
         return Plan.getInstance()
             .getSummary()

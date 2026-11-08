@@ -27,7 +27,6 @@ import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widgets.menu.Menu;
-import com.sbancuz.plannh.Config;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.client.ScreenEffect;
@@ -52,10 +51,9 @@ import com.sbancuz.plannh.gui.layout.LayoutStrategy;
 import com.sbancuz.plannh.gui.node.NodeWidget;
 import com.sbancuz.plannh.gui.node.PortWidget;
 import com.sbancuz.plannh.gui.note.NoteWidget;
-import com.sbancuz.plannh.nei.NEIPlanConfig;
+import com.sbancuz.plannh.nei.config.AppearanceConfig;
+import com.sbancuz.plannh.nei.config.DebugConfig;
 
-import codechicken.lib.config.ConfigTag;
-import codechicken.nei.NEIClientConfig;
 import codechicken.nei.recipe.IRecipeHandler;
 import lombok.Getter;
 import lombok.Setter;
@@ -129,8 +127,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private final ModularPanel panel;
 
     private final ScreenEffect effect = new UIBlurEffect();
-    private final ConfigTag showGrid;
-    private final ConfigTag backgroundColor;
 
     private boolean needsReroute = true;
 
@@ -149,9 +145,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         this.layouter = new ChartLayouter(this, strategy);
         this.graph = Plan.getActiveGraph();
         this.panel = panel;
-
-        showGrid = NEIClientConfig.getSetting(NEIPlanConfig.ConfigShowGrid.KEY);
-        backgroundColor = NEIClientConfig.getSetting(NEIPlanConfig.ConfigBackgroundColor.KEY);
 
         fullWidth();
         expanded();
@@ -407,7 +400,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     public int getBackgroundColor() {
-        return backgroundColor.getHexValue(PlannhColors.BACKGROUND.getColor());
+        return AppearanceConfig.backgroundColor();
     }
 
     @Override
@@ -420,7 +413,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
         super.draw(context, widgetTheme);
         effect.execute(x, y, width, height);
-        if (showGrid.getIntValue(NEIPlanConfig.ConfigShowGrid.ON) == NEIPlanConfig.ConfigShowGrid.ON) {
+        if (AppearanceConfig.showGrid()) {
             drawGrid(width, height);
         }
     }
@@ -547,7 +540,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
         needsReroute = false;
 
-        if (!Config.debugRouteDump) return;
+        if (!DebugConfig.routeDump()) return;
 
         // The routing input replays headlessly (ArrowRouter is Minecraft-free); dump it on
         // every recompute so any bad-looking route can be rebuilt from the dev log.

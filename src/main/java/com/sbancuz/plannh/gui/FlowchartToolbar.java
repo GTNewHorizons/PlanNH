@@ -26,9 +26,7 @@ import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
-import com.sbancuz.plannh.nei.NEIPlanConfig;
-
-import codechicken.nei.NEIClientConfig;
+import com.sbancuz.plannh.nei.config.KeybindsConfig;
 
 /** The graph controls that sit above a {@link CanvasWidget}. */
 public final class FlowchartToolbar extends Flow {
@@ -147,18 +145,18 @@ public final class FlowchartToolbar extends Flow {
             .childPadding(2)
             .child(leftButton("edit.undo", GuiIcon.UNDO, canvas::undoGraph).tooltipBuilder(tooltip -> {
                 tooltip.addLine(IKey.lang("plannh.gui.toolbar.undo.title"));
-                final String binding = NEIClientConfig.getKeyName(NEIPlanConfig.ConfigUndoKey.KEY);
+                final String binding = KeybindsConfig.undoName();
                 if (binding != null) tooltip.addLine(
                     IKey.lang("plannh.gui.toolbar.shortcut", binding)
                         .style(TooltipTheme.Role.TUNABLE.code()));
             }))
             .child(leftButton("edit.redo", GuiIcon.REDO, canvas::redoGraph).tooltipBuilder(tooltip -> {
                 tooltip.addLine(IKey.lang("plannh.gui.toolbar.redo.title"));
-                final String binding = NEIClientConfig.getKeyName(NEIPlanConfig.ConfigRedoKey.KEY);
+                final String binding = KeybindsConfig.redoName();
                 if (binding != null) tooltip.addLine(
                     IKey.lang("plannh.gui.toolbar.shortcut", binding)
                         .style(TooltipTheme.Role.TUNABLE.code()));
-                final String alternate = NEIClientConfig.getKeyName(NEIPlanConfig.ConfigRedoAltKey.KEY);
+                final String alternate = KeybindsConfig.redoAltName();
                 if (alternate != null) tooltip.addLine(
                     IKey.lang("plannh.gui.toolbar.alternate", alternate)
                         .style(TooltipTheme.Role.TUNABLE.code()));

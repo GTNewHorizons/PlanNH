@@ -18,6 +18,7 @@ import com.sbancuz.plannh.gui.layout.LayoutPlan;
 import com.sbancuz.plannh.gui.layout.LayoutRelation;
 import com.sbancuz.plannh.gui.layout.LayoutRequest;
 import com.sbancuz.plannh.gui.layout.LayoutSettings;
+import com.sbancuz.plannh.nei.config.LayoutConfig;
 
 import it.unimi.dsi.fastutil.ints.IntIntPair;
 
@@ -73,10 +74,10 @@ public class LayoutMarginTest {
     @DisplayName("a cramped spacing still leaves the router its corridor")
     public void crampedSpacingIsRaisedToTheCorridor() {
         // The engine cannot know what the router needs, so the caller clamps. Asserted here at the level
-        // the clamp actually lives: Config.layoutSettings, which takes the floor as an argument rather
+        // the clamp actually lives: LayoutConfig.settings, which takes the floor as an argument rather
         // than restating it.
         final int floor = CanvasWidget.requiredRouteCorridor();
-        final LayoutSettings clamped = Config.layoutSettings(floor, Group.GROUP_MIN_W, Group.GROUP_MIN_H);
+        final LayoutSettings clamped = LayoutConfig.settings(floor, Group.GROUP_MIN_W, Group.GROUP_MIN_H);
 
         assertTrue(
             clamped.layerSpacing() >= floor,

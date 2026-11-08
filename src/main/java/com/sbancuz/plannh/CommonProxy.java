@@ -2,7 +2,6 @@ package com.sbancuz.plannh;
 
 import com.sbancuz.plannh.annotation.VersionedInjector;
 import com.sbancuz.plannh.client.ImportCommand;
-import com.sbancuz.plannh.config.ConfigMain;
 
 import cpw.mods.fml.common.event.FMLConstructionEvent;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
@@ -16,9 +15,6 @@ public class CommonProxy {
 
     public void preInit(final FMLPreInitializationEvent event) {
         VersionedInjector.injectAll(event.getAsmData());
-
-        Config.synchronizeConfiguration(event.getSuggestedConfigurationFile());
-        ConfigMain.registerPlanNHConfigs();
     }
 
     public void init(final FMLInitializationEvent event) {}
