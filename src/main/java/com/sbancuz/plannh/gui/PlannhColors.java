@@ -8,128 +8,91 @@ public final class PlannhColors {
     private static final ColorResource.Factory C = new ColorResource.Factory("plannh");
 
     // spotless:off
-    // ── Backgrounds ──
+    // ── Surfaces (dark translucent panels: summary, context menu, messages) ──
     public static final ColorResource
-        SLOT_BAR_BG       = C.argb("slot_bar_bg",        "0x3C242428"),
-        SUMMARY_BG        = C.argb("summary_bg",         "0xC8282C34"),
-        SUMMARY_HEADER_BG = C.argb("summary_header_bg",  "0xCC323841"),
-        SUMMARY_TITLE_BG  = C.argb("summary_title_bg",   "0xE0484F5C"),
-        NODE_BG           = C.argb("node_bg",            "0x323232E6"),
-        CHIP_BG           = C.argb("chip_bg",            "0xE6141414"),
-        NOTE_BG           = C.argb("note_bg",            "0xC8FFF0A0"),
-        NOTE_BG_EDITING   = C.argb("note_bg_editing",    "0xE6FFFAE0"),
-        SETTINGS_PANEL_BG = C.argb("settings_panel_bg",  "0xAA202020"),
-        TRANSPARENT       = C.argb("transparent",        "0x00000000");
+        PANEL_BG        = C.argb("panel_bg",        "0xC8282C34"),
+        PANEL_BG_RAISED = C.argb("panel_bg_raised", "0xE0484F5C"),
+        PANEL_BORDER    = C.argb("panel_border",    "0x5A9CB8D0"),
+        SEPARATOR       = C.argb("separator",       "0x3A98B4CC"),
+        HOVER           = C.argb("hover",           "0x1EFFFFFF"),
+        HIGHLIGHT       = C.argb("highlight",       "0x80FFFFFF");
 
-    // ── Borders / Lines / Separators ──
+    // ── Text on panels ──
     public static final ColorResource
-        FRAME_BORDER       = C.rgb("frame_border",         "0x373737"),
-        SLOT_BAR_LINE      = C.argb("slot_bar_line",       "0x6464A0DC"),
-        SUMMARY_TITLE_LINE = C.argb("summary_title_line",  "0x5078A0DC"),
-        SUMMARY_BORDER     = C.argb("summary_border",      "0x5A9CB8D0"),
-        SUMMARY_SEPARATOR  = C.argb("summary_separator",   "0x3A98B4CC"),
-        NODE_BORDER        = C.argb("node_border",         "0x6496C8FF"),
-        NODE_TITLE_LINE    = C.argb("node_title_line",     "0x3CFFFFFF"),
-        NOTE_BORDER        = C.argb("note_border",         "0xA0B4A050"),
-        NOTE_BORDER_EDIT   = C.argb("note_border_edit",    "0xC8B4A03C"),
-        SEPARATOR_LIGHT    = C.argb("separator_light",     "0x3CC8C8C8"),
-        SEPARATOR_DIM      = C.argb("separator_dim",       "0x32C8C8C8"),
-        BACKGROUND         = C.argb("background",          "0x22000000");
+        TEXT           = C.rgb("text",           "0xFFFFFF"),
+        TEXT_SECONDARY = C.rgb("text_secondary", "0xB8BDC8"),
+        TEXT_MUTED     = C.rgb("text_muted",     "0x99A0AC"),
+        TEXT_SELECTION = C.rgb("text_selection", "0x2F72A8");
 
-    // ── Section Headers (summary highlight bars) ──
+    // ── Value roles ──
     public static final ColorResource
-        SECTION_PRODUCT   = C.argb("section_product",    "0x92B48C3C"),
-        SECTION_INPUT     = C.argb("section_input",      "0x9250A050"),
-        SECTION_FLUID_OUT = C.argb("section_fluid_out",  "0x923C8CB4"),
-        SECTION_FLUID_IN  = C.argb("section_fluid_in",   "0x923C64B4"),
-        SECTION_OPS       = C.argb("section_ops",        "0x926478C8"),
-        SECTION_CHOICE    = C.argb("section_choice",     "0x9250A0A0"),
-        SECTION_WARN      = C.argb("section_warn",       "0x92C86450");
+        INFO     = C.rgb("info",     "0x88AAFF"),
+        POWER    = C.rgb("power",    "0xFFFFAA"),
+        WARNING  = C.rgb("warning",  "0xFFCC66"),
+        SELECTED = C.rgb("selected", "0x77DDDD"),
+        POSITIVE = C.rgb("positive", "0x88FF88"),
+        NEGATIVE = C.rgb("negative", "0xFF8888");
 
-    // ── Text Colors (opaque) ──
+    // ── Cards (node, note, group: light backgrounds) ──
     public static final ColorResource
-        TEXT_WHITE   = C.rgb("text_white",   "0xFFFFFF"),
-        TEXT_BLACK   = C.rgb("text_black",   "0x141414"),
-        TEXT_LIGHT   = C.rgb("text_light",   "0xCCCCCC"),
-        TEXT_MUTED   = C.rgb("text_muted",   "0xAAAAAA"),
-        TEXT_DIM     = C.rgb("text_dim",     "0x888888"),
-        TEXT_FAINT   = C.rgb("text_faint",   "0x666666"),
-        TEXT_DARK    = C.rgb("text_dark",    "0x444444"),
-        TEXT_NOTE    = C.rgb("text_note",    "0x555555");
+        CARD_FRAME      = C.rgb("card_frame",      "0x373737"),
+        CARD_TEXT       = C.rgb("card_text",       "0x444444"),
+        CARD_TEXT_MUTED = C.rgb("card_text_muted", "0x888888"),
+        CARD_INPUT      = C.rgb("card_input",      "0xA00000"),
+        CARD_OUTPUT     = C.rgb("card_output",     "0x006E00");
 
-    // ── Summary Panel ──
+    // ── Notes ──
     public static final ColorResource
-        SUMMARY_TEXT        = C.rgb("summary_text",        "0xB8BDC8"),
-        SUMMARY_TEXT_MUTED  = C.rgb("summary_text_muted",  "0x99A0AC"),
-        SUMMARY_ROW_HOVER   = C.argb("summary_row_hover",  "0x1EFFFFFF");
+        NOTE_BG     = C.argb("note_bg",     "0xC8FFF0A0"),
+        NOTE_ACCENT = C.argb("note_accent", "0xA0B4A050");
 
-    // ── Accent Text Colors (opaque) ──
+    // ── Canvas ──
     public static final ColorResource
-        ACCENT_RED2    = C.rgb("accent_red2",    "0xA00000"),
-        ACCENT_GREEN3  = C.rgb("accent_green3",  "0x006E00"),
-        ACCENT_BLUE    = C.rgb("accent_blue",    "0x88AAFF"),
-        ACCENT_GREEN   = C.rgb("accent_green",   "0x88FF88"),
-        ACCENT_RED     = C.rgb("accent_red",     "0xFF8888"),
-        ACCENT_RED_X   = C.rgb("accent_red_x",   "0xFF5555"),
-        ACCENT_YELLOW  = C.rgb("accent_yellow",  "0xFFFFAA"),
-        ACCENT_CYAN    = C.rgb("accent_cyan",    "0x77FFAA"),
-        ACCENT_AMBER   = C.rgb("accent_amber",   "0xFFCC66"),
-        ACCENT_GREEN2  = C.rgb("accent_green2",  "0x77DD77"),
-        ACCENT_CYAN2   = C.rgb("accent_cyan2",   "0x77DDDD"),
-        ACCENT_BLUE2   = C.rgb("accent_blue2",   "0x77AADD"),
-        ACCENT_BLUE3   = C.rgb("accent_blue3",   "0x77AAFF");
+        GRID = C.argb("grid", "0x18FFFFFF");
 
-    // ── Arrows & Preview ──
+    // ── Ports & edges ──
     public static final ColorResource
-        ARROW_ITEM        = C.argb("arrow_item",         "0xDCC88C3C"),
-        ARROW_FLUID       = C.argb("arrow_fluid",        "0xDC3C8CC8"),
-        PREVIEW_HIGHLIGHT = C.argb("preview_highlight",  "0xB4FFC850");
-
-    // ── Slot Pins ──
-    public static final ColorResource
-        PIN_OUTPUT       = C.argb("pin_output",        "0xDC64C864"),
-        PIN_OUTPUT_HOVER = C.argb("pin_output_hover",  "0x3C64C864"),
-        PIN_INPUT        = C.argb("pin_input",         "0xDC6464C8"),
-        PIN_INPUT_HOVER  = C.argb("pin_input_hover",   "0x3C6464C8"),
-        PIN_FLUID_OUT    = C.argb("pin_fluid_out",     "0xDC3C8CC8"),
-        PIN_FLUID_OUT_H  = C.argb("pin_fluid_out_h",   "0x3C3C8CC8"),
-        PIN_FLUID_IN     = C.argb("pin_fluid_in",      "0xDC3C64C8"),
-        PIN_FLUID_IN_H   = C.argb("pin_fluid_in_h",    "0x3C3C64C8");
-
-    public static final ColorResource
-        PORT_INACTIVE_BORDER  = C.argb("port_inactive_border",  "0xAAAAAAAA"),
-        PORT_INACTIVE_OVERLAY = C.argb("port_inactive_overlay", "0x80508080");
-
-    // ── Close / Delete Buttons ──
-    public static final ColorResource
-        BTN_DELETE_SHADOW = C.argb("btn_delete_shadow",  "0x50C82828"),
-        BTN_DELETE_BG     = C.argb("btn_delete_bg",      "0xC8B42828"),
-        BTN_DELETE_INNER  = C.argb("btn_delete_inner",   "0xDC000000"),
-        NOTE_CLOSE_BG     = C.argb("note_close_bg",      "0xB4C83C3C"),
-        PORT_LABEL_BG     = C.argb("port_label_bg",      "0xC8141414");
-
-    // ── Grid ──
-    public static final ColorResource
-        GRID_LINE      = C.argb("grid_line",       "0x18FFFFFF"),
-        GRID_MAJOR     = C.argb("grid_major",      "0x30FFFFFF");
-
-    // ── Ingredient Edge/Pin Contrast Outlines ──
-    public static final ColorResource
-        EDGE_OUTLINE_DARK  = C.argb("edge_outline_dark",   "0xC00A0A0A"),
-        EDGE_OUTLINE_LIGHT = C.argb("edge_outline_light",  "0xC0F2F2F2");
-
-    // ── Context Menu ──
-    public static final ColorResource
-        CONTEXT_BG     = C.argb("context_bg",      "0xE6323237"),
-        CONTEXT_BORDER = C.argb("context_border",  "0x9064A0DC"),
-        CONTEXT_HOVER  = C.argb("context_hover",   "0x3C64C864");
-
-    // ── Setting States (opaque) ──
-    public static final ColorResource
-        SETTING_ON  = C.rgb("setting_on",  "0x88FF88"),
-        SETTING_OFF = C.rgb("setting_off", "0x888888");
-
+        PORT_UNKNOWN  = C.argb("port_unknown",  "0xDC888888"),
+        PORT_INACTIVE = C.argb("port_inactive", "0xAAAAAAAA"),
+        OUTLINE_DARK  = C.argb("outline_dark",  "0xC00A0A0A"),
+        OUTLINE_LIGHT = C.argb("outline_light", "0xC0F2F2F2");
     // spotless:on
+
+    private static final int SECTION_BAR_ALPHA = 0x92;
+    private static final float SECTION_BAR_SHADE = 0.7f;
+    private static final int NOTE_EDITING_ALPHA = 0xC8;
+    private static final int PORT_INACTIVE_OVERLAY_ALPHA = 0x80;
+
+    private PlannhColors() {}
+
+    public static int sectionBar(final int roleColor) {
+        return Color.argb(
+            (int) (Color.getRed(roleColor) * SECTION_BAR_SHADE),
+            (int) (Color.getGreen(roleColor) * SECTION_BAR_SHADE),
+            (int) (Color.getBlue(roleColor) * SECTION_BAR_SHADE),
+            SECTION_BAR_ALPHA);
+    }
+
+    public static int gridMajor() {
+        final int grid = GRID.getColor();
+        return Color.withAlpha(grid, Math.min(255, Color.getAlpha(grid) * 2));
+    }
+
+    public static int noteEditing() {
+        return Color.withAlpha(NOTE_ACCENT.getColor(), NOTE_EDITING_ALPHA);
+    }
+
+    public static int portInactiveOverlay() {
+        return Color.withAlpha(PORT_INACTIVE.getColor(), PORT_INACTIVE_OVERLAY_ALPHA);
+    }
+
+    /**
+     * Contrast outline for a color: light outline under dark colors, dark outline under light
+     * ones, so derived colors read on any world background.
+     */
+    public static int outlineFor(final int color) {
+        return Color.getLuminance(color) < 0.5f ? OUTLINE_LIGHT.getColor() : OUTLINE_DARK.getColor();
+    }
 
     /**
      * Generates a deterministic title bar color from a recipe name hash.
@@ -143,14 +106,5 @@ public final class PlannhColors {
         final int g = rgb >> 8 & 0xFF;
         final int b = rgb & 0xFF;
         return Color.argb(r, g, b, 100);
-    }
-
-    /**
-     * Text color that contrasts with the given background: dark text on light-to-mid
-     * backgrounds, white on dark ones. Keyed to perceived luminance so it stays correct however
-     * the header color is generated (e.g. dynamically from the recipe handler name).
-     */
-    public static int textOn(final int background) {
-        return Color.getLuminance(background) >= 0.35f ? TEXT_BLACK.getColor() : TEXT_WHITE.getColor();
     }
 }

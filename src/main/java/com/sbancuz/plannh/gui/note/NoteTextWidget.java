@@ -1,13 +1,11 @@
 package com.sbancuz.plannh.gui.note;
 
-import com.cleanroommc.modularui.drawable.DynamicDrawable;
-import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.TextFieldTheme;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.sbancuz.plannh.data.flowchart.Note;
-import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.common.FlowchartTextFieldWidget;
+import com.sbancuz.plannh.gui.theme.PlannhWidgetThemes;
 
 public class NoteTextWidget extends FlowchartTextFieldWidget {
 
@@ -17,7 +15,7 @@ public class NoteTextWidget extends FlowchartTextFieldWidget {
     public NoteTextWidget(NoteWidget parent) {
         super(parent);
         name("note.text");
-        background(new DynamicDrawable(() -> new Rectangle().color(PlannhColors.NOTE_BG.getColor())));
+        widgetTheme(PlannhWidgetThemes.NOTE_BODY);
 
         Note note = parent.getData();
         // add loaded note text if not empty, initialize it otherwise
@@ -33,7 +31,6 @@ public class NoteTextWidget extends FlowchartTextFieldWidget {
 
         handler.setMaxLines(1000);
         setTextAlignment(Alignment.TopLeft);
-        setTextColor(PlannhColors.TEXT_NOTE.getColor());
         padding(4);
 
         resize(

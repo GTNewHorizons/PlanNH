@@ -3,9 +3,6 @@ package com.sbancuz.plannh.gui.note;
 import java.util.SortedMap;
 import java.util.UUID;
 
-import com.cleanroommc.modularui.drawable.DynamicDrawable;
-import com.cleanroommc.modularui.drawable.Rectangle;
-import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.sbancuz.plannh.data.flowchart.Note;
 import com.sbancuz.plannh.gui.CanvasWidget;
@@ -14,6 +11,7 @@ import com.sbancuz.plannh.gui.common.CloseButtonWidget;
 import com.sbancuz.plannh.gui.common.FlowchartFlow;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.common.HeaderTextWidget;
+import com.sbancuz.plannh.gui.theme.PlannhWidgetThemes;
 
 public class NoteWidget extends FlowchartWidget<NoteWidget, Note> {
 
@@ -23,13 +21,7 @@ public class NoteWidget extends FlowchartWidget<NoteWidget, Note> {
         name("note");
         coverChildren();
         padding(2);
-        background(
-            new DynamicDrawable(
-                () -> new Rectangle().hollow(2)
-                    .color(Color.withAlpha(PlannhColors.NOTE_BORDER.getColor(), 255))),
-            new DynamicDrawable(
-                () -> new Rectangle().hollow(1)
-                    .color(PlannhColors.FRAME_BORDER.getColor())));
+        widgetTheme(PlannhWidgetThemes.NOTE);
 
         Flow mainColumn = Flow.column()
             .name("note.column")
@@ -39,9 +31,9 @@ public class NoteWidget extends FlowchartWidget<NoteWidget, Note> {
             .coverChildrenHeight()
             .fullWidth()
             .childPadding(4)
-            .background(new Rectangle().color(PlannhColors.NOTE_BORDER.getColor()));
+            .widgetTheme(PlannhWidgetThemes.NOTE_HEADER);
 
-        topRow.child(new HeaderTextWidget(this, PlannhColors.NOTE_BORDER_EDIT.getColor()));
+        topRow.child(new HeaderTextWidget(this, PlannhColors.noteEditing()));
         topRow.child(new CloseButtonWidget(this));
 
         mainColumn.child(topRow);

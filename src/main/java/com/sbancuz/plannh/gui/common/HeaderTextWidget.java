@@ -4,10 +4,11 @@ import java.util.function.IntSupplier;
 
 import org.jetbrains.annotations.NotNull;
 
+import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.DynamicDrawable;
 import com.cleanroommc.modularui.drawable.Rectangle;
-import com.cleanroommc.modularui.utils.Color;
+import com.sbancuz.plannh.gui.theme.PlannhWidgetThemes;
 
 public class HeaderTextWidget extends FlowchartTextFieldWidget {
 
@@ -24,14 +25,13 @@ public class HeaderTextWidget extends FlowchartTextFieldWidget {
     public HeaderTextWidget(FlowchartWidget<?, ?> parent, IntSupplier bgColor) {
         super(parent);
         name("header");
+        widgetTheme(PlannhWidgetThemes.CARD_HEADER);
 
         height(HEIGHT);
         margin(1);
         setScale(1f);
         expanded();
-        background(
-            new DynamicDrawable(
-                () -> new Rectangle().color(isEditing ? bgColor.getAsInt() : Color.argb(1f, 1f, 1f, 0))));
+        background(new DynamicDrawable(() -> isEditing ? new Rectangle().color(bgColor.getAsInt()) : IDrawable.EMPTY));
 
         handler.getText()
             .add(

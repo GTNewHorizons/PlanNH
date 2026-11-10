@@ -3,11 +3,10 @@ package com.sbancuz.plannh.gui.edge;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.gui.CanvasWidget;
-import com.sbancuz.plannh.gui.IngredientColors;
+import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.node.NodeWidget;
 import com.sbancuz.plannh.gui.node.PortWidget;
 
@@ -64,12 +63,12 @@ public class ArrowWidget extends ParentWidget<ArrowWidget> {
             innerColor = source.getPortWidget(edge.getSourceOutputIndex(), false)
                 .getPort()
                 .getArrowColor();
-            outerColor = IngredientColors.outlineFor(innerColor);
+            outerColor = PlannhColors.outlineFor(innerColor);
 
             canvas.needsReroute();
         } else {
-            innerColor = Color.BLACK.main;
-            outerColor = Color.WHITE.main;
+            innerColor = PlannhColors.OUTLINE_DARK.getColor();
+            outerColor = PlannhColors.OUTLINE_LIGHT.getColor();
         }
     }
 

@@ -5,7 +5,6 @@ import net.minecraft.item.ItemStack;
 import com.cleanroommc.modularui.api.GuiAxis;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.drawable.ItemDrawable;
-import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.widget.Widget;
@@ -16,6 +15,7 @@ import com.sbancuz.plannh.data.flowchart.resource.LongItemStack;
 import com.sbancuz.plannh.data.properties.ResourceProperty;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.PlannhColors;
+import com.sbancuz.plannh.gui.theme.PlannhWidgetThemes;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
@@ -44,7 +44,7 @@ final class MeasureRow extends SummaryFlow {
         final boolean hasItem = stack != null && stack.getItem() != null;
         final TextWidget<?> text = new TextWidget<>(IKey.str(measure.displayName()))
             .name("summary.measure.name")
-            .color(amount.isEmpty() ? PlannhColors.ACCENT_BLUE.getColor() : PlannhColors.TEXT_WHITE.getColor())
+            .color((amount.isEmpty() ? PlannhColors.INFO : PlannhColors.TEXT)::getColor)
             .textAlign(Alignment.CenterLeft);
         final Widget<?> label = resourceRow && hasItem
             ? SummaryFlow.row().widthRel(NAME_RATIO)
@@ -59,11 +59,11 @@ final class MeasureRow extends SummaryFlow {
             .paddingTop(2)
             .paddingBottom(2)
             .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
-            .hoverBackground(new Rectangle().color(PlannhColors.SUMMARY_ROW_HOVER.getColor()))
+            .widgetTheme(PlannhWidgetThemes.ROW)
             .child(label)
             .child(
                 new TextWidget<>(IKey.str(amount)).name("summary.measure.amount")
-                    .color(PlannhColors.ACCENT_BLUE.getColor())
+                    .color(PlannhColors.INFO::getColor)
                     .textAlign(Alignment.CenterRight)
                     .widthRel(1 - NAME_RATIO))
             .tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE)

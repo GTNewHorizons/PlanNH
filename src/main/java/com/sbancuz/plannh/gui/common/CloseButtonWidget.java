@@ -2,13 +2,12 @@ package com.sbancuz.plannh.gui.common;
 
 import org.jetbrains.annotations.NotNull;
 
-import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.GuiIcon;
-import com.sbancuz.plannh.gui.PlannhColors;
+import com.sbancuz.plannh.gui.theme.PlannhWidgetThemes;
 
 public class CloseButtonWidget extends ButtonWidget<CloseButtonWidget> {
 
@@ -17,15 +16,9 @@ public class CloseButtonWidget extends ButtonWidget<CloseButtonWidget> {
     public CloseButtonWidget(FlowchartWidget<?, ?> parent) {
         this.parent = parent;
         name("close");
-        background(GuiTextures.MC_BUTTON);
-        hoverBackground(GuiTextures.MC_BUTTON_HOVERED);
+        widgetTheme(PlannhWidgetThemes.CLOSE_BUTTON);
         overlay(
             GuiIcon.DELETE.asIcon()
-                .size(GuiIcon.DELETE.size()));
-        hoverOverlay(
-            GuiIcon.DELETE.texture()
-                .withColorOverride(PlannhColors.ACCENT_RED.getColor())
-                .asIcon()
                 .size(GuiIcon.DELETE.size()));
         size(12);
         addTooltipLine("Delete this widget");

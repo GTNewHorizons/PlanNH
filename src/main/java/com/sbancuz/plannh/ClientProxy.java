@@ -18,6 +18,7 @@ import com.sbancuz.plannh.client.UnsupportedPackException;
 import com.sbancuz.plannh.client.WorldHandler;
 import com.sbancuz.plannh.gui.FlowchartScreen;
 import com.sbancuz.plannh.gui.layout.ElkLayoutStrategy;
+import com.sbancuz.plannh.gui.theme.PlannhWidgetThemes;
 
 import cpw.mods.fml.client.registry.ClientRegistry;
 import cpw.mods.fml.common.FMLCommonHandler;
@@ -46,6 +47,7 @@ public class ClientProxy extends CommonProxy {
     @Override
     public void preInit(FMLPreInitializationEvent event) {
         super.preInit(event);
+        PlannhWidgetThemes.init();
     }
 
     @Override

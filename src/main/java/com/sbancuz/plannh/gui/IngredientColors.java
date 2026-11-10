@@ -57,15 +57,6 @@ public final class IngredientColors {
     private IngredientColors() {}
 
     /**
-     * Contrast outline for a color: light outline under dark colors, dark outline under light
-     * ones, so derived colors read on any world background.
-     */
-    public static int outlineFor(final int color) {
-        return Color.getLuminance(color) < 0.5f ? PlannhColors.EDGE_OUTLINE_LIGHT.getColor()
-            : PlannhColors.EDGE_OUTLINE_DARK.getColor();
-    }
-
-    /**
      * Modal sprite color for an item stack, bare RGB, -1 when none is derivable; the ITEM
      * resource's color provider.
      */

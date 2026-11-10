@@ -11,6 +11,7 @@ import net.minecraftforge.fluids.FluidStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.IDraggable;
 import com.cleanroommc.modularui.api.widget.IWidget;
@@ -21,7 +22,6 @@ import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.utils.Alignment;
-import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.sbancuz.plannh.PlanNH;
@@ -111,18 +111,15 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         stack = port.getAllStacks()
             .get(index.secondInt());
 
-        final int color = portType == PortType.CATALYST ? portType.borderColor : port.getPinColor(input);
         refreshInactiveState();
 
         background(
             new DynamicDrawable(
-                () -> new Rectangle().color(
-                    inactiveDemand ? PlannhColors.PORT_INACTIVE_OVERLAY.getColor()
-                        : PlannhColors.TRANSPARENT.getColor())),
+                () -> inactiveDemand ? new Rectangle().color(PlannhColors.portInactiveOverlay()) : IDrawable.EMPTY),
             new DynamicDrawable(
-                () -> new Rectangle().color(inactiveDemand ? PlannhColors.PORT_INACTIVE_BORDER.getColor() : color)
-                    .hollow()));
-        hoverOverlay(new Rectangle().color(Color.argb(255, 255, 255, 128)));
+                () -> new Rectangle().hollow()
+                    .color(inactiveDemand ? PlannhColors.PORT_INACTIVE.getColor() : pinColor())));
+        hoverOverlay(new DynamicDrawable(() -> new Rectangle().color(PlannhColors.HIGHLIGHT.getColor())));
         pos(stack.relx + PORT_OFFSET_X, stack.rely + PORT_OFFSET_Y + yShift);
         size(PORT_SIZE);
 
@@ -323,6 +320,10 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         return parent.effectSnapshot();
     }
 
+    private int pinColor() {
+        return portType == PortType.CATALYST ? PlannhColors.OUTLINE_DARK.getColor() : port.getPinColor(input);
+    }
+
     private void refreshInactiveState() {
         final boolean next = configuredInactiveDemand();
         if (next == inactiveDemand) return;
@@ -469,22 +470,16 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     @Getter
     public enum PortType {
 
-        INPUT(0, true, false),
-        OUTPUT(0, true, true),
-        CATALYST(Color.BLACK.main, false);
+        INPUT(true, false),
+        OUTPUT(true, true),
+        CATALYST(false, false);
 
-        private final int borderColor;
         private final boolean supportsEdge;
         private final boolean edgeSource;
 
-        PortType(int borderColor, boolean supportsEdge, boolean edgeSource) {
-            this.borderColor = borderColor;
+        PortType(boolean supportsEdge, boolean edgeSource) {
             this.supportsEdge = supportsEdge;
             this.edgeSource = edgeSource;
-        }
-
-        PortType(int borderColor, boolean supportsEdge) {
-            this(borderColor, supportsEdge, false);
         }
 
         private boolean canConnect(PortType other) {

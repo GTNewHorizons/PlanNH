@@ -31,16 +31,18 @@ public class ResourceProperty<T> extends SummaryProperty<T> {
     @lombok.Builder.Default
     private final BiConsumer<RichTooltip, T> tooltip = (_, _) -> {};
 
-    // Pin/arrow fallback colors; opaque white so a type that declares none stays visible.
+    /** A pin/arrow color the type leaves to the GUI palette's unknown-port color. */
+    public static final int UNSET = 0;
+
     @Getter
     @lombok.Builder.Default
-    private final int pinInputColor = 0xFFFFFFFF;
+    private final int pinInputColor = UNSET;
     @Getter
     @lombok.Builder.Default
-    private final int pinOutputColor = 0xFFFFFFFF;
+    private final int pinOutputColor = UNSET;
     @Getter
     @lombok.Builder.Default
-    private final int arrowColor = 0xFFFFFFFF;
+    private final int arrowColor = UNSET;
 
     @Override
     public String displayName() {

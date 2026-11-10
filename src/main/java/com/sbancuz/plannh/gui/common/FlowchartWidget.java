@@ -80,8 +80,7 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
 
     public int getSummaryFilterColor() {
         final int color = data instanceof Group group ? group.getColor()
-            : data instanceof Node node ? PlannhColors.titleColor(node.getMachineName())
-                : PlannhColors.TEXT_WHITE.getColor();
+            : data instanceof Node node ? PlannhColors.titleColor(node.getMachineName()) : PlannhColors.TEXT.getColor();
         return Color.withAlpha(color, 0xFF);
     }
 

@@ -92,10 +92,8 @@ public final class OutputRateTarget implements TargetKind {
             .coverChildrenHeight()
             .padding(2)
             .child(
-                new FlowchartTextWidget(
-                    IKey.lang(LANG + "no_outputs", new Object[] {})
-                        .color(PlannhColors.TEXT_DIM.getColor()),
-                    parent));
+                new FlowchartTextWidget(IKey.lang(LANG + "no_outputs", new Object[] {}), parent)
+                    .color(PlannhColors.CARD_TEXT_MUTED::getColor));
         return column;
     }
 
@@ -121,10 +119,9 @@ public final class OutputRateTarget implements TargetKind {
     }
 
     private Flow row(final NodeWidget parent, final Port<?> port, final int index, final Consumer<Runnable> edit) {
-        final IWidget label = new FlowchartTextWidget(
-            IKey.str(port.getDisplayName())
-                .color(rate(index) > 0 ? PlannhColors.SETTING_ON.getColor() : PlannhColors.TEXT_DIM.getColor()),
-            parent).widthRel(2 / 3f);
+        final IWidget label = new FlowchartTextWidget(IKey.str(port.getDisplayName()), parent)
+            .color((rate(index) > 0 ? PlannhColors.POSITIVE : PlannhColors.CARD_TEXT_MUTED)::getColor)
+            .widthRel(2 / 3f);
 
         final FlowchartFlow flow = FlowchartFlow.row(parent);
         flow.name("target.rates.row")
