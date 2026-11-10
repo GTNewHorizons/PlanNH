@@ -422,8 +422,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         final float spacing = GRID_SIZE * graph.getZoom();
         if (spacing < MIN_GRID_SPACING) return;
 
-        final int gridColor = PlannhColors.GRID_LINE.getColor();
-        final int majorColor = PlannhColors.GRID_MAJOR.getColor();
+        final int gridColor = PlannhColors.GRID.getColor();
+        final int majorColor = PlannhColors.gridMajor();
 
         final int firstKX = (int) Math.ceil(-graph.getPanX() / spacing);
         final float startX = graph.getPanX() + firstKX * spacing;

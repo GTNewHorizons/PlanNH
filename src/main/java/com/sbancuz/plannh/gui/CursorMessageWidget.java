@@ -35,14 +35,13 @@ public final class CursorMessageWidget extends ParentWidget<CursorMessageWidget>
             .shadow(false)
             // Native font rendering treats alpha values below 4 as fully opaque.
             .color(
-                () -> Color
-                    .withAlpha(PlannhColors.TEXT_WHITE.getColor(), Math.max(4 / 255f, opacity(lifetime.getValue()))));
+                () -> Color.withAlpha(PlannhColors.TEXT.getColor(), Math.max(4 / 255f, opacity(lifetime.getValue()))));
         child(text);
         background(
-            new DynamicDrawable(() -> new Rectangle().color(fadedColor(PlannhColors.CONTEXT_BG.getColor()))),
+            new DynamicDrawable(() -> new Rectangle().color(fadedColor(PlannhColors.PANEL_BG.getColor()))),
             new DynamicDrawable(
                 () -> new Rectangle().hollow()
-                    .color(fadedColor(PlannhColors.CONTEXT_BORDER.getColor()))));
+                    .color(fadedColor(PlannhColors.PANEL_BORDER.getColor()))));
         left(
             () -> clampPosition(
                 cursorX + CURSOR_OFFSET,

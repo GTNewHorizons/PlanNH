@@ -8,7 +8,6 @@ import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.drawable.DynamicDrawable;
 import com.cleanroommc.modularui.drawable.GuiTextures;
-import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.value.BoolValue;
 import com.cleanroommc.modularui.value.EnumValue;
@@ -24,6 +23,7 @@ import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
+import com.sbancuz.plannh.gui.theme.PlannhWidgetThemes;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 import com.sbancuz.plannh.nei.config.KeybindsConfig;
@@ -59,7 +59,7 @@ public final class FlowchartToolbar extends Flow {
             .width(90)
             .height(BUTTON_SIZE)
             .padding(4, 2)
-            .setTextColor(PlannhColors.TEXT_WHITE.getColor())
+            .widgetTheme(PlannhWidgetThemes.TEXT_FIELD)
             .value(
                 new StringValue.Dynamic(
                     () -> Plan.getActiveGraph()
@@ -67,12 +67,14 @@ public final class FlowchartToolbar extends Flow {
                     value -> Plan.getActiveGraph()
                         .setName(value)));
 
-        final IDrawable editingBackground = IDrawable.of(
-            new Rectangle().color(0xFF000000),
-            new Rectangle().hollow(1)
-                .color(0xFFA0A0A0));
-        name.background(new DynamicDrawable(() -> name.isFocused() ? editingBackground : IDrawable.EMPTY))
-            .hoverBackground(editingBackground);
+        // MUI2 themes have no focused state: show the field's hover box while it is being edited.
+        name.background(
+            new DynamicDrawable(
+                () -> name.isFocused() ? name.getWidgetTheme(
+                    name.getPanel()
+                        .getTheme())
+                    .getHoverTheme()
+                    .getBackground() : IDrawable.EMPTY));
 
         return Flow.row()
             .name("screen.toolbar.graphs")
@@ -88,7 +90,7 @@ public final class FlowchartToolbar extends Flow {
                             + Plan.getInstance()
                                 .getGraphs()
                                 .size())).name("graph.index")
-                                    .color(PlannhColors.TEXT_WHITE.getColor()))
+                                    .color(PlannhColors.TEXT::getColor))
             .child(graphStep(canvas, 1));
     }
 
@@ -110,11 +112,10 @@ public final class FlowchartToolbar extends Flow {
             } else addGraph(canvas);
         }).overlay(IKey.dynamicKey(() -> {
             if (!GuiHelper.shiftHeld()) {
-                return IKey.str(direction < 0 ? "<" : ">")
-                    .color(PlannhColors.TEXT_WHITE.getColor());
+                return IKey.str(direction < 0 ? "<" : ">");
             }
             return IKey.str(direction < 0 ? "-" : "+")
-                .color(direction < 0 ? PlannhColors.ACCENT_RED.getColor() : PlannhColors.ACCENT_GREEN.getColor());
+                .color(direction < 0 ? PlannhColors.NEGATIVE::getColor : PlannhColors.POSITIVE::getColor);
         }))
             .tooltipBuilder(tooltip -> {
                 final boolean shift = GuiHelper.shiftHeld();
@@ -200,20 +201,16 @@ public final class FlowchartToolbar extends Flow {
                         .setBalanceMode(value)))
             .stateOverlay(
                 BalanceMode.NONE,
-                IKey.lang("plannh.gui.toolbar.balance.label", IKey.lang("plannh.gui.toolbar.balance.off"))
-                    .color(PlannhColors.TEXT_WHITE.getColor()))
+                IKey.lang("plannh.gui.toolbar.balance.label", IKey.lang("plannh.gui.toolbar.balance.off")))
             .stateOverlay(
                 BalanceMode.INPUT,
-                IKey.lang("plannh.gui.toolbar.balance.label", IKey.lang("plannh.gui.toolbar.balance.input"))
-                    .color(PlannhColors.TEXT_WHITE.getColor()))
+                IKey.lang("plannh.gui.toolbar.balance.label", IKey.lang("plannh.gui.toolbar.balance.input")))
             .stateOverlay(
                 BalanceMode.OUTPUT,
-                IKey.lang("plannh.gui.toolbar.balance.label", IKey.lang("plannh.gui.toolbar.balance.output"))
-                    .color(PlannhColors.TEXT_WHITE.getColor()))
+                IKey.lang("plannh.gui.toolbar.balance.label", IKey.lang("plannh.gui.toolbar.balance.output")))
             .stateOverlay(
                 BalanceMode.AUTO,
-                IKey.lang("plannh.gui.toolbar.balance.label", IKey.lang("plannh.gui.toolbar.balance.auto"))
-                    .color(PlannhColors.TEXT_WHITE.getColor()))
+                IKey.lang("plannh.gui.toolbar.balance.label", IKey.lang("plannh.gui.toolbar.balance.auto")))
             .tooltipBuilder(tooltip -> {
                 final BalanceMode active = canvas.getGraph()
                     .getBalanceMode();
@@ -373,13 +370,13 @@ public final class FlowchartToolbar extends Flow {
                     .childPadding(8)
                     .child(
                         new TextWidget<>(IKey.lang("plannh.gui.toolbar.graph.delete.confirm", graph.getName()))
+                            .color(PlannhColors.TEXT::getColor)
                             .fullWidth()
-                            .textAlign(Alignment.Center)
-                            .color(PlannhColors.TEXT_WHITE.getColor()))
+                            .textAlign(Alignment.Center))
                     .child(
                         new TextWidget<>(IKey.lang("plannh.gui.toolbar.graph.delete.irreversible")).fullWidth()
                             .textAlign(Alignment.Center)
-                            .color(PlannhColors.ACCENT_RED.getColor()))
+                            .color(PlannhColors.NEGATIVE::getColor))
                     .child(
                         Flow.row()
                             .fullWidth()
@@ -394,7 +391,7 @@ public final class FlowchartToolbar extends Flow {
                                     .size(110, 20)
                                     .overlay(
                                         IKey.lang("plannh.gui.toolbar.graph.delete.button")
-                                            .color(PlannhColors.ACCENT_RED.getColor())))));
+                                            .color(PlannhColors.NEGATIVE::getColor)))));
         return dialog;
     }
 }

@@ -59,11 +59,9 @@ abstract class NodeFold extends FlowchartFlow {
 
     /** One dimmed line, standing in for the rows a fold has none of. */
     protected IWidget hint(final String key, final Object... args) {
-        return new FlowchartTextWidget(
-            IKey.lang(key, args)
-                .color(PlannhColors.TEXT_DIM.getColor()),
-            node).fullWidth()
-                .name("node.hint");
+        return new FlowchartTextWidget(IKey.lang(key, args), node).color(PlannhColors.CARD_TEXT_MUTED::getColor)
+            .fullWidth()
+            .name("node.hint");
     }
 
     protected void commitEdit(final Runnable change) {

@@ -54,7 +54,7 @@ public abstract class GroupWidget<G extends Group> extends FlowchartWidget<Group
                     .color(Color.withAlpha(data.getColor(), 255))),
             new DynamicDrawable(
                 () -> new Rectangle().hollow(1)
-                    .color(PlannhColors.FRAME_BORDER.getColor())));
+                    .color(PlannhColors.CARD_FRAME.getColor())));
 
         data.getChildren()
             .values()
@@ -101,7 +101,7 @@ public abstract class GroupWidget<G extends Group> extends FlowchartWidget<Group
                 new DynamicDrawable(() -> new Rectangle().color(data.getColor())),
                 new DynamicDrawable(
                     () -> new Rectangle().hollow(1)
-                        .color(PlannhColors.FRAME_BORDER.getColor())))
+                        .color(PlannhColors.CARD_FRAME.getColor())))
             .child(
                 new HeaderTextWidget(this, data::getColor).height(20)
                     .setScale(1.5f));

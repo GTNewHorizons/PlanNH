@@ -74,15 +74,12 @@ class PropertiesFold extends NodeFold {
                             .childPadding(2)
                             .child(new FlowchartTextWidget(IKey.str(name), node)))
                     .child(
-                        new FlowchartTextWidget(
-                            IKey.str(prop.formatAmount(amount))
-                                .color(
-                                    // A property named per tick is energy, and the pack marks energy in its
-                                    // own colour wherever it turns up - the tooltip's rule, kept.
-                                    name.endsWith("/t") ? PlannhColors.ACCENT_YELLOW.getColor()
-                                        : PlannhColors.ACCENT_BLUE.getColor()),
-                            node).widthRel(1 - LABEL_RATIO)
-                                .textAlign(Alignment.CenterRight)));
+                        new FlowchartTextWidget(IKey.str(prop.formatAmount(amount)), node)
+                            // A property named per tick is energy, and the pack marks energy in its
+                            // own colour wherever it turns up - the tooltip's rule, kept.
+                            .color((name.endsWith("/t") ? PlannhColors.POWER : PlannhColors.INFO)::getColor)
+                            .widthRel(1 - LABEL_RATIO)
+                            .textAlign(Alignment.CenterRight)));
         }
 
         if (getChildren().isEmpty()) child(hint(LANG + "none_hint"));

@@ -3,7 +3,6 @@ package com.sbancuz.plannh.gui;
 import com.cleanroommc.modularui.api.UpOrDown;
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
-import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.ModularScreen;
 import com.cleanroommc.modularui.screen.UISettings;
@@ -15,6 +14,7 @@ import com.cleanroommc.modularui.widgets.menu.Menu;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.gui.summary.SummaryWidget;
+import com.sbancuz.plannh.gui.theme.PlannhWidgetThemes;
 import com.sbancuz.plannh.nei.config.AppearanceConfig;
 import com.sbancuz.plannh.nei.config.KeybindsConfig;
 
@@ -89,11 +89,7 @@ public class FlowchartScreen extends ModularScreen {
     private static ButtonWidget<?> contextAction(final String name, final String key, final Runnable action) {
         return new ButtonWidget<>().name(name)
             .fullWidth()
-            .background(
-                new Rectangle().color(PlannhColors.CONTEXT_BG.getColor()),
-                new Rectangle().hollow()
-                    .color(PlannhColors.CONTEXT_BORDER.getColor()))
-            .hoverBackground(new Rectangle().color(PlannhColors.CONTEXT_HOVER.getColor()))
+            .widgetTheme(PlannhWidgetThemes.MENU_ITEM)
             .overlay(IKey.lang(key))
             .onMousePressed(button -> {
                 if (button != 0) return false;

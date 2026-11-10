@@ -13,6 +13,7 @@ import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.flowchart.resource.LongFluidStack;
 import com.sbancuz.plannh.data.flowchart.resource.LongItemStack;
 import com.sbancuz.plannh.data.properties.ResourceProperty;
+import com.sbancuz.plannh.gui.PlannhColors;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.item.ItemFluidDisplay;
@@ -67,8 +68,9 @@ public class Port<T> {
         return colorOr(type.getArrowColor());
     }
 
-    /** Representative color for this port's ingredient; {@code fallback}'s alpha is kept. */
-    private int colorOr(final int fallback) {
+    /** Representative color for this port's ingredient; {@code declared}'s alpha is kept. */
+    private int colorOr(final int declared) {
+        final int fallback = declared == ResourceProperty.UNSET ? PlannhColors.PORT_UNKNOWN.getColor() : declared;
         final int rgb = type.color(value);
         if (rgb == -1) return fallback;
         return Color.withAlpha(rgb, Color.getAlpha(fallback));

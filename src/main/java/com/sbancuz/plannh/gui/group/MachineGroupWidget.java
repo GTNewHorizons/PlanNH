@@ -8,7 +8,6 @@ import com.cleanroommc.modularui.api.IPanelHandler;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.utils.Alignment;
-import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
@@ -127,9 +126,7 @@ public class MachineGroupWidget extends GroupWidget<MachineGroup> {
     private ButtonWidget<?> capacityButton(final String label, final int step) {
         return new ButtonWidget<>().name(step > 0 ? "group.capacity.add" : "group.capacity.remove")
             .size(HEADER_BUTTON_SIZE)
-            .overlay(
-                IKey.str(label)
-                    .color(Color.WHITE.main))
+            .overlay(IKey.str(label))
             .onMousePressed(_ -> {
                 PlanAPI.recordEdit(canvas.getGraph(), () -> {
                     data.setMachineCapacity(Math.max(0, data.getMachineCapacity() + step));
@@ -159,7 +156,7 @@ public class MachineGroupWidget extends GroupWidget<MachineGroup> {
             return used + " / "
                 + (data.getMachineCapacity() > 0 ? Integer.toString(data.getMachineCapacity()) : "\u221e");
         })).name("group.load")
-            .color(PlannhColors.SUMMARY_TEXT_MUTED.getColor())
+            .color(PlannhColors.TEXT::getColor)
             .textAlign(Alignment.CenterRight)
             .tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE)
             .tooltipBuilder(this::writeMachineTooltip)

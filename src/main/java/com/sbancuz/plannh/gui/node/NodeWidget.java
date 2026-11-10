@@ -16,7 +16,6 @@ import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.drawable.UITexture;
 import com.cleanroommc.modularui.utils.Alignment;
-import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.value.BoolValue;
 import com.cleanroommc.modularui.widgets.CycleButtonWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
@@ -36,6 +35,7 @@ import com.sbancuz.plannh.gui.common.SummaryFilterButton;
 import com.sbancuz.plannh.gui.drawable.Brackets;
 import com.sbancuz.plannh.gui.edge.ArrowWidget;
 import com.sbancuz.plannh.gui.group.GroupAreaWidget;
+import com.sbancuz.plannh.gui.theme.PlannhWidgetThemes;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 
 import it.unimi.dsi.fastutil.ints.IntIntPair;
@@ -109,8 +109,8 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
 
         topRow.child(
             new HeaderTextWidget(this, PlannhColors.titleColor(data.getMachineName())).setScale(1)
-                .background()
-                .setTextColor(Color.BLACK.main));
+                .widgetTheme(PlannhWidgetThemes.NODE_HEADER)
+                .background());
 
         topRow.child(
             FlowchartFlow.row(this)
@@ -183,8 +183,9 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
             .stateOverlay(true, icon.asIcon())
             .stateOverlay(
                 false,
-                icon.withColorOverride(PlannhColors.TEXT_DARK.getColor())
-                    .asIcon())
+                new DynamicDrawable(
+                    () -> icon.withColorOverride(PlannhColors.CARD_TEXT.getColor())
+                        .asIcon()))
             .value(new BoolValue.Dynamic(open, set::accept))
             .tooltipBuilder(
                 tooltip -> TooltipBuilder.create(tooltip)

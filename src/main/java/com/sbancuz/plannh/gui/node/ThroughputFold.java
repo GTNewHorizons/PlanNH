@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
+import com.cleanroommc.modularui.drawable.DynamicDrawable;
 import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.utils.Alignment;
@@ -137,7 +138,7 @@ class ThroughputFold extends NodeFold {
                         new FlowchartTextWidget(IKey.str(port.getDisplayName()), node).textAlign(Alignment.CenterLeft)))
             .child(
                 new FlowchartTextWidget(IKey.str(PortWidget.rateText(port, perCycle, duration, unit)), node)
-                    .color(input ? PlannhColors.ACCENT_RED2.getColor() : PlannhColors.ACCENT_GREEN3.getColor())
+                    .color((input ? PlannhColors.CARD_INPUT : PlannhColors.CARD_OUTPUT)::getColor)
                     .widthRel(1 - LABEL_RATIO)
                     .textAlign(Alignment.CenterRight));
     }
@@ -176,9 +177,10 @@ class ThroughputFold extends NodeFold {
             fullHeight();
 
             background(
-                new Rectangle().color(port.getPinColor(input)),
-                new Rectangle().hollow()
-                    .color(PlannhColors.SUMMARY_BG.getColor()));
+                new DynamicDrawable(() -> new Rectangle().color(port.getPinColor(input))),
+                new DynamicDrawable(
+                    () -> new Rectangle().hollow()
+                        .color(PlannhColors.PANEL_BG.getColor())));
         }
 
         @Override
