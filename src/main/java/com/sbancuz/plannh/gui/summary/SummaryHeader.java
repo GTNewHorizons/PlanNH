@@ -1,7 +1,6 @@
 package com.sbancuz.plannh.gui.summary;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
-import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.value.BoolValue;
 import com.cleanroommc.modularui.widget.ParentWidget;
@@ -11,7 +10,7 @@ import com.cleanroommc.modularui.widgets.TextWidget;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.data.flowchart.Summary.Line;
 import com.sbancuz.plannh.gui.FlowchartList;
-import com.sbancuz.plannh.gui.PlannhColors;
+import com.sbancuz.plannh.gui.theme.PlannhWidgetThemes;
 
 /**
  * The title row of one summary section: the reorder grip, a section-colored highlight bar, the
@@ -27,7 +26,7 @@ class SummaryHeader extends ParentWidget<SummaryHeader> {
         FlowchartList sectionsList) {
         name("summary.section.header");
         fullWidth().height(HEADER_H)
-            .background(new Rectangle().color(PlannhColors.SUMMARY_HEADER_BG.getColor()));
+            .widgetTheme(PlannhWidgetThemes.PANEL_HEADER);
 
         child(
             SummaryFlow.row()
@@ -41,43 +40,21 @@ class SummaryHeader extends ParentWidget<SummaryHeader> {
                         .coverChildren()
                         .childPadding(PAD)
                         .child(
-                            new FlowchartList.Grip(sectionsList, accentColor(section), textColor(section))
-                                .name("summary.grip"))
+                            new FlowchartList.Grip(sectionsList).name("summary.grip")
+                                .widgetTheme(PlannhWidgetThemes.section(section)))
                         .child(
                             new TextWidget<>(headerTitle(section, data)).name("summary.section.header.text")
-                                .color(textColor(section))))
+                                .widgetTheme(PlannhWidgetThemes.section(section))
+                                .disableThemeBackground(true)
+                                .disableHoverThemeBackground(true)))
                 .child(foldToggle(data, section)));
 
         child(
             new Widget<>().name("summary.section.header.rule")
                 .fullWidth()
                 .height(1)
-                .background(new Rectangle().color(PlannhColors.SUMMARY_SEPARATOR.getColor())));
+                .widgetTheme(PlannhWidgetThemes.SEPARATOR));
 
-    }
-
-    private static int accentColor(final Summary.Section section) {
-        return switch (section) {
-            case OUTPUTS -> PlannhColors.SECTION_PRODUCT.getColor();
-            case INPUTS -> PlannhColors.SECTION_INPUT.getColor();
-            case PROPERTIES, MACHINE_COUNTS -> PlannhColors.SECTION_OPS.getColor();
-            case CHOICES -> PlannhColors.SECTION_CHOICE.getColor();
-            case MESSAGES -> PlannhColors.SECTION_WARN.getColor();
-            case HELP -> PlannhColors.SECTION_FLUID_OUT.getColor();
-            default -> PlannhColors.SECTION_CHOICE.getColor();
-        };
-    }
-
-    private static int textColor(final Summary.Section section) {
-        return switch (section) {
-            case OUTPUTS -> PlannhColors.ACCENT_AMBER.getColor();
-            case INPUTS -> PlannhColors.ACCENT_GREEN2.getColor();
-            case PROPERTIES, MACHINE_COUNTS -> PlannhColors.ACCENT_BLUE.getColor();
-            case CHOICES -> PlannhColors.ACCENT_CYAN2.getColor();
-            case MESSAGES -> PlannhColors.ACCENT_YELLOW.getColor();
-            case HELP -> PlannhColors.TEXT_LIGHT.getColor();
-            default -> PlannhColors.TEXT_WHITE.getColor();
-        };
     }
 
     static CycleButtonWidget foldToggle(final Summary data, final Summary.Section section) {

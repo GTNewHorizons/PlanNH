@@ -19,8 +19,8 @@ public final class FilterOff implements IDrawable {
         if (width < 4 || height < 4) return;
 
         final int steps = Math.min(width, height) - 2;
-        final int outline = 0xFF101010;
-        final int slash = PlannhColors.ACCENT_RED.getColor();
+        final int outline = PlannhColors.OUTLINE_DARK.getColor();
+        final int slash = PlannhColors.NEGATIVE.getColor();
         for (int i = 0; i < steps; i++) {
             final int px = x + width - 3 - i;
             final int py = y + i;

@@ -7,7 +7,6 @@ import org.jetbrains.annotations.Nullable;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.IDraggable;
 import com.cleanroommc.modularui.api.widget.IWidget;
-import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.utils.Alignment;
@@ -28,6 +27,7 @@ import com.sbancuz.plannh.gui.FlowchartList;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.drawable.FilterOff;
+import com.sbancuz.plannh.gui.theme.PlannhWidgetThemes;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
@@ -39,7 +39,6 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
 
     private static final int WIDTH = 200;
     private static final int PADDING = 4;
-    private static final int CORNER_RADIUS = 2;
     private static final int SECTION_GAP = 4;
     private static final int TITLE_INSET_X = 4;
     private static final int BUTTON_GAP = 2;
@@ -98,11 +97,7 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
                 .coverChildrenHeight()
                 .crossAxisAlignment(Alignment.CrossAxis.START)
                 .collapseDisabledChild()
-                .background(
-                    new Rectangle().color(PlannhColors.SUMMARY_BG.getColor()),
-                    new Rectangle().cornerRadius(CORNER_RADIUS)
-                        .hollow(1)
-                        .color(PlannhColors.SUMMARY_BORDER.getColor()))
+                .widgetTheme(PlannhWidgetThemes.PANEL)
                 .child(
                     SummaryFlow.row()
                         .name("summary.header")
@@ -111,10 +106,10 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
                         .paddingLeft(TITLE_INSET_X)
                         .childPadding(PADDING)
                         .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
-                        .background(new Rectangle().color(PlannhColors.SUMMARY_TITLE_BG.getColor()))
+                        .widgetTheme(PlannhWidgetThemes.PANEL_HEADER)
                         .child(
                             new TextWidget<>(IKey.lang(Summary.Section.ALL.titleKey()))
-                                .color(PlannhColors.TEXT_WHITE.getColor())
+                                .color(PlannhColors.TEXT::getColor)
                                 .tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE)
                                 .tooltipBuilder(tooltip -> {
                                     final var scopes = canvas.getGraph()
@@ -147,7 +142,7 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
                     new Widget<>().name("summary.header.rule")
                         .fullWidth()
                         .height(1)
-                        .background(new Rectangle().color(PlannhColors.SUMMARY_TITLE_LINE.getColor())))
+                        .widgetTheme(PlannhWidgetThemes.PANEL_RULE))
                 .child(sectionsList));
     }
 

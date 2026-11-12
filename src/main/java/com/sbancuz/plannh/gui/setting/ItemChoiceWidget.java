@@ -21,6 +21,7 @@ import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.sbancuz.plannh.data.setting.ChoiceSettingDef;
+import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.common.ItemSelectionGrid;
 import com.sbancuz.plannh.gui.common.SelectionPicker;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
@@ -65,7 +66,7 @@ public final class ItemChoiceWidget extends ButtonWidget<ItemChoiceWidget>
                         ? Integer.toString(item.getItem().stackSize)
                         : "")
                     .alignment(Alignment.BottomRight)
-                    .color(0xFFFFFFFF)
+                    .color(PlannhColors.TEXT::getColor)
                     .shadow(true)
                     .asIcon()
                     .size(16))

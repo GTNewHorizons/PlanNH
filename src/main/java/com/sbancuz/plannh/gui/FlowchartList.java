@@ -4,15 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
-import net.minecraft.util.ResourceLocation;
-
 import org.jetbrains.annotations.Nullable;
 
 import com.cleanroommc.modularui.api.layout.IViewportStack;
 import com.cleanroommc.modularui.api.widget.IDraggable;
 import com.cleanroommc.modularui.api.widget.IWidget;
-import com.cleanroommc.modularui.drawable.Rectangle;
-import com.cleanroommc.modularui.drawable.UITexture;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.viewport.LocatedWidget;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
@@ -153,17 +149,13 @@ public final class FlowchartList extends ClampedListWidget<IWidget, FlowchartLis
 
     public static final class Grip extends Widget<Grip> implements IDraggable {
 
-        private static final String GRIP_TEXTURE = "textures/gui/summary_grip.png";
         private static final int WIDTH = 10;
 
         private final FlowchartList list;
 
-        public Grip(FlowchartList sectionsList, final int accentColor, final int tintColor) {
+        public Grip(FlowchartList sectionsList) {
             name("summary.grip");
-            width(WIDTH).fullHeight()
-                .background(
-                    new Rectangle().color(accentColor),
-                    new UITexture(new ResourceLocation("plannh", GRIP_TEXTURE), 0f, 0f, 1f, 1f, null, true, tintColor));
+            width(WIDTH).fullHeight();
             list = sectionsList;
         }
 

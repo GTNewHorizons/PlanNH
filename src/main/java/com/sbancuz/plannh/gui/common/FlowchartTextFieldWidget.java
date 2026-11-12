@@ -19,9 +19,6 @@ public abstract class FlowchartTextFieldWidget extends BaseTextFieldWidget<Flowc
 
     public FlowchartTextFieldWidget(FlowchartWidget<?, ?> parent) {
         this.parent = parent;
-
-        background();
-        hoverBackground();
     }
 
     @Override
