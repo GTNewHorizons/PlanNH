@@ -28,6 +28,7 @@ import com.sbancuz.plannh.client.MessageHandler;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.UndoHistory;
+import com.sbancuz.plannh.data.serialization.GuideNHExporter;
 import com.sbancuz.plannh.data.serialization.Serializer;
 
 import codechicken.nei.NEIClientConfig;
@@ -92,6 +93,18 @@ public final class PlanAPI {
             return true;
         } catch (final Exception | LinkageError failure) {
             PlanNH.LOG.error("Failed to copy graph to clipboard", failure);
+            showMessage("plannh.error.export");
+            return false;
+        }
+    }
+
+    /** Copies ready-to-paste GuideNH Markdown, including its PlanNH import button payload. */
+    public static boolean copyGuideNHToClipboard(final Graph graph) {
+        try {
+            GuiScreen.setClipboardString(GuideNHExporter.toMarkdown(graph));
+            return true;
+        } catch (final Exception | LinkageError failure) {
+            PlanNH.LOG.error("Failed to export graph for GuideNH", failure);
             showMessage("plannh.error.export");
             return false;
         }

@@ -288,13 +288,29 @@ public final class FlowchartToolbar extends Flow {
     }
 
     private static Flow shareGroup(final CanvasWidget canvas) {
+        final ButtonWidget<?> share = leftButton("share.link", GuiIcon.SHARE, () -> {
+            if (!GuiHelper.shiftHeld()) PlanAPI.shareGraph(canvas.getGraph());
+            else if (PlanAPI.copyGuideNHToClipboard(canvas.getGraph())) {
+                PlanAPI.showMessage("plannh.share.guidenh_to_clipboard");
+            }
+        });
+
+        // Shift switches the action to the GuideNH export, so the title follows it
+        final IKey shiftHint = IKey.lang("plannh.gui.toolbar.share.shift");
+        shiftHint.style(TooltipTheme.Role.TUNABLE.code());
+        share.tooltipAutoUpdate(true);
+        share.tooltipBuilder(tooltip -> {
+            final boolean guideNH = GuiHelper.shiftHeld();
+            tooltip.addLine(
+                IKey.lang(guideNH ? "plannh.gui.toolbar.share.guidenh.title" : "plannh.gui.toolbar.share.title"));
+            tooltip.addLine(shiftHint);
+        });
+
         return Flow.row()
             .name("screen.toolbar.share")
             .coverChildren()
             .childPadding(2)
-            .child(
-                leftButton("share.link", GuiIcon.SHARE, () -> PlanAPI.shareGraph(canvas.getGraph()))
-                    .addTooltipLine(IKey.lang("plannh.gui.toolbar.share.title")))
+            .child(share)
             .child(leftButton("share.copy", GuiIcon.COPY, () -> {
                 if (PlanAPI.copyToClipboard(canvas.getGraph())) {
                     PlanAPI.showMessage("plannh.share.copy_to_clipboard");
