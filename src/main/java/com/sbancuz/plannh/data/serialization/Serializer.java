@@ -6,7 +6,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import java.util.UUID;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -27,8 +26,6 @@ import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.GraphData;
 import com.sbancuz.plannh.data.flowchart.GraphIndex;
-import com.sbancuz.plannh.data.flowchart.Node;
-import com.sbancuz.plannh.data.flowchart.Note;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.data.flowchart.balancer.ChoiceKey;
@@ -138,42 +135,6 @@ public final class Serializer {
         } finally {
             if (malformed > 0) PlanAPI.showMessage("plannh.warning.malformed_entries", malformed);
         }
-    }
-
-    @Nonnull
-    public static String toMermaid(final Graph graph) {
-        final StringBuilder sb = new StringBuilder("flowchart LR\n");
-        for (final Node node : graph.allNodes()
-            .toList()) {
-            final String id = mermaidId(node.getId());
-            final String label = node.getMachineName()
-                .isEmpty() ? "?" : node.getMachineName();
-            sb.append("    ")
-                .append(id)
-                .append("[\"")
-                .append(escapeMermaid(label))
-                .append("\"]\n");
-        }
-        for (final Note note : graph.getNotes()
-            .values()) {
-            sb.append("    %% Note: ");
-            for (final String line : note.getText()) sb.append(escapeMermaid(line))
-                .append("\n");
-        }
-        return sb.toString();
-    }
-
-    @Nonnull
-    private static String mermaidId(final UUID uuid) {
-        return "n" + uuid.toString()
-            .replace("-", "")
-            .substring(0, 8);
-    }
-
-    @Nonnull
-    private static String escapeMermaid(final String value) {
-        return value.replace("\"", "#quot;")
-            .replace("\n", "<br/>");
     }
 
 }
