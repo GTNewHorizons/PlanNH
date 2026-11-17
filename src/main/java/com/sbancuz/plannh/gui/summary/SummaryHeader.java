@@ -10,7 +10,7 @@ import com.cleanroommc.modularui.widgets.TextWidget;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.data.flowchart.Summary.Line;
 import com.sbancuz.plannh.gui.FlowchartList;
-import com.sbancuz.plannh.gui.theme.PlannhWidgetThemes;
+import com.sbancuz.plannh.gui.theme.PlannhThemes;
 
 /**
  * The title row of one summary section: the reorder grip, a section-colored highlight bar, the
@@ -26,7 +26,7 @@ class SummaryHeader extends ParentWidget<SummaryHeader> {
         FlowchartList sectionsList) {
         name("summary.section.header");
         fullWidth().height(HEADER_H)
-            .widgetTheme(PlannhWidgetThemes.PANEL_HEADER);
+            .widgetTheme(PlannhThemes.PANEL_HEADER);
 
         child(
             SummaryFlow.row()
@@ -41,10 +41,10 @@ class SummaryHeader extends ParentWidget<SummaryHeader> {
                         .childPadding(PAD)
                         .child(
                             new FlowchartList.Grip(sectionsList).name("summary.grip")
-                                .widgetTheme(PlannhWidgetThemes.section(section)))
+                                .widgetTheme(PlannhThemes.section(section)))
                         .child(
                             new TextWidget<>(headerTitle(section, data)).name("summary.section.header.text")
-                                .widgetTheme(PlannhWidgetThemes.section(section))
+                                .widgetTheme(PlannhThemes.section(section))
                                 .disableThemeBackground(true)
                                 .disableHoverThemeBackground(true)))
                 .child(foldToggle(data, section)));
@@ -53,7 +53,7 @@ class SummaryHeader extends ParentWidget<SummaryHeader> {
             new Widget<>().name("summary.section.header.rule")
                 .fullWidth()
                 .height(1)
-                .widgetTheme(PlannhWidgetThemes.SEPARATOR));
+                .widgetTheme(PlannhThemes.SEPARATOR));
 
     }
 

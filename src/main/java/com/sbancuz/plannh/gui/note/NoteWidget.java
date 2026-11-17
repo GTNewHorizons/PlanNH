@@ -11,7 +11,7 @@ import com.sbancuz.plannh.gui.common.CloseButtonWidget;
 import com.sbancuz.plannh.gui.common.FlowchartFlow;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.common.HeaderTextWidget;
-import com.sbancuz.plannh.gui.theme.PlannhWidgetThemes;
+import com.sbancuz.plannh.gui.theme.PlannhThemes;
 
 public class NoteWidget extends FlowchartWidget<NoteWidget, Note> {
 
@@ -21,7 +21,7 @@ public class NoteWidget extends FlowchartWidget<NoteWidget, Note> {
         name("note");
         coverChildren();
         padding(2);
-        widgetTheme(PlannhWidgetThemes.NOTE);
+        widgetTheme(PlannhThemes.NOTE);
 
         Flow mainColumn = Flow.column()
             .name("note.column")
@@ -31,7 +31,7 @@ public class NoteWidget extends FlowchartWidget<NoteWidget, Note> {
             .coverChildrenHeight()
             .fullWidth()
             .childPadding(4)
-            .widgetTheme(PlannhWidgetThemes.NOTE_HEADER);
+            .widgetTheme(PlannhThemes.NOTE_HEADER);
 
         topRow.child(new HeaderTextWidget(this, PlannhColors::noteEditing));
         topRow.child(new CloseButtonWidget(this));

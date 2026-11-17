@@ -14,8 +14,7 @@ import com.cleanroommc.modularui.widgets.menu.Menu;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.gui.summary.SummaryWidget;
-import com.sbancuz.plannh.gui.theme.PlannhTheme;
-import com.sbancuz.plannh.gui.theme.PlannhWidgetThemes;
+import com.sbancuz.plannh.gui.theme.PlannhThemes;
 import com.sbancuz.plannh.nei.config.AppearanceConfig;
 import com.sbancuz.plannh.nei.config.KeybindsConfig;
 
@@ -31,7 +30,7 @@ public class FlowchartScreen extends ModularScreen {
 
     private FlowchartScreen(final ModularPanel panel, final CanvasWidget canvas, final ParentWidget<?> messages) {
         super(PlanNH.MODID, panel);
-        useTheme(PlannhTheme.ID);
+        useTheme(PlannhThemes.FLOWCHART);
         getContext().setSettings(new UISettings());
         getContext().getUISettings()
             .getRecipeViewerSettings()
@@ -91,7 +90,7 @@ public class FlowchartScreen extends ModularScreen {
     private static ButtonWidget<?> contextAction(final String name, final String key, final Runnable action) {
         return new ButtonWidget<>().name(name)
             .fullWidth()
-            .widgetTheme(PlannhWidgetThemes.MENU_ITEM)
+            .widgetTheme(PlannhThemes.MENU_ITEM)
             .overlay(IKey.lang(key))
             .onMousePressed(button -> {
                 if (button != 0) return false;

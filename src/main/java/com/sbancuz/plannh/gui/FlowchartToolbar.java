@@ -23,7 +23,7 @@ import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
-import com.sbancuz.plannh.gui.theme.PlannhWidgetThemes;
+import com.sbancuz.plannh.gui.theme.PlannhThemes;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 import com.sbancuz.plannh.nei.config.KeybindsConfig;
@@ -59,7 +59,7 @@ public final class FlowchartToolbar extends Flow {
             .width(90)
             .height(BUTTON_SIZE)
             .padding(4, 2)
-            .widgetTheme(PlannhWidgetThemes.TOOLBAR_FIELD)
+            .widgetTheme(PlannhThemes.TOOLBAR_FIELD)
             .value(
                 new StringValue.Dynamic(
                     () -> Plan.getActiveGraph()
@@ -90,7 +90,7 @@ public final class FlowchartToolbar extends Flow {
                             + Plan.getInstance()
                                 .getGraphs()
                                 .size())).name("graph.index")
-                                    .widgetTheme(PlannhWidgetThemes.TEXT))
+                                    .widgetTheme(PlannhThemes.TEXT))
             .child(graphStep(canvas, 1));
     }
 
@@ -370,13 +370,13 @@ public final class FlowchartToolbar extends Flow {
                     .childPadding(8)
                     .child(
                         new TextWidget<>(IKey.lang("plannh.gui.toolbar.graph.delete.confirm", graph.getName()))
-                            .widgetTheme(PlannhWidgetThemes.TEXT)
+                            .widgetTheme(PlannhThemes.TEXT)
                             .fullWidth()
                             .textAlign(Alignment.Center))
                     .child(
                         new TextWidget<>(IKey.lang("plannh.gui.toolbar.graph.delete.irreversible")).fullWidth()
                             .textAlign(Alignment.Center)
-                            .widgetTheme(PlannhWidgetThemes.TEXT_NEGATIVE))
+                            .widgetTheme(PlannhThemes.TEXT_NEGATIVE))
                     .child(
                         Flow.row()
                             .fullWidth()
@@ -389,7 +389,7 @@ public final class FlowchartToolbar extends Flow {
                             .child(
                                 leftButton("graph.delete.confirm", IKey.EMPTY, () -> dialog.closeWith(true))
                                     .size(110, 20)
-                                    .widgetTheme(PlannhWidgetThemes.DANGER_BUTTON)
+                                    .widgetTheme(PlannhThemes.DANGER_BUTTON)
                                     .overlay(IKey.lang("plannh.gui.toolbar.graph.delete.button")))));
         return dialog;
     }

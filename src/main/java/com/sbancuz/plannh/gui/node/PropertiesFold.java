@@ -13,7 +13,7 @@ import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.properties.SummaryProperty;
 import com.sbancuz.plannh.gui.common.FlowchartFlow;
 import com.sbancuz.plannh.gui.common.FlowchartTextWidget;
-import com.sbancuz.plannh.gui.theme.PlannhWidgetThemes;
+import com.sbancuz.plannh.gui.theme.PlannhThemes;
 
 class PropertiesFold extends NodeFold {
 
@@ -77,8 +77,7 @@ class PropertiesFold extends NodeFold {
                         new FlowchartTextWidget(IKey.str(prop.formatAmount(amount)), node)
                             // A property named per tick is energy, and the pack marks energy in its
                             // own colour wherever it turns up - the tooltip's rule, kept.
-                            .widgetTheme(
-                                name.endsWith("/t") ? PlannhWidgetThemes.CARD_POWER : PlannhWidgetThemes.CARD_INFO)
+                            .widgetTheme(name.endsWith("/t") ? PlannhThemes.CARD_POWER : PlannhThemes.CARD_INFO)
                             .widthRel(1 - LABEL_RATIO)
                             .textAlign(Alignment.CenterRight)));
         }

@@ -23,7 +23,7 @@ import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.GuiIcon;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.node.NodeWidget;
-import com.sbancuz.plannh.gui.theme.PlannhWidgetThemes;
+import com.sbancuz.plannh.gui.theme.PlannhThemes;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
@@ -156,7 +156,7 @@ public class MachineGroupWidget extends GroupWidget<MachineGroup> {
             return used + " / "
                 + (data.getMachineCapacity() > 0 ? Integer.toString(data.getMachineCapacity()) : "\u221e");
         })).name("group.load")
-            .widgetTheme(PlannhWidgetThemes.TEXT)
+            .widgetTheme(PlannhThemes.TEXT)
             .textAlign(Alignment.CenterRight)
             .tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE)
             .tooltipBuilder(this::writeMachineTooltip)

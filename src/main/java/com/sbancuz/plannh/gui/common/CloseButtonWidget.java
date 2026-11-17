@@ -7,7 +7,7 @@ import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.GuiIcon;
-import com.sbancuz.plannh.gui.theme.PlannhWidgetThemes;
+import com.sbancuz.plannh.gui.theme.PlannhThemes;
 
 public class CloseButtonWidget extends ButtonWidget<CloseButtonWidget> {
 
@@ -16,7 +16,7 @@ public class CloseButtonWidget extends ButtonWidget<CloseButtonWidget> {
     public CloseButtonWidget(FlowchartWidget<?, ?> parent) {
         this.parent = parent;
         name("close");
-        widgetTheme(PlannhWidgetThemes.CLOSE_BUTTON);
+        widgetTheme(PlannhThemes.CLOSE_BUTTON);
         overlay(
             GuiIcon.DELETE.asIcon()
                 .size(GuiIcon.DELETE.size()));

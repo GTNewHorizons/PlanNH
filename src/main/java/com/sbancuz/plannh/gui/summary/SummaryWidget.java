@@ -26,7 +26,7 @@ import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.FlowchartList;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.drawable.FilterOff;
-import com.sbancuz.plannh.gui.theme.PlannhWidgetThemes;
+import com.sbancuz.plannh.gui.theme.PlannhThemes;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
@@ -96,7 +96,7 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
                 .coverChildrenHeight()
                 .crossAxisAlignment(Alignment.CrossAxis.START)
                 .collapseDisabledChild()
-                .widgetTheme(PlannhWidgetThemes.PANEL)
+                .widgetTheme(PlannhThemes.PANEL)
                 .child(
                     SummaryFlow.row()
                         .name("summary.header")
@@ -105,10 +105,9 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
                         .paddingLeft(TITLE_INSET_X)
                         .childPadding(PADDING)
                         .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
-                        .widgetTheme(PlannhWidgetThemes.PANEL_HEADER)
+                        .widgetTheme(PlannhThemes.PANEL_HEADER)
                         .child(
-                            new TextWidget<>(IKey.lang(Summary.Section.ALL.titleKey()))
-                                .widgetTheme(PlannhWidgetThemes.TEXT)
+                            new TextWidget<>(IKey.lang(Summary.Section.ALL.titleKey())).widgetTheme(PlannhThemes.TEXT)
                                 .tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE)
                                 .tooltipBuilder(tooltip -> {
                                     final var scopes = canvas.getGraph()
@@ -141,7 +140,7 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
                     new Widget<>().name("summary.header.rule")
                         .fullWidth()
                         .height(1)
-                        .widgetTheme(PlannhWidgetThemes.PANEL_RULE))
+                        .widgetTheme(PlannhThemes.PANEL_RULE))
                 .child(sectionsList));
     }
 

@@ -11,7 +11,7 @@ import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.gui.GuiHelper;
-import com.sbancuz.plannh.gui.theme.PlannhWidgetThemes;
+import com.sbancuz.plannh.gui.theme.PlannhThemes;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
@@ -31,10 +31,10 @@ final class TotalsRow extends SummaryFlow {
             : IKey.lang("plannh.summary.totals.cycles", ops, totals.durationTicks(), sec);
         fullWidth().coverChildrenHeight(SummaryBody.LINE_H)
             .paddingLeft(SummaryBody.TEXT_X)
-            .widgetTheme(PlannhWidgetThemes.ROW)
+            .widgetTheme(PlannhThemes.ROW)
             .child(
                 new TextWidget<>(text).name("summary.totals.text")
-                    .widgetTheme(PlannhWidgetThemes.TEXT_INFO)
+                    .widgetTheme(PlannhThemes.TEXT_INFO)
                     .textAlign(Alignment.CenterLeft)
                     .fullWidth())
             .tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE)
