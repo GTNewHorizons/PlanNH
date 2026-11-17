@@ -10,6 +10,7 @@ import com.cleanroommc.modularui.widgets.TextWidget;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.data.flowchart.Summary.Line;
 import com.sbancuz.plannh.gui.FlowchartList;
+import com.sbancuz.plannh.gui.GuiIcon;
 import com.sbancuz.plannh.gui.theme.PlannhThemes;
 
 /**
@@ -20,6 +21,7 @@ import com.sbancuz.plannh.gui.theme.PlannhThemes;
 class SummaryHeader extends ParentWidget<SummaryHeader> {
 
     public static final int HEADER_H = 18;
+    public static final int ICON_SIZE = 12;
     private static final int PAD = 4;
 
     protected SummaryHeader(final SummaryWidget panel, final Summary data, final Summary.Section section,
@@ -57,13 +59,31 @@ class SummaryHeader extends ParentWidget<SummaryHeader> {
 
     }
 
+    @Override
+    public boolean canClickThrough() {
+        return true;
+    }
+
     static CycleButtonWidget foldToggle(final Summary data, final Summary.Section section) {
-        return new CycleButtonWidget().name("summary.fold")
+        final BoolValue.Dynamic folded = new BoolValue.Dynamic(
+            () -> data.isSummaryFold(section),
+            val -> data.setSummaryFold(section, val));
+        return headerButton(new CycleButtonWidget()).name("summary.fold")
             .stateCount(2)
-            .size(HEADER_H, HEADER_H)
-            .stateOverlay(true, IKey.str("V"))
-            .stateOverlay(false, IKey.str("^"))
-            .value(new BoolValue.Dynamic(() -> data.isSummaryFold(section), val -> data.setSummaryFold(section, val)));
+            .stateOverlay(
+                true,
+                GuiIcon.FOLDED.asIcon()
+                    .size(ICON_SIZE))
+            .stateOverlay(
+                false,
+                GuiIcon.UNFOLDED.asIcon()
+                    .size(ICON_SIZE))
+            .value(folded);
+    }
+
+    public static <W extends Widget<?>> W headerButton(final W button) {
+        button.size(HEADER_H, HEADER_H);
+        return button;
     }
 
     private static IKey headerTitle(final Summary.Section section, final Summary data) {
