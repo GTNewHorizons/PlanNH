@@ -59,7 +59,7 @@ public final class FlowchartToolbar extends Flow {
             .width(90)
             .height(BUTTON_SIZE)
             .padding(4, 2)
-            .widgetTheme(PlannhWidgetThemes.TEXT_FIELD)
+            .widgetTheme(PlannhWidgetThemes.TOOLBAR_FIELD)
             .value(
                 new StringValue.Dynamic(
                     () -> Plan.getActiveGraph()
@@ -90,7 +90,7 @@ public final class FlowchartToolbar extends Flow {
                             + Plan.getInstance()
                                 .getGraphs()
                                 .size())).name("graph.index")
-                                    .color(PlannhColors.TEXT::getColor))
+                                    .widgetTheme(PlannhWidgetThemes.TEXT))
             .child(graphStep(canvas, 1));
     }
 
@@ -370,13 +370,13 @@ public final class FlowchartToolbar extends Flow {
                     .childPadding(8)
                     .child(
                         new TextWidget<>(IKey.lang("plannh.gui.toolbar.graph.delete.confirm", graph.getName()))
-                            .color(PlannhColors.TEXT::getColor)
+                            .widgetTheme(PlannhWidgetThemes.TEXT)
                             .fullWidth()
                             .textAlign(Alignment.Center))
                     .child(
                         new TextWidget<>(IKey.lang("plannh.gui.toolbar.graph.delete.irreversible")).fullWidth()
                             .textAlign(Alignment.Center)
-                            .color(PlannhColors.NEGATIVE::getColor))
+                            .widgetTheme(PlannhWidgetThemes.TEXT_NEGATIVE))
                     .child(
                         Flow.row()
                             .fullWidth()
@@ -389,9 +389,8 @@ public final class FlowchartToolbar extends Flow {
                             .child(
                                 leftButton("graph.delete.confirm", IKey.EMPTY, () -> dialog.closeWith(true))
                                     .size(110, 20)
-                                    .overlay(
-                                        IKey.lang("plannh.gui.toolbar.graph.delete.button")
-                                            .color(PlannhColors.NEGATIVE::getColor)))));
+                                    .widgetTheme(PlannhWidgetThemes.DANGER_BUTTON)
+                                    .overlay(IKey.lang("plannh.gui.toolbar.graph.delete.button")))));
         return dialog;
     }
 }

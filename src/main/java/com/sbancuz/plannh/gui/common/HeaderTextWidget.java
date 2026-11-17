@@ -22,16 +22,15 @@ public class HeaderTextWidget extends FlowchartTextFieldWidget {
      */
     public static final int HEIGHT = 14;
 
-    public HeaderTextWidget(FlowchartWidget<?, ?> parent, IntSupplier bgColor) {
+    public HeaderTextWidget(FlowchartWidget<?, ?> parent) {
         super(parent);
         name("header");
-        widgetTheme(PlannhWidgetThemes.CARD_HEADER);
+        widgetTheme(PlannhWidgetThemes.TEXT_FIELD);
 
         height(HEIGHT);
         margin(1);
         setScale(1f);
         expanded();
-        background(new DynamicDrawable(() -> isEditing ? new Rectangle().color(bgColor.getAsInt()) : IDrawable.EMPTY));
 
         handler.getText()
             .add(
@@ -39,8 +38,11 @@ public class HeaderTextWidget extends FlowchartTextFieldWidget {
                     .getHeader());
     }
 
-    public HeaderTextWidget(FlowchartWidget<?, ?> parent, int bgColor) {
-        this(parent, () -> bgColor);
+    /** A title that is highlighted in {@code editingColor} while it is being edited. */
+    public HeaderTextWidget(FlowchartWidget<?, ?> parent, IntSupplier editingColor) {
+        this(parent);
+        background(
+            new DynamicDrawable(() -> isEditing ? new Rectangle().color(editingColor.getAsInt()) : IDrawable.EMPTY));
     }
 
     @Override

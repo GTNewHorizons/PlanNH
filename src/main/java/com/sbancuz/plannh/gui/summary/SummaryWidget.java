@@ -25,7 +25,6 @@ import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.FlowchartList;
 import com.sbancuz.plannh.gui.GuiHelper;
-import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.drawable.FilterOff;
 import com.sbancuz.plannh.gui.theme.PlannhWidgetThemes;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
@@ -109,7 +108,7 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
                         .widgetTheme(PlannhWidgetThemes.PANEL_HEADER)
                         .child(
                             new TextWidget<>(IKey.lang(Summary.Section.ALL.titleKey()))
-                                .color(PlannhColors.TEXT::getColor)
+                                .widgetTheme(PlannhWidgetThemes.TEXT)
                                 .tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE)
                                 .tooltipBuilder(tooltip -> {
                                     final var scopes = canvas.getGraph()

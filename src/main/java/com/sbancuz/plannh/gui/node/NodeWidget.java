@@ -107,10 +107,7 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
                         : IDrawable.EMPTY))
             .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN);
 
-        topRow.child(
-            new HeaderTextWidget(this, PlannhColors.titleColor(data.getMachineName())).setScale(1)
-                .widgetTheme(PlannhWidgetThemes.NODE_HEADER)
-                .background());
+        topRow.child(new HeaderTextWidget(this).widgetTheme(PlannhWidgetThemes.CARD_FIELD));
 
         topRow.child(
             FlowchartFlow.row(this)

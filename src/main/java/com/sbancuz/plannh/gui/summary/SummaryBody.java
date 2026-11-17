@@ -12,7 +12,6 @@ import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.data.flowchart.Summary.Line;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceResult;
 import com.sbancuz.plannh.gui.GuiHelper;
-import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.theme.PlannhWidgetThemes;
 
 /**
@@ -86,8 +85,8 @@ class SummaryBody extends SummaryFlow {
         return switch (line) {
             case Line.Measure<?> measure -> new MeasureRow(measure, rowSuffix(), amountScale(), section, rowsMode);
             case Line.Message message -> new TextRow(IKey.str(message.displayName()), message.note().severity());
-            case Line.Text(String key) -> new TextRow(IKey.lang(key), PlannhColors.TEXT_SECONDARY, "summary.text");
-            case Line.Heading heading -> new TextRow(IKey.str(heading.displayName()), PlannhColors.TEXT_MUTED,
+            case Line.Text(String key) -> new TextRow(IKey.lang(key), PlannhWidgetThemes.TEXT_SECONDARY, "summary.text");
+            case Line.Heading heading -> new TextRow(IKey.str(heading.displayName()), PlannhWidgetThemes.TEXT_MUTED,
                 "summary.heading");
             case Line.Choice choice -> new ChoiceRow(choice, data.getChoiceNotes()).name("summary.choice" );
             case Line.Totals totals -> new TotalsRow(totals, rowsMode).name("summary.totals");

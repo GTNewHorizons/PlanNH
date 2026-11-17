@@ -15,7 +15,7 @@ public class NoteTextWidget extends FlowchartTextFieldWidget {
     public NoteTextWidget(NoteWidget parent) {
         super(parent);
         name("note.text");
-        widgetTheme(PlannhWidgetThemes.NOTE_BODY);
+        widgetTheme(PlannhWidgetThemes.NOTE_FIELD);
 
         Note note = parent.getData();
         // add loaded note text if not empty, initialize it otherwise

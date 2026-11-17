@@ -33,7 +33,7 @@ public class NoteWidget extends FlowchartWidget<NoteWidget, Note> {
             .childPadding(4)
             .widgetTheme(PlannhWidgetThemes.NOTE_HEADER);
 
-        topRow.child(new HeaderTextWidget(this, PlannhColors.noteEditing()));
+        topRow.child(new HeaderTextWidget(this, PlannhColors::noteEditing));
         topRow.child(new CloseButtonWidget(this));
 
         mainColumn.child(topRow);

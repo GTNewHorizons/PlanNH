@@ -11,13 +11,13 @@ public class FlowchartTextWidget extends TextWidget<FlowchartTextWidget> impleme
     public FlowchartTextWidget(IKey key, FlowchartWidget<?, ?> parent) {
         super(key);
         this.parent = parent;
-        widgetTheme(PlannhWidgetThemes.CARD_TEXT);
+        widgetTheme(PlannhWidgetThemes.CARD);
     }
 
     public FlowchartTextWidget(String key, FlowchartWidget<?, ?> parent) {
         super(key);
         this.parent = parent;
-        widgetTheme(PlannhWidgetThemes.CARD_TEXT);
+        widgetTheme(PlannhWidgetThemes.CARD);
     }
 
     @Override
