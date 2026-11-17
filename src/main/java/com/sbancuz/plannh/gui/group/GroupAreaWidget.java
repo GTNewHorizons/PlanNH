@@ -4,6 +4,7 @@ import static com.sbancuz.plannh.data.flowchart.Group.GROUP_MIN_H;
 import static com.sbancuz.plannh.data.flowchart.Group.GROUP_MIN_W;
 
 import java.util.List;
+import java.util.function.ToIntFunction;
 
 import com.cleanroommc.modularui.api.layout.IViewportStack;
 import com.cleanroommc.modularui.api.widget.IDragResizeable;
@@ -58,26 +59,21 @@ public class GroupAreaWidget extends ParentWidget<GroupAreaWidget> implements IF
 
     @Override
     public int getMinDragWidth() {
-        return Math.max(
-            GROUP_MIN_W,
-            getChildren().stream()
-                .filter(w -> w instanceof FlowchartWidget<?, ?>)
-                .map(IWidget::getArea)
-                .mapToInt(a -> a.rx + a.width)
-                .max()
-                .orElse(0));
+        return Math.max(GROUP_MIN_W, childrenExtent(area -> area.rx + area.width));
     }
 
     @Override
     public int getMinDragHeight() {
-        return Math.max(
-            GROUP_MIN_H,
-            getChildren().stream()
-                .filter(w -> w instanceof FlowchartWidget<?, ?>)
-                .map(IWidget::getArea)
-                .mapToInt(a -> a.ry + a.height)
-                .max()
-                .orElse(0));
+        return Math.max(GROUP_MIN_H, childrenExtent(area -> area.ry + area.height));
+    }
+
+    private int childrenExtent(final ToIntFunction<Area> edge) {
+        return getChildren().stream()
+            .filter(w -> w instanceof FlowchartWidget<?, ?>child && !child.isMoving())
+            .map(IWidget::getArea)
+            .mapToInt(edge)
+            .max()
+            .orElse(0);
     }
 
     @Override
