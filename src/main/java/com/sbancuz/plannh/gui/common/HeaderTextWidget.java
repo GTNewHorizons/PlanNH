@@ -8,7 +8,7 @@ import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.DynamicDrawable;
 import com.cleanroommc.modularui.drawable.Rectangle;
-import com.sbancuz.plannh.gui.theme.PlannhWidgetThemes;
+import com.sbancuz.plannh.gui.theme.PlannhThemes;
 
 public class HeaderTextWidget extends FlowchartTextFieldWidget {
 
@@ -25,7 +25,7 @@ public class HeaderTextWidget extends FlowchartTextFieldWidget {
     public HeaderTextWidget(FlowchartWidget<?, ?> parent) {
         super(parent);
         name("header");
-        widgetTheme(PlannhWidgetThemes.TEXT_FIELD);
+        widgetTheme(PlannhThemes.TEXT_FIELD);
 
         height(HEIGHT);
         margin(1);

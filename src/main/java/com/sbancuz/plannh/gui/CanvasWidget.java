@@ -51,7 +51,7 @@ import com.sbancuz.plannh.gui.layout.LayoutStrategy;
 import com.sbancuz.plannh.gui.node.NodeWidget;
 import com.sbancuz.plannh.gui.node.PortWidget;
 import com.sbancuz.plannh.gui.note.NoteWidget;
-import com.sbancuz.plannh.gui.theme.PlannhWidgetThemes;
+import com.sbancuz.plannh.gui.theme.PlannhThemes;
 import com.sbancuz.plannh.nei.config.AppearanceConfig;
 import com.sbancuz.plannh.nei.config.DebugConfig;
 
@@ -150,7 +150,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         fullWidth();
         expanded();
         name("canvas");
-        widgetTheme(PlannhWidgetThemes.CANVAS);
+        widgetTheme(PlannhThemes.CANVAS);
 
         contextMenu = menu;
         rebuildWidgets();

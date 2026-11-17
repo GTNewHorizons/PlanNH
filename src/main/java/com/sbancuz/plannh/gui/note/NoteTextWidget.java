@@ -5,7 +5,7 @@ import com.cleanroommc.modularui.theme.TextFieldTheme;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.sbancuz.plannh.data.flowchart.Note;
 import com.sbancuz.plannh.gui.common.FlowchartTextFieldWidget;
-import com.sbancuz.plannh.gui.theme.PlannhWidgetThemes;
+import com.sbancuz.plannh.gui.theme.PlannhThemes;
 
 public class NoteTextWidget extends FlowchartTextFieldWidget {
 
@@ -15,7 +15,7 @@ public class NoteTextWidget extends FlowchartTextFieldWidget {
     public NoteTextWidget(NoteWidget parent) {
         super(parent);
         name("note.text");
-        widgetTheme(PlannhWidgetThemes.NOTE_FIELD);
+        widgetTheme(PlannhThemes.NOTE_FIELD);
 
         Note note = parent.getData();
         // add loaded note text if not empty, initialize it otherwise

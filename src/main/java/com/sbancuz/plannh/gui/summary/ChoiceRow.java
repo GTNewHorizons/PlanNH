@@ -14,7 +14,7 @@ import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.data.flowchart.balancer.Note;
-import com.sbancuz.plannh.gui.theme.PlannhWidgetThemes;
+import com.sbancuz.plannh.gui.theme.PlannhThemes;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
@@ -30,12 +30,12 @@ final class ChoiceRow extends SummaryFlow implements Interactable {
         this.choice = choice;
 
         fullWidth().coverChildrenHeight(SummaryBody.LINE_H)
-            .widgetTheme(PlannhWidgetThemes.ROW)
+            .widgetTheme(PlannhThemes.ROW)
             .child(
                 new TextWidget<>(IKey.str((choice.active() ? "> " : "  ") + choice.displayName()))
                     .name("summary.choice.text")
                     .paddingLeft(SummaryBody.TEXT_X)
-                    .widgetTheme(choice.active() ? PlannhWidgetThemes.TEXT_SELECTED : PlannhWidgetThemes.TEXT_MUTED)
+                    .widgetTheme(choice.active() ? PlannhThemes.TEXT_SELECTED : PlannhThemes.TEXT_MUTED)
                     .textAlign(Alignment.CenterLeft)
                     .fullWidth());
 

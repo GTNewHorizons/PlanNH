@@ -35,7 +35,7 @@ import com.sbancuz.plannh.gui.common.SummaryFilterButton;
 import com.sbancuz.plannh.gui.drawable.Brackets;
 import com.sbancuz.plannh.gui.edge.ArrowWidget;
 import com.sbancuz.plannh.gui.group.GroupAreaWidget;
-import com.sbancuz.plannh.gui.theme.PlannhWidgetThemes;
+import com.sbancuz.plannh.gui.theme.PlannhThemes;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 
 import it.unimi.dsi.fastutil.ints.IntIntPair;
@@ -107,7 +107,7 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
                         : IDrawable.EMPTY))
             .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN);
 
-        topRow.child(new HeaderTextWidget(this).widgetTheme(PlannhWidgetThemes.CARD_FIELD));
+        topRow.child(new HeaderTextWidget(this).widgetTheme(PlannhThemes.CARD_FIELD));
 
         topRow.child(
             FlowchartFlow.row(this)

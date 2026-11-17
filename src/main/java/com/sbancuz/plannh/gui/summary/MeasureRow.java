@@ -14,7 +14,7 @@ import com.sbancuz.plannh.data.flowchart.resource.LongFluidStack;
 import com.sbancuz.plannh.data.flowchart.resource.LongItemStack;
 import com.sbancuz.plannh.data.properties.ResourceProperty;
 import com.sbancuz.plannh.gui.GuiHelper;
-import com.sbancuz.plannh.gui.theme.PlannhWidgetThemes;
+import com.sbancuz.plannh.gui.theme.PlannhThemes;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
@@ -43,7 +43,7 @@ final class MeasureRow extends SummaryFlow {
         final boolean hasItem = stack != null && stack.getItem() != null;
         final TextWidget<?> text = new TextWidget<>(IKey.str(measure.displayName()))
             .name("summary.measure.name")
-            .widgetTheme(amount.isEmpty() ? PlannhWidgetThemes.TEXT_INFO : PlannhWidgetThemes.TEXT)
+            .widgetTheme(amount.isEmpty() ? PlannhThemes.TEXT_INFO : PlannhThemes.TEXT)
             .textAlign(Alignment.CenterLeft);
         final Widget<?> label = resourceRow && hasItem
             ? SummaryFlow.row().widthRel(NAME_RATIO)
@@ -58,11 +58,11 @@ final class MeasureRow extends SummaryFlow {
             .paddingTop(2)
             .paddingBottom(2)
             .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
-            .widgetTheme(PlannhWidgetThemes.ROW)
+            .widgetTheme(PlannhThemes.ROW)
             .child(label)
             .child(
                 new TextWidget<>(IKey.str(amount)).name("summary.measure.amount")
-                    .widgetTheme(PlannhWidgetThemes.TEXT_INFO)
+                    .widgetTheme(PlannhThemes.TEXT_INFO)
                     .textAlign(Alignment.CenterRight)
                     .widthRel(1 - NAME_RATIO))
             .tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE)
