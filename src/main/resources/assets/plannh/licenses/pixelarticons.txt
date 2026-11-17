@@ -14,6 +14,12 @@ PlanNH assets derived from this project:
 - textures/gui/copy.png, from svg/copy.svg
 - textures/gui/clipboard.png, from svg/clipboard.svg
 - textures/gui/cpu.png, from svg/cpu.svg
+- textures/gui/repeat.png, from svg/repeat.svg
+- textures/gui/hourglass.png, from svg/hourglass.svg
+- textures/gui/eye.png, from svg/eye.svg
+- textures/gui/checkbox.png, from svg/checkbox.svg
+- textures/gui/checkbox-on.png, from svg/checkbox-on.svg
+- textures/gui/check.png, the tick of svg/checkbox-on.svg without the box
 
 Sources:
 https://raw.githubusercontent.com/halfmage/pixelarticons/c9ecc2da61afde85dbe539025e3d931c6152ad75/svg/
@@ -23,6 +29,10 @@ https://github.com/halfmage/pixelarticons/blob/c9ecc2da61afde85dbe539025e3d931c6
 
 Changes by PlanNH: rasterized the 24x24 SVGs to transparent 12x12 PNGs
 using nearest-neighbor sampling and a white fill. The geometry is unchanged.
+repeat draws its 2px strokes on odd coordinates, so it was sampled 1px
+further right and down: the shape is unchanged and sits half a 12px pixel
+off. checkbox-on mixes both grids, so its tick was sampled 1px further right
+than its box.
 
 Upstream license follows in full:
 
