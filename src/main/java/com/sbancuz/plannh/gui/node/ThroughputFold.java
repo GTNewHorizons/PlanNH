@@ -22,6 +22,7 @@ import com.sbancuz.plannh.gui.common.FlowchartFlow;
 import com.sbancuz.plannh.gui.common.FlowchartTextWidget;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.common.IFlowchartDraggable;
+import com.sbancuz.plannh.gui.theme.PlannhWidgetThemes;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 
 class ThroughputFold extends NodeFold {
@@ -138,7 +139,7 @@ class ThroughputFold extends NodeFold {
                         new FlowchartTextWidget(IKey.str(port.getDisplayName()), node).textAlign(Alignment.CenterLeft)))
             .child(
                 new FlowchartTextWidget(IKey.str(PortWidget.rateText(port, perCycle, duration, unit)), node)
-                    .color((input ? PlannhColors.CARD_INPUT : PlannhColors.CARD_OUTPUT)::getColor)
+                    .widgetTheme(input ? PlannhWidgetThemes.CARD_INPUT : PlannhWidgetThemes.CARD_OUTPUT)
                     .widthRel(1 - LABEL_RATIO)
                     .textAlign(Alignment.CenterRight));
     }

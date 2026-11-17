@@ -39,7 +39,9 @@ public final class PlannhColors {
         CARD_TEXT       = C.rgb("card_text",       "0x444444"),
         CARD_TEXT_MUTED = C.rgb("card_text_muted", "0x888888"),
         CARD_INPUT      = C.rgb("card_input",      "0xA00000"),
-        CARD_OUTPUT     = C.rgb("card_output",     "0x006E00");
+        CARD_OUTPUT     = C.rgb("card_output",     "0x006E00"),
+        CARD_INFO       = C.rgb("card_info",       "0x2A4F9E"),
+        CARD_POWER      = C.rgb("card_power",      "0x8A6400");
 
     // ── Notes ──
     public static final ColorResource
@@ -73,8 +75,7 @@ public final class PlannhColors {
             SECTION_BAR_ALPHA);
     }
 
-    public static int gridMajor() {
-        final int grid = GRID.getColor();
+    public static int gridMajor(final int grid) {
         return Color.withAlpha(grid, Math.min(255, Color.getAlpha(grid) * 2));
     }
 
