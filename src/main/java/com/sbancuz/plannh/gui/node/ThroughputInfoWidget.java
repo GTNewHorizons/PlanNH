@@ -91,6 +91,7 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
         if (row != null) row.markTooltipDirty();
     }
 
+    /** Rebuild the copies and duration row when the solve's operations or duration changed. */
     private void rebuild() {
         final Node node = parent.getData();
         final Balancer.NodeBalance balance = parent.balance();
@@ -101,7 +102,7 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
         lastOperations = operations;
         lastDuration = duration;
 
-        if (balance != null && !ThroughputFold.hasPlannedThroughput(balance)) {
+        if (balance != null && balance.operations() <= 0) {
             lines.removeAll();
             row = null;
             scheduleResize();
