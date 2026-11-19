@@ -6,6 +6,7 @@ import static org.lwjgl.opengl.GL11.glEnable;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -50,6 +51,7 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
     @Getter
     private int recipeWidth = 0;
 
+    /** The NEI recipe of {@code parent}, with a {@link PortWidget} over each stack. */
     public RecipeAreaWidget(NodeWidget parent) {
         name("node.recipe");
         this.parent = parent;
@@ -113,6 +115,13 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
         recipeWidth = widthWithPorts(recipeWidth, portsWidth);
         size(recipeWidth, Math.max(recipeHeight, portsHeight));
 
+        // `RecipeWidget.drawItem()` passes each stack to the `PortSlot` of the stack's port
+        final Map<PositionedStack, PortSlot> slots = new IdentityHashMap<>();
+        accessor.plannh$setStackDrawer(stack -> {
+            final PortSlot slot = slots.get(stack);
+            return slot != null && slot.draw();
+        });
+
         // inputs
         for (int i = 0; i < inputs.size(); i++) {
             Port<?> port = inputs.get(i);
@@ -128,6 +137,7 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
                     yShift,
                     getPortWidgets(true));
                 inputPortWidgets.put(index, portWidget);
+                slots.put(stacks.get(j), portWidget.getSlot());
                 child(portWidget);
             }
         }
@@ -147,6 +157,7 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
                     yShift,
                     getPortWidgets(false));
                 outputPortWidgets.put(index, portWidget);
+                slots.put(stacks.get(j), portWidget.getSlot());
                 child(portWidget);
             }
         }
