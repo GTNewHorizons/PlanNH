@@ -87,9 +87,9 @@ class MagicBeesAuraAccountingTest {
         final EffectResult effect = config(true, false, 50, 2, 3).computeEffect(recipe);
 
         assertEquals(Math.round(nominal.durationTicks() * 2d), effect.durationTicks());
-        assertEquals(effect.durationTicks(), effect.inputMultiplier(1));
-        assertEquals(0d, effect.inputMultiplier(2));
-        assertEquals(1d, effect.inputMultiplier(0));
+        assertEquals(effect.durationTicks(), effect.multiplier(true, 1));
+        assertEquals(0d, effect.multiplier(true, 2));
+        assertEquals(1d, effect.multiplier(true, 0));
         assertEquals(6, effect.throughputFactor());
     }
 
@@ -97,9 +97,9 @@ class MagicBeesAuraAccountingTest {
     void disabledAurasHaveZeroDemandWithoutChangingBeeInputs() {
         final EffectResult effect = config(false, false, 100, 1, 1).computeEffect(auraRecipe());
 
-        assertEquals(0d, effect.inputMultiplier(1));
-        assertEquals(0d, effect.inputMultiplier(2));
-        assertEquals(1d, effect.inputMultiplier(0));
+        assertEquals(0d, effect.multiplier(true, 1));
+        assertEquals(0d, effect.multiplier(true, 2));
+        assertEquals(1d, effect.multiplier(true, 0));
     }
 
     private static MachineConfig config(final boolean productionAura, final boolean lifespanAura,

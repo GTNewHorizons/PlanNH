@@ -1,12 +1,17 @@
 package com.sbancuz.plannh.data.effect;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.DoubleSupplier;
 
+import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 
-/** Per-evaluation quantities. Port multipliers are recipe-relative, independent of throughput and tick scaling. */
+/**
+ * Per-evaluation quantities. Port multipliers are recipe-relative, independent of throughput and tick scaling. After
+ * {@code MachineProfile.computeEffect()}, a port's multiplier is the port's chance per craft.
+ */
 public class EffectResult {
 
     private int durationTicks;
@@ -62,29 +67,29 @@ public class EffectResult {
         this.throughputFactor = value;
     }
 
-    public double inputMultiplier(final int index) {
-        return inputMultipliers.getOrDefault(index, 1d);
+    public void setMultiplier(final boolean input, final int index, final double value) {
+        (input ? inputMultipliers : outputMultipliers).put(index, value);
     }
 
-    public double inputMultiplier(final int index, final DoubleSupplier fallback) {
-        final Double value = inputMultipliers.get(index);
+    public double[] quantities(final boolean input, final List<Port<?>> ports) {
+        final double[] quantities = new double[ports.size()];
+        for (int i = 0; i < quantities.length; i++) {
+            quantities[i] = quantity(input, i, ports.get(i));
+        }
+        return quantities;
+    }
+
+    /** What one operation consumes or produces of {@code port}, throughput factor included. */
+    public double quantity(final boolean input, final int index, final Port<?> port) {
+        return Math.max(0d, port.getAmount()) * multiplier(input, index) * throughputFactor;
+    }
+
+    public double multiplier(final boolean input, final int index) {
+        return (input ? inputMultipliers : outputMultipliers).getOrDefault(index, 1d);
+    }
+
+    public double multiplier(final boolean input, final int index, final DoubleSupplier fallback) {
+        final Double value = (input ? inputMultipliers : outputMultipliers).get(index);
         return value == null ? fallback.getAsDouble() : value;
-    }
-
-    public void inputMultiplier(final int index, final double value) {
-        inputMultipliers.put(index, value);
-    }
-
-    public double outputMultiplier(final int index) {
-        return outputMultipliers.getOrDefault(index, 1d);
-    }
-
-    public double outputMultiplier(final int index, final DoubleSupplier fallback) {
-        final Double value = outputMultipliers.get(index);
-        return value == null ? fallback.getAsDouble() : value;
-    }
-
-    public void outputMultiplier(final int index, final double value) {
-        outputMultipliers.put(index, value);
     }
 }

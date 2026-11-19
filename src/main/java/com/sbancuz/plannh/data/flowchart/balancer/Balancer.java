@@ -265,27 +265,20 @@ public final class Balancer {
             final var eff = node.computeEffect();
             final double energyPerOp = eff.energyPerT();
             final int durPerOp = eff.durationTicks();
-            final int throughputFactor = eff.throughputFactor();
 
             final long totalEnergy = Math.round(energyPerOp * durPerOp * count);
             if (durPerOp > totalDuration) totalDuration = durPerOp;
 
             final Map<Integer, Double> effOuts = new HashMap<>(node.getOutputs().size());
             for (int i = 0; i < node.getOutputs().size(); i++) {
-                final var outStack = node.getOutputs().get(i);
-                final double total = count * Math.max(0d, outStack.getAmount()) * outStack.getChance()
-                    * eff.outputMultiplier(i)
-                    * throughputFactor;
+                final double total = count * eff.quantity(false, i, node.getOutputs().get(i));
                 if (total <= 0) continue;
                 effOuts.put(i, total);
             }
 
             final Map<Integer, Double> effIns = new HashMap<>(node.getInputs().size());
             for (int i = 0; i < node.getInputs().size(); i++) {
-                final var inStack = node.getInputs().get(i);
-                final double total = count * Math.max(0d, inStack.getAmount()) * inStack.getChance()
-                    * eff.inputMultiplier(i)
-                    * throughputFactor;
+                final double total = count * eff.quantity(true, i, node.getInputs().get(i));
                 if (total <= 0) continue;
                 effIns.put(i, total);
             }

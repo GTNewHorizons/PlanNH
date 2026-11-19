@@ -262,7 +262,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         final boolean input, final int portIndex, final double perCycle, final int duration,
         final @Nullable EffectResult effect) {
         if (effect == null) return;
-        final double bonus = input ? effect.inputMultiplier(portIndex) : effect.outputMultiplier(portIndex);
+        final double bonus = effect.multiplier(input, portIndex);
 
         // A rule between this and what came before it - unless it is the first thing in the tooltip,
         // where a rule would be a heading over nothing.
@@ -309,7 +309,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     private boolean configuredInactiveDemand() {
         if (!input || portType != PortType.INPUT) return false;
         final EffectResult current = currentEffect();
-        return current != null && isInactiveDemand(portType, current.inputMultiplier(index.leftInt()));
+        return current != null && isInactiveDemand(portType, current.multiplier(true, index.leftInt()));
     }
 
     static boolean isInactiveDemand(final PortType portType, final double multiplier) {
