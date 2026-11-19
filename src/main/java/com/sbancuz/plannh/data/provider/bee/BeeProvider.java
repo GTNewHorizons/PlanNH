@@ -261,6 +261,14 @@ public class BeeProvider implements PropertyProvider {
         return BeeManager.beeRoot.createBeeHousingModifier(modifierHousing);
     }
 
+    /**
+     * Compute one queen's expected lifetime and rebreeding time in {@code description} under the frames and alleles of
+     * {@code cfg}. An output's quantity is the expected product of that lifetime times the output's multiplier.
+     *
+     * @throws IllegalArgumentException for a frame setting with an item that is not a bee frame, an allele the
+     *                                  chromosome rejects, or a lifetime over {@link Integer#MAX_VALUE} ticks
+     * @throws IllegalStateException    when Forestry doesn't have a beekeeping mode
+     */
     private EffectResult calculate(final Housing description, final MachineConfig cfg, final RecipeContext ctx) {
         // Preserve frame and board order: capped bonuses depend on the preceding modifiers.
         final List<IBeeModifier> modifiers = new ArrayList<>();
@@ -332,7 +340,7 @@ public class BeeProvider implements PropertyProvider {
                 final ItemId key = ItemId.create(stack.getItem(), stack.getItemDamage(), stack.getTagCompound());
                 amount = products.getOrDefault(key, 0d) * cycles / baseAmount;
             }
-            result.outputMultiplier(i, amount);
+            result.setMultiplier(false, i, amount);
         }
 
         return result;

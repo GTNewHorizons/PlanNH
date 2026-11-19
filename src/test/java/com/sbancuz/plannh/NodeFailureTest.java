@@ -218,8 +218,8 @@ class NodeFailureTest {
                 .rate(0),
             1e-9);
         assertEquals(Pin.TARGET_RATE, config.getTargetKind());
-        assertEquals(0.5, config.inputMultiplier(0, () -> 1d), 1e-6);
-        assertEquals(1.25, config.outputMultiplier(0, () -> 1d), 1e-6);
+        assertEquals(0.5, config.chanceOverride(true, 0), 1e-6);
+        assertEquals(1.25, config.chanceOverride(false, 0), 1e-6);
     }
 
     @Test
@@ -313,8 +313,8 @@ class NodeFailureTest {
             .rates()
             .put(0, 12.5);
         config.setTargetKind(Pin.TARGET_RATE);
-        config.inputMultiplier(0, 0.5);
-        config.outputMultiplier(0, 1.25);
+        config.overrideChance(true, 0, 0.5);
+        config.overrideChance(false, 0, 1.25);
         node.getInputConfigurations()
             .put(
                 0,

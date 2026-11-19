@@ -18,27 +18,27 @@ class EffectEvaluationTest {
     }
 
     @Test
-    void explicitConfigOverridesWinIncludingZero() {
+    void chanceOverridesReplaceTheMultiplierIncludingZero() {
         final MachineProfile profile = MachineProfile.builder("explicit-multipliers")
             .effect((cfg, ctx) -> {
                 final EffectResult result = new EffectResult(10, 0, 1);
-                result.inputMultiplier(0, 2d);
-                result.outputMultiplier(0, 3d);
+                result.setMultiplier(true, 0, 2d);
+                result.setMultiplier(false, 0, 3d);
                 return result;
             })
             .inputMultiplier((_, cfg, ctx, index) -> 10d + index)
             .outputMultiplier((_, cfg, ctx, index) -> 20d + index)
             .build();
         final MachineConfig config = new MachineConfig(profile);
-        config.inputMultiplier(0, 0d);
-        config.outputMultiplier(0, 0d);
+        config.overrideChance(true, 0, 0d);
+        config.overrideChance(false, 0, 0d);
 
         final EffectResult result = config.computeEffect(recipe(2, 2));
 
-        assertEquals(0d, result.inputMultiplier(0));
-        assertEquals(11d, result.inputMultiplier(1));
-        assertEquals(0d, result.outputMultiplier(0));
-        assertEquals(21d, result.outputMultiplier(1));
+        assertEquals(0d, result.multiplier(true, 0));
+        assertEquals(11d, result.multiplier(true, 1));
+        assertEquals(0d, result.multiplier(false, 0));
+        assertEquals(21d, result.multiplier(false, 1));
     }
 
     @Test
@@ -60,9 +60,9 @@ class EffectEvaluationTest {
         final EffectResult newResult = config.computeEffect(recipe(1, 0));
 
         assertEquals(6, oldResult.durationTicks());
-        assertEquals(2d, oldResult.inputMultiplier(0));
+        assertEquals(2d, oldResult.multiplier(true, 0));
         assertEquals(12, newResult.durationTicks());
-        assertEquals(4d, newResult.inputMultiplier(0));
+        assertEquals(4d, newResult.multiplier(true, 0));
     }
 
     private static RecipeContext recipe(final int inputs, final int outputs) {

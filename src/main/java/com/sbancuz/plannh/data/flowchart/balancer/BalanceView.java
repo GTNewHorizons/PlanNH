@@ -113,14 +113,11 @@ public final class BalanceView {
     private static void collectConfigured(final Node node, final Set<PortRef> wired, final boolean input,
         final double count, final EffectResult effect, final List<Boundary> out) {
         final int durTicks = Math.max(1, effect.durationTicks());
-        final int tf = effect.throughputFactor();
         final List<Port<?>> ports = input ? node.getInputs() : node.getOutputs();
         for (int i = 0; i < ports.size(); i++) {
             final Port<?> port = ports.get(i);
             if (wired.contains(new PortRef(node.getId(), i, input))) continue;
-            final double qty = Math.max(0, port.getAmount()) * port.getChance()
-                * (input ? effect.inputMultiplier(i) : effect.outputMultiplier(i))
-                * tf;
+            final double qty = effect.quantity(input, i, port);
             if (qty <= 0) continue;
             final double rate = count * qty * GuiHelper.TICKS_PER_SECOND / (double) durTicks;
             out.add(
