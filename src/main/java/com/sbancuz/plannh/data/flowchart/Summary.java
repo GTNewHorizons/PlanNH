@@ -19,6 +19,7 @@ import com.sbancuz.plannh.data.flowchart.balancer.Note;
 import com.sbancuz.plannh.data.flowchart.balancer.alternatives.Alternatives;
 import com.sbancuz.plannh.data.properties.SummaryProperty;
 import com.sbancuz.plannh.gui.GuiHelper;
+import com.sbancuz.plannh.nei.config.KeybindsConfig.Shortcut;
 import com.sbancuz.plannh.nei.config.SolverConfig;
 
 import lombok.AccessLevel;
@@ -106,8 +107,19 @@ public final class Summary extends GraphData {
             }
         }
 
-        /** A static help row; the string is a localization key the GUI resolves at draw time. */
-        record Text(String text) implements Line<Object> {
+        /**
+         * A help row. {@code text} is a lang key with a {@code %s} for the key name of each shortcut of
+         * {@code shortcuts}.
+         */
+        record Text(String text, List<Shortcut> shortcuts) implements Line<Object> {
+
+            public Text {
+                shortcuts = List.copyOf(shortcuts);
+            }
+
+            public Text(final String text, final Shortcut... shortcuts) {
+                this(text, List.of(shortcuts));
+            }
 
             @Override
             public String displayName() {
@@ -232,9 +244,9 @@ public final class Summary extends GraphData {
                 List.of(
                     new Line.Text("plannh.summary.help.zoom"),
                     new Line.Text("plannh.summary.help.move"),
-                    new Line.Text("plannh.summary.help.nei"),
+                    new Line.Text("plannh.summary.help.nei", Shortcut.RECIPE, Shortcut.USAGE),
                     new Line.Text("plannh.summary.help.add_recipe"),
-                    new Line.Text("plannh.summary.help.port_display"))));
+                    new Line.Text("plannh.summary.help.port_display", Shortcut.PORT_DISPLAY))));
     }
 
     @Override

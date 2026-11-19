@@ -1,5 +1,7 @@
 package com.sbancuz.plannh.nei.config;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.client.gui.GuiScreen;
 
 import org.lwjgl.input.Keyboard;
@@ -56,26 +58,26 @@ public final class KeybindsConfig {
             requiredShift);
     }
 
-    public static String undoName() {
-        return shortcutName(UNDO_KEY, NEIKeyboardUtils.CTRL_HASH);
-    }
+    /** An NEI key binding, with the modifiers that the flowchart requires. */
+    public enum Shortcut {
 
-    public static String redoName() {
-        return shortcutName(REDO_KEY, NEIKeyboardUtils.CTRL_HASH | NEIKeyboardUtils.SHIFT_HASH);
-    }
+        UNDO(UNDO_KEY, NEIKeyboardUtils.CTRL_HASH),
+        REDO(REDO_KEY, NEIKeyboardUtils.CTRL_HASH | NEIKeyboardUtils.SHIFT_HASH),
+        REDO_ALT(REDO_ALT_KEY, NEIKeyboardUtils.CTRL_HASH),
+        PORT_DISPLAY(PORT_DISPLAY_KEY, NEIKeyboardUtils.CTRL_HASH),
+        RECIPE("recipe.recipe", 0),
+        USAGE("recipe.usage", 0);
 
-    public static String redoAltName() {
-        return shortcutName(REDO_ALT_KEY, NEIKeyboardUtils.CTRL_HASH);
-    }
+        private final String ident;
+        private final int modifiers;
 
-    public static String portDisplayName() {
-        return shortcutName(PORT_DISPLAY_KEY, NEIKeyboardUtils.CTRL_HASH);
-    }
+        Shortcut(final String ident, final int modifiers) {
+            this.ident = ident;
+            this.modifiers = modifiers;
+        }
 
-    private static String shortcutName(final String ident, final int modifiers) {
-        final int keyCode = KeyManager.getKeyCode(ident);
-        if (keyCode == Keyboard.KEY_NONE) return "";
-
-        return NEIKeyboardUtils.getKeyName(keyCode, modifiers);
+        public @Nullable String keyName() {
+            return KeyManager.getKeyName(ident, modifiers);
+        }
     }
 }

@@ -1,5 +1,6 @@
 package com.sbancuz.plannh.gui.summary;
 
+import java.util.List;
 import java.util.Locale;
 
 import net.minecraft.util.StatCollector;
@@ -13,6 +14,7 @@ import com.sbancuz.plannh.data.flowchart.Summary.Line;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceResult;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.theme.PlannhThemes;
+import com.sbancuz.plannh.nei.config.KeybindsConfig.Shortcut;
 
 /**
  * The rows of one section as a vertical list of real MUI2 widgets, one per {@link Line}: hover,
@@ -85,12 +87,25 @@ class SummaryBody extends SummaryFlow {
         return switch (line) {
             case Line.Measure<?> measure -> new MeasureRow(measure, rowSuffix(), amountScale(), section, rowsMode);
             case Line.Message message -> new TextRow(IKey.str(message.displayName()), message.note().severity());
-            case Line.Text(String key) -> new TextRow(IKey.lang(key), PlannhThemes.TEXT_SECONDARY, "summary.text");
+            case Line.Text(String key, List<Shortcut> shortcuts) -> new TextRow(
+                IKey.lang(key, () -> keyNames(shortcuts)),
+                PlannhThemes.TEXT_SECONDARY,
+                "summary.text");
             case Line.Heading heading -> new TextRow(IKey.str(heading.displayName()), PlannhThemes.TEXT_MUTED,
                 "summary.heading");
             case Line.Choice choice -> new ChoiceRow(choice, data.getChoiceNotes()).name("summary.choice" );
             case Line.Totals totals -> new TotalsRow(totals, rowsMode).name("summary.totals");
         };
+    }
+
+    private static Object[] keyNames(final List<Shortcut> shortcuts) {
+        final Object[] names = new Object[shortcuts.size()];
+        for (int i = 0; i < names.length; i++) {
+            final String name = shortcuts.get(i)
+                .keyName();
+            names[i] = name == null ? StatCollector.translateToLocal("plannh.summary.help.unbound") : name;
+        }
+        return names;
     }
 
     private String rowSuffix() {
