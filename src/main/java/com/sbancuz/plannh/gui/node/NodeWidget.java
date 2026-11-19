@@ -25,6 +25,7 @@ import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
+import com.sbancuz.plannh.data.flowchart.balancer.Pin;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.common.CloseButtonWidget;
@@ -275,5 +276,16 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
     public BalanceMode balanceMode() {
         return canvas.getGraph()
             .getBalanceMode();
+    }
+
+    /**
+     * Whether this machine's rate targets are in force: Rate is the selected target, and the pins of
+     * {@link #balanceMode} have {@link Pin#TARGET_RATE}.
+     */
+    public boolean isRateTargeted() {
+        final Pin targetKind = data.getMachineConfig()
+            .getTargetKind();
+        return targetKind == Pin.TARGET_RATE && balanceMode().pins()
+            .contains(Pin.TARGET_RATE);
     }
 }

@@ -12,6 +12,7 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 
 import com.sbancuz.plannh.data.flowchart.Graph;
+import com.sbancuz.plannh.data.setting.RateTarget;
 
 /**
  * The shared, mutable state of one solve run - the "threaded" half of the zero-copy pipeline.
@@ -110,28 +111,24 @@ public final class SolveContext {
     }
 
     /**
-     * Says so when a node carries output-rate targets it cannot all hit (parallel outputs share
-     * one extent, so the largest target wins and the rest overproduce).
+     * Add a {@link SolverMessage#OVERSHOOTS_TARGET} note for each rate target of machine {@code m} with a rate below
+     * the rate of the chosen extent on that port. Every port of a machine shares one extent, so only the largest target
+     * is met exactly.
      */
     private void noteOvershotTargets(final int m, final double chosenExtent) {
         final ModelData.Machine md = model.machines.get(m);
         final double tieRel = heuristics.numerics().tieRel;
-        for (final Map.Entry<Integer, Double> t : md.node.getMachineConfig()
+        final List<RateTarget.Live> targets = md.node.getMachineConfig()
             .getRates()
-            .liveTargets(md.outQty)
-            .entrySet()) {
-            final double actual = chosenExtent * md.outQty[t.getKey()];
-            if (actual > t.getValue() * (1 + tieRel)) {
-                notes.add(
-                    new Note(
-                        SolverMessage.OVERSHOOTS_TARGET,
-                        md.node.getMachineName(),
-                        md.node.getOutputs()
-                            .get(t.getKey())
-                            .getDisplayName(),
-                        actual,
-                        t.getValue()));
-            }
+            .liveTargets(md.outQty);
+        for (final RateTarget.Live target : targets) {
+            final double actual = chosenExtent * target.quantity();
+            if (actual <= target.rate() * (1 + tieRel)) continue;
+            final String portName = md.node.getOutputs()
+                .get(target.output())
+                .getDisplayName();
+            notes.add(
+                new Note(SolverMessage.OVERSHOOTS_TARGET, md.node.getMachineName(), portName, actual, target.rate()));
         }
     }
 
