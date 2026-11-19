@@ -39,8 +39,7 @@ class SerializerPersistenceTest {
             .setTargetKind(Pin.FIXED_COPIES);
         node.getMachineConfig()
             .getRates()
-            .rates()
-            .put(0, 12.5);
+            .setRate(0, 12.5);
         final Graph graph = new Graph("unavailable recipe");
         graph.addNode(node);
 

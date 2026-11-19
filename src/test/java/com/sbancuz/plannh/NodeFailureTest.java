@@ -310,8 +310,7 @@ class NodeFailureTest {
         config.getCopies()
             .setCopies(4);
         config.getRates()
-            .rates()
-            .put(0, 12.5);
+            .setRate(0, 12.5);
         config.setTargetKind(Pin.TARGET_RATE);
         config.overrideChance(true, 0, 0.5);
         config.overrideChance(false, 0, 1.25);

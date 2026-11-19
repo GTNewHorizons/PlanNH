@@ -11,7 +11,7 @@ import javax.annotation.Nullable;
 import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.flowchart.balancer.Pin;
 import com.sbancuz.plannh.data.setting.CopyCountTarget;
-import com.sbancuz.plannh.data.setting.OutputRateTarget;
+import com.sbancuz.plannh.data.setting.RateTarget;
 import com.sbancuz.plannh.data.setting.SettingDef;
 import com.sbancuz.plannh.data.setting.Settings;
 
@@ -29,7 +29,7 @@ public class MachineConfig {
     private String profileId;
 
     private final CopyCountTarget copies = new CopyCountTarget();
-    private final OutputRateTarget rates = new OutputRateTarget();
+    private final RateTarget rates = new RateTarget();
     private Pin targetKind = Pin.NONE;
     @Getter(AccessLevel.NONE)
     private final Map<Integer, Double> inputChance = new HashMap<>();
@@ -54,8 +54,7 @@ public class MachineConfig {
         profileId = source.profileId;
         settings.putAll(source.settings);
         copies.setCopies(source.copies.copies());
-        rates.rates()
-            .putAll(source.rates.rates());
+        rates.copyFrom(source.rates);
         targetKind = source.targetKind;
         inputChance.putAll(source.inputChance);
         outputChance.putAll(source.outputChance);
@@ -128,7 +127,6 @@ public class MachineConfig {
         targetKind = kind;
     }
 
-    /** The user's chance for a port, as a fraction where 1 is every craft. Null when the profile's chance applies. */
     public @Nullable Double chanceOverride(final boolean input, final int index) {
         return (input ? inputChance : outputChance).get(index);
     }

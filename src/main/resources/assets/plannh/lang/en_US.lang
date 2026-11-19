@@ -265,8 +265,9 @@ plannh.gui.node.throughput.shift_hint=Hold §f§l[LSHIFT]§7 for every unit and 
 ## The rate under a port, and the rows that take it apart
 plannh.gui.node.port.rate=Rate
 plannh.gui.node.port.per_unit=Per unit
-plannh.gui.node.port.consumption=Input consumption
-plannh.gui.node.port.productivity=Output productivity
+plannh.gui.node.port.chance=Chance
+plannh.gui.node.port.percent=%%
+plannh.gui.node.port.target=Target
 plannh.gui.node.port.shift_hint=Hold §f§l[LSHIFT]§7 for the rate in every unit
 plannh.gui.node.port.configure_hint=Right-Click to Configure
 
@@ -283,7 +284,7 @@ plannh.gui.node.target.rows.show_hint=Click to show the rows again
 plannh.gui.node.target.none_hint=No target selected, so the balance picks this machine's count
 plannh.gui.node.target.copies=Copies
 plannh.gui.node.target.solved=The balance asks for
-plannh.gui.node.target.no_outputs=This recipe names no output, so there is no rate to ask for
+plannh.gui.node.target.rates.hint=Right-click an output to ask for a rate
 plannh.gui.node.target.unsupported=%s honours no target; switch the chart's balance mode to pin machines
 plannh.gui.node.target.extent=Extent pins are handed to a solve by the caller, not set on a machine
 
@@ -333,7 +334,7 @@ plannh.solver.validation_failed=Solution failed independent validation: %s
 ## Wiring diagnostics
 plannh.solver.wiring_import='%s' imports %s externally, but is produced at '%s' - missing an edge?
 plannh.solver.wiring_unlinked='%s' sources %s externally, but an unlinked part of the chart produces it at '%s' - missing an edge?
-plannh.solver.overshoots_target='%s' overshoots its %s target: %s/s produced for a target of %s/s, because another output on the same machine asks for more
+plannh.solver.overshoots_target='%s' overshoots its %s target: %s/s for a target of %s/s, because another target on the same machine asks for more
 ## Alternatives search
 plannh.solver.showing_closest=Showing the closest %d of %d workable answers
 plannh.solver.stopped_early=Stopped after %d combinations, so there may be more than the ones listed (%d not tried)
