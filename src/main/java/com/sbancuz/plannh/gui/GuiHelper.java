@@ -55,6 +55,44 @@ public final class GuiHelper {
         return trimTrailingZeros(String.format(Locale.ROOT, "%.5f", rate));
     }
 
+    /**
+     * A rate short enough for the count of an 18 pixel slot: at most four characters below 999.5E, and no unit.
+     *
+     * <pre>
+     *     0.004  ->  <.01
+     *     0.125  ->  .13
+     *     12.5   ->  12.5
+     *     125    ->  125
+     *     1250   ->  1.3k
+     *     12500  ->  13k
+     * </pre>
+     */
+    public static String formatSlotRate(final double rate) {
+        final double SMALLEST = 0.005;
+        final String SUFFIXES = "kMGTPE";
+        if (rate <= 0) return "0";
+        if (rate < SMALLEST) return "<.01";
+
+        // below 1, drop the leading zero. `PortSlot.countScale()` returns a larger scale for three characters than four
+        if (rate < 1) {
+            final String fraction = trimTrailingZeros(String.format(Locale.ROOT, "%.2f", rate));
+            return fraction.startsWith("0") ? fraction.substring(1) : fraction;
+        }
+        if (rate < 100) return trimTrailingZeros(String.format(Locale.ROOT, "%.1f", rate));
+        if (rate < 999.5) return String.format(Locale.ROOT, "%.0f", rate);
+
+        // divide by 1000 until the value is under 999.5, so the rounded value has at most three digits
+        double scaled = rate;
+        int suffix = -1;
+        while (scaled >= 999.5 && suffix < SUFFIXES.length() - 1) {
+            scaled /= 1000;
+            suffix++;
+        }
+        final String digits = scaled < 9.95 ? trimTrailingZeros(String.format(Locale.ROOT, "%.1f", scaled))
+            : String.format(Locale.ROOT, "%.0f", scaled);
+        return digits + SUFFIXES.charAt(suffix);
+    }
+
     /** A unit of time, and how many seconds one of it holds. */
     public enum RateUnit {
 

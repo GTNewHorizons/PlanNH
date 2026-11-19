@@ -13,6 +13,8 @@ import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.cleanroommc.modularui.widgets.menu.Menu;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
+import com.sbancuz.plannh.data.flowchart.Plan;
+import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.gui.summary.SummaryWidget;
 import com.sbancuz.plannh.gui.theme.PlannhThemes;
 import com.sbancuz.plannh.nei.config.AppearanceConfig;
@@ -166,6 +168,13 @@ public class FlowchartScreen extends ModularScreen {
         if (undo || KeybindsConfig.isRedo(keyCode)) {
             if (undo) canvas.undoGraph();
             else canvas.redoGraph();
+            return true;
+        }
+        if (KeybindsConfig.isPortDisplayToggle(keyCode)) {
+            final Summary summary = Plan.getInstance()
+                .getSummary();
+            final boolean showsRecipe = summary.getPortDisplay() == Summary.PortDisplay.RECIPE;
+            summary.setPortDisplay(showsRecipe ? Summary.PortDisplay.RATE : Summary.PortDisplay.RECIPE);
             return true;
         }
         return super.onKeyPressed(typedChar, keyCode);

@@ -8,9 +8,11 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import com.sbancuz.plannh.gui.node.RecipeWidgetAccessor;
+import com.sbancuz.plannh.gui.node.StackDrawer;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.HandlerInfo;
@@ -32,6 +34,9 @@ public abstract class RecipeWidgetMixin implements RecipeWidgetAccessor {
     @Unique
     private List<PositionedStack> plannh$outputs;
 
+    @Unique
+    private StackDrawer plannh$stackDrawer; // noqa: NAR130
+
     @Inject(method = "getCyclingStacks", at = @At("HEAD"), cancellable = true)
     private void plannh$getInputs(CallbackInfoReturnable<List<PositionedStack>> cir) {
         if (plannh$inputs != null) {
@@ -42,6 +47,13 @@ public abstract class RecipeWidgetMixin implements RecipeWidgetAccessor {
     @Inject(method = "getOutputs", at = @At("HEAD"), cancellable = true)
     private void plannh$getOutputs(CallbackInfoReturnable<List<PositionedStack>> cir) {
         if (plannh$outputs != null) cir.setReturnValue(plannh$outputs);
+    }
+
+    /** Draw the stack with {@code plannh$stackDrawer}, when the drawer is set and draws the stack. */
+    @Inject(method = "drawItem", at = @At("HEAD"), cancellable = true)
+    private void plannh$drawItem(PositionedStack stack, int x, int y, int shift, boolean input, // noqa: NAR130, NAR131
+        CallbackInfo ci) {
+        if (plannh$stackDrawer != null && plannh$stackDrawer.drawStack(stack)) ci.cancel();
     }
 
     @Override
@@ -62,5 +74,10 @@ public abstract class RecipeWidgetMixin implements RecipeWidgetAccessor {
     @Override
     public void plannh$setOutputs(List<PositionedStack> outputs) {
         plannh$outputs = outputs;
+    }
+
+    @Override
+    public void plannh$setStackDrawer(StackDrawer drawer) {
+        plannh$stackDrawer = drawer;
     }
 }
