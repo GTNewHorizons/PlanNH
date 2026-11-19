@@ -27,7 +27,7 @@ import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 import com.sbancuz.plannh.gui.theme.PlannhThemes;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
-import com.sbancuz.plannh.nei.config.KeybindsConfig;
+import com.sbancuz.plannh.nei.config.KeybindsConfig.Shortcut;
 
 /** The graph controls that sit above a {@link CanvasWidget}. */
 public final class FlowchartToolbar extends Flow {
@@ -140,6 +140,7 @@ public final class FlowchartToolbar extends Flow {
             .tooltipAutoUpdate(true);
     }
 
+    /** The undo and redo buttons, with each NEI binding of a button that has a key in the button's tooltip. */
     private static Flow historyGroup(final CanvasWidget canvas) {
         return Flow.row()
             .name("screen.toolbar.history")
@@ -147,18 +148,18 @@ public final class FlowchartToolbar extends Flow {
             .childPadding(2)
             .child(leftButton("edit.undo", GuiIcon.UNDO, canvas::undoGraph).tooltipBuilder(tooltip -> {
                 tooltip.addLine(IKey.lang("plannh.gui.toolbar.undo.title"));
-                final String binding = KeybindsConfig.undoName();
+                final String binding = Shortcut.UNDO.keyName();
                 if (binding != null) tooltip.addLine(
                     IKey.lang("plannh.gui.toolbar.shortcut", binding)
                         .style(TooltipTheme.Role.TUNABLE.code()));
             }))
             .child(leftButton("edit.redo", GuiIcon.REDO, canvas::redoGraph).tooltipBuilder(tooltip -> {
                 tooltip.addLine(IKey.lang("plannh.gui.toolbar.redo.title"));
-                final String binding = KeybindsConfig.redoName();
+                final String binding = Shortcut.REDO.keyName();
                 if (binding != null) tooltip.addLine(
                     IKey.lang("plannh.gui.toolbar.shortcut", binding)
                         .style(TooltipTheme.Role.TUNABLE.code()));
-                final String alternate = KeybindsConfig.redoAltName();
+                final String alternate = Shortcut.REDO_ALT.keyName();
                 if (alternate != null) tooltip.addLine(
                     IKey.lang("plannh.gui.toolbar.alternate", alternate)
                         .style(TooltipTheme.Role.TUNABLE.code()));
@@ -298,7 +299,7 @@ public final class FlowchartToolbar extends Flow {
                         .get();
                     out.marker(active == display ? ">" : " ", name, active == display);
                 }
-                final String binding = KeybindsConfig.portDisplayName();
+                final String binding = Shortcut.PORT_DISPLAY.keyName();
                 if (binding != null) out.separator()
                     .row(
                         IKey.lang("plannh.gui.toolbar.shortcut", binding)
