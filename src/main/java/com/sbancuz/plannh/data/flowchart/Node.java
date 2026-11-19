@@ -50,11 +50,7 @@ public class Node extends GraphData {
     @Setter
     private transient boolean targetOpen = true;
 
-    /** Whether the throughput rows are showing. Transient, like {@link #targetOpen}. */
-    @Setter
-    private transient boolean throughputOpen = true;
-
-    /** Whether the properties rows are showing. Transient, like {@link #throughputOpen}. */
+    /** Whether the properties fold is open. Transient, like {@link #targetOpen}. */
     @Setter
     private transient boolean propertiesOpen = true;
 
