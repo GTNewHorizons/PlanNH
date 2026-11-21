@@ -365,8 +365,7 @@ class NodeFailureTest {
             new Class<?>[] { IRecipeHandler.class },
             (proxy, method, args) -> switch (method.getName()) {
             case "getRecipeName" -> "inputless";
-            case "getIngredientStacks", "getOtherStacks" -> Collections.emptyList();
-            case "getResultStack" -> null;
+            case "getIngredientStacks", "getOtherStacks", "getResultStacks" -> Collections.emptyList();
             case "numRecipes" -> 1;
             default -> defaultValue(method.getReturnType());
             });

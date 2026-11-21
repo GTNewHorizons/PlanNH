@@ -51,28 +51,21 @@ public final class KeybindsConfig {
     }
 
     public static String undoName() {
-        return shortcutName(UNDO_KEY, "Ctrl");
+        return shortcutName(UNDO_KEY, NEIKeyboardUtils.CTRL_HASH);
     }
 
     public static String redoName() {
-        return shortcutName(REDO_KEY, "Ctrl", "Shift");
+        return shortcutName(REDO_KEY, NEIKeyboardUtils.CTRL_HASH | NEIKeyboardUtils.SHIFT_HASH);
     }
 
     public static String redoAltName() {
-        return shortcutName(REDO_ALT_KEY, "Ctrl");
+        return shortcutName(REDO_ALT_KEY, NEIKeyboardUtils.CTRL_HASH);
     }
 
-    private static String shortcutName(final String ident, final String... modifiers) {
+    private static String shortcutName(final String ident, final int modifiers) {
         final int keyCode = KeyManager.getKeyCode(ident);
-        if (keyCode == Keyboard.KEY_NONE) return null;
+        if (keyCode == Keyboard.KEY_NONE) return "";
 
-        final StringBuilder name = new StringBuilder();
-        for (final String modifier : modifiers) {
-            if (name.length() > 0) name.append(" + ");
-            name.append(modifier);
-        }
-        if (name.length() > 0) name.append(" + ");
-        name.append(NEIKeyboardUtils.getKeyName(keyCode));
-        return name.toString();
+        return NEIKeyboardUtils.getKeyName(keyCode, modifiers);
     }
 }
