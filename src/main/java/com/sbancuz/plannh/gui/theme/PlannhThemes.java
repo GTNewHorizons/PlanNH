@@ -62,11 +62,13 @@ public final class PlannhThemes {
     // ── Panels: summary, context menu ──
     public static final WidgetThemeKey<WidgetTheme>
         PANEL        = ROOT.createSubKey("panel"),
+        PANEL_OPAQUE = PANEL.createSubKey("panelOpaque"),
         MENU_ITEM    = PANEL.createSubKey("menuItem"),
         PANEL_HEADER = ROOT.createSubKey("panelHeader"),
         PANEL_RULE   = ROOT.createSubKey("panelRule"),
         SEPARATOR    = ROOT.createSubKey("separator"),
         ROW          = ROOT.createSubKey("row");
+    public static final WidgetThemeKey<WidgetTheme> CHECKLIST_ROW = ROW.createSubKey("checklistRow");
 
     // ── Cards: node, note, group ──
     public static final WidgetThemeKey<WidgetTheme>
@@ -155,9 +157,11 @@ public final class PlannhThemes {
         // Text roles on panels
         THEME.textColor(TEXT_SECONDARY, PlannhColors.TEXT_SECONDARY.getColor())
             .textColor(TEXT_MUTED, PlannhColors.TEXT_MUTED.getColor())
+            .iconColor(TEXT_MUTED, PlannhColors.TEXT_MUTED.getColor())
             .textColor(TEXT_INFO, PlannhColors.INFO.getColor())
             .textColor(TEXT_WARNING, PlannhColors.WARNING.getColor())
             .textColor(TEXT_SELECTED, PlannhColors.SELECTED.getColor())
+            .iconColor(TEXT_SELECTED, PlannhColors.SELECTED.getColor())
             .textColor(TEXT_NEGATIVE, PlannhColors.NEGATIVE.getColor());
 
         // Panels: one fill and frame; menu items and rows add the hover tint
@@ -165,7 +169,9 @@ public final class PlannhThemes {
         final IDrawable panelFrame = frame(PlannhColors.PANEL_BORDER.getColor(), 1);
         final IDrawable hoverFill = fill(PlannhColors.HOVER.getColor());
         final IDrawable panelBox = new DrawableStack(panelFill, panelFrame);
+        final IDrawable opaqueFill = fill(Color.withAlpha(PlannhColors.PANEL_BG.getColor(), 0xFF));
         THEME.background(PANEL, panelBox)
+            .background(PANEL_OPAQUE, new DrawableStack(opaqueFill, panelFrame))
             .background(PANEL_HEADER, fill(PlannhColors.PANEL_BG_RAISED.getColor()))
             .background(PANEL_RULE, fill(PlannhColors.PANEL_BORDER.getColor()))
             .background(SEPARATOR, fill(PlannhColors.SEPARATOR.getColor()));
@@ -175,6 +181,12 @@ public final class PlannhThemes {
             .hoverBackground(MENU_ITEM, new DrawableStack(panelFill, hoverFill, panelFrame))
             .background(ROW, IDrawable.EMPTY)
             .hoverBackground(ROW, hoverFill);
+
+        // Checklist rows: secondary text and positive ticks
+        THEME.background(CHECKLIST_ROW, IDrawable.EMPTY)
+            .hoverBackground(CHECKLIST_ROW, hoverFill)
+            .textColor(CHECKLIST_ROW, PlannhColors.TEXT_SECONDARY.getColor())
+            .iconColor(CHECKLIST_ROW, PlannhColors.POSITIVE.getColor());
 
         // Summary sections: a darkened bar in the role color, with the grip and title in it
         for (final Summary.Section section : Summary.Section.VALUES) {

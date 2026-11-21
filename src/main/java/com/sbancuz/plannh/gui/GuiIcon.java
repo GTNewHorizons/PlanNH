@@ -22,7 +22,15 @@ public enum GuiIcon implements IDrawable {
     MACHINE("cpu"),
     COVER_CHILDREN("fit-children", 10),
     DELETE("delete", 8),
-    FLOWCHART("flowchart", 16);
+    FLOWCHART("flowchart", 16),
+    FOLDED("chevron-down"),
+    UNFOLDED("chevron-up"),
+    CYCLES("repeat"),
+    THROUGHPUT("hourglass"),
+    SECTIONS("eye"),
+    CHECKBOX("checkbox"),
+    CHECKBOX_ON("checkbox-on"),
+    CHECK("check");
 
     private final UITexture texture;
     private final int size;

@@ -81,7 +81,9 @@ public class FlowchartScreen extends ModularScreen {
                 .childPadding(FlowchartBounds.TOOLBAR_GAP)
                 .child(new FlowchartToolbar(canvas))
                 .child(canvas));
-        panel.child(new SummaryWidget(canvas));
+        final SummaryWidget summary = new SummaryWidget(canvas);
+        panel.child(summary);
+        panel.child(summary.getSectionsMenu());
         panel.child(contextMenu);
         panel.child(messages);
         return new FlowchartScreen(panel, canvas, messages);

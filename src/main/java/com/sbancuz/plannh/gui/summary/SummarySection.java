@@ -8,9 +8,9 @@ import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.gui.FlowchartList;
 
 /**
- * One section of the summary panel: the accent-bar title row with its fold toggle, plus the row
- * body. The whole section hides itself when it has nothing to show; the body alone hides when the
- * section is folded away, so the header stays clickable.
+ * One section of the summary panel: the accent-bar title row with a fold toggle, plus the row body. The whole section
+ * is hidden when the section has nothing to show, or when the user hid the section from the sections menu. The body
+ * alone is hidden when the section is folded away, so the header stays clickable.
  */
 class SummarySection extends ParentWidget<SummarySection> {
 
@@ -28,7 +28,7 @@ class SummarySection extends ParentWidget<SummarySection> {
             "summary.section." + section.name()
                 .toLowerCase(Locale.ROOT));
         fullWidth().coverChildrenHeight()
-            .setEnabledIf(_ -> data.lineCount(section) > 0);
+            .setEnabledIf(_ -> !data.isSectionHidden(section) && data.lineCount(section) > 0);
 
         child(
             SummaryFlow.col()

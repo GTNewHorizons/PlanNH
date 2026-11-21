@@ -10,7 +10,7 @@ https://raw.githubusercontent.com/lucide-icons/lucide/53fab88ff9d1b48f4704b5b5b5
 PlanNH asset: textures/gui/flowchart.png
 textures/gui/flowchart.svg is PlanNH's pixel-art adaptation of the upstream
 network icon. Its three-node layout is redrawn on a native 16x16 grid with
-square nodes, black outlines, and a five-shade grayscale palette matching NEI's
+square nodes, black outlines, and a six-shade grayscale palette matching NEI's
 toolbar sprites. Node faces have upper-left highlights and lower-right shadows.
 Connectors remain continuous, and alpha is binary with no antialiased edges.
 
