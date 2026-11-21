@@ -24,7 +24,6 @@ import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.properties.ResourceProperty;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.IngredientColors;
-import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.mixins.PositionedStackAccessor;
 
 import codechicken.nei.PositionedStack;
@@ -51,9 +50,6 @@ public final class RecipePropertyAPI {
             value -> 31 * value.stack.getItem()
                 .hashCode() + value.stack.getItemDamage())
         .colorProvider(value -> IngredientColors.itemColor(value.stack))
-        .pinInputColor(PlannhColors.PIN_INPUT.getColor())
-        .pinOutputColor(PlannhColors.PIN_OUTPUT.getColor())
-        .arrowColor(PlannhColors.ARROW_ITEM.getColor())
         .build();
 
     public static final ResourceProperty<LongFluidStack> FLUID = ResourceProperty
@@ -72,9 +68,6 @@ public final class RecipePropertyAPI {
             value -> value.stack.getFluid()
                 .hashCode())
         .colorProvider(value -> IngredientColors.fluidColor(value.stack))
-        .pinInputColor(PlannhColors.PIN_FLUID_IN.getColor())
-        .pinOutputColor(PlannhColors.PIN_FLUID_OUT.getColor())
-        .arrowColor(PlannhColors.ARROW_FLUID.getColor())
         .build();
 
     private static boolean itemPortsMatch(final Port<LongItemStack> pa, final Port<LongItemStack> pb) {

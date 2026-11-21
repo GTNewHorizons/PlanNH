@@ -51,6 +51,7 @@ import com.sbancuz.plannh.gui.layout.LayoutStrategy;
 import com.sbancuz.plannh.gui.node.NodeWidget;
 import com.sbancuz.plannh.gui.node.PortWidget;
 import com.sbancuz.plannh.gui.note.NoteWidget;
+import com.sbancuz.plannh.gui.theme.PlannhThemes;
 import com.sbancuz.plannh.nei.config.AppearanceConfig;
 import com.sbancuz.plannh.nei.config.DebugConfig;
 
@@ -149,6 +150,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         fullWidth();
         expanded();
         name("canvas");
+        widgetTheme(PlannhThemes.CANVAS);
 
         contextMenu = menu;
         rebuildWidgets();
@@ -414,16 +416,17 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         super.draw(context, widgetTheme);
         effect.execute(x, y, width, height);
         if (AppearanceConfig.showGrid()) {
-            drawGrid(width, height);
+            final int gridColor = widgetTheme.getTheme()
+                .getColor();
+            drawGrid(width, height, gridColor);
         }
     }
 
-    private void drawGrid(final int w, final int h) {
+    private void drawGrid(final int w, final int h, final int gridColor) {
         final float spacing = GRID_SIZE * graph.getZoom();
         if (spacing < MIN_GRID_SPACING) return;
 
-        final int gridColor = PlannhColors.GRID_LINE.getColor();
-        final int majorColor = PlannhColors.GRID_MAJOR.getColor();
+        final int majorColor = PlannhColors.gridMajor(gridColor);
 
         final int firstKX = (int) Math.ceil(-graph.getPanX() / spacing);
         final float startX = graph.getPanX() + firstKX * spacing;

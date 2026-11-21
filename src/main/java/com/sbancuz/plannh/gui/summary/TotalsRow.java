@@ -6,13 +6,12 @@ import net.minecraft.util.StatCollector;
 
 import com.cleanroommc.modularui.api.GuiAxis;
 import com.cleanroommc.modularui.api.drawable.IKey;
-import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.gui.GuiHelper;
-import com.sbancuz.plannh.gui.PlannhColors;
+import com.sbancuz.plannh.gui.theme.PlannhThemes;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
@@ -32,10 +31,10 @@ final class TotalsRow extends SummaryFlow {
             : IKey.lang("plannh.summary.totals.cycles", ops, totals.durationTicks(), sec);
         fullWidth().coverChildrenHeight(SummaryBody.LINE_H)
             .paddingLeft(SummaryBody.TEXT_X)
-            .hoverBackground(new Rectangle().color(PlannhColors.SUMMARY_ROW_HOVER.getColor()))
+            .widgetTheme(PlannhThemes.ROW)
             .child(
                 new TextWidget<>(text).name("summary.totals.text")
-                    .color(PlannhColors.ACCENT_BLUE.getColor())
+                    .widgetTheme(PlannhThemes.TEXT_INFO)
                     .textAlign(Alignment.CenterLeft)
                     .fullWidth())
             .tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE)

@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
+import com.cleanroommc.modularui.drawable.DynamicDrawable;
 import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.utils.Alignment;
@@ -21,6 +22,7 @@ import com.sbancuz.plannh.gui.common.FlowchartFlow;
 import com.sbancuz.plannh.gui.common.FlowchartTextWidget;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.common.IFlowchartDraggable;
+import com.sbancuz.plannh.gui.theme.PlannhThemes;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 
 class ThroughputFold extends NodeFold {
@@ -137,7 +139,7 @@ class ThroughputFold extends NodeFold {
                         new FlowchartTextWidget(IKey.str(port.getDisplayName()), node).textAlign(Alignment.CenterLeft)))
             .child(
                 new FlowchartTextWidget(IKey.str(PortWidget.rateText(port, perCycle, duration, unit)), node)
-                    .color(input ? PlannhColors.ACCENT_RED2.getColor() : PlannhColors.ACCENT_GREEN3.getColor())
+                    .widgetTheme(input ? PlannhThemes.CARD_INPUT : PlannhThemes.CARD_OUTPUT)
                     .widthRel(1 - LABEL_RATIO)
                     .textAlign(Alignment.CenterRight));
     }
@@ -176,9 +178,10 @@ class ThroughputFold extends NodeFold {
             fullHeight();
 
             background(
-                new Rectangle().color(port.getPinColor(input)),
-                new Rectangle().hollow()
-                    .color(PlannhColors.SUMMARY_BG.getColor()));
+                new DynamicDrawable(() -> new Rectangle().color(port.getPinColor(input))),
+                new DynamicDrawable(
+                    () -> new Rectangle().hollow()
+                        .color(PlannhColors.PANEL_BG.getColor())));
         }
 
         @Override

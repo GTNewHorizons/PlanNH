@@ -13,7 +13,6 @@ import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.screen.RichTooltip;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.properties.ResourceProperty;
-import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 
 import codechicken.nei.PositionedStack;
@@ -71,9 +70,6 @@ public final class MagicResources {
             .connectionChecker((a, b) -> Objects.equals(a.getValue().id, b.getValue().id))
             .hashCodeExtractor(value -> Objects.hashCode(value.id))
             .colorProvider(value -> value.color & 0xFFFFFF)
-            .pinInputColor(PlannhColors.PIN_INPUT.getColor())
-            .pinOutputColor(PlannhColors.PIN_OUTPUT.getColor())
-            .arrowColor(PlannhColors.ARROW_ITEM.getColor())
             .tooltip(tooltip)
             .build();
     }
