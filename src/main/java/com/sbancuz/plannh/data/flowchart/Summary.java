@@ -158,6 +158,9 @@ public final class Summary extends GraphData {
      */
     private int collapsedSummaryFolds = 0;
 
+    /** Sections the user took out of this chart's panel, one bit per {@link Section} ordinal. */
+    private int hiddenSummarySections = 0;
+
     @Getter
     @Nullable
     @Accessors(fluent = true)
@@ -300,6 +303,18 @@ public final class Summary extends GraphData {
         final int bit = 1 << section.ordinal();
         if (folded) collapsedSummaryFolds |= bit;
         else collapsedSummaryFolds &= ~bit;
+    }
+
+    /** Whether the user took the section out of this chart's panel. */
+    public boolean isSectionHidden(final Section section) {
+        return (hiddenSummarySections & (1 << section.ordinal())) != 0;
+    }
+
+    /** Shows or hides the section in this chart's panel. Pure UI state, with no version bump. */
+    public void setSectionHidden(final Section section, final boolean hidden) {
+        final int bit = 1 << section.ordinal();
+        if (hidden) hiddenSummarySections |= bit;
+        else hiddenSummarySections &= ~bit;
     }
 
     /**

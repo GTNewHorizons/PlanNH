@@ -4,9 +4,14 @@ import java.util.stream.Collectors;
 
 import org.jetbrains.annotations.Nullable;
 
+import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.IDraggable;
+import com.cleanroommc.modularui.api.widget.IGuiAction;
 import com.cleanroommc.modularui.api.widget.IWidget;
+import com.cleanroommc.modularui.drawable.ColorType;
+import com.cleanroommc.modularui.drawable.DynamicDrawable;
+import com.cleanroommc.modularui.drawable.UITexture;
 import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.utils.Alignment;
@@ -18,6 +23,9 @@ import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.CycleButtonWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
+import com.cleanroommc.modularui.widgets.layout.Flow;
+import com.cleanroommc.modularui.widgets.menu.Menu;
+import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.GraphData;
 import com.sbancuz.plannh.data.flowchart.Plan;
@@ -25,10 +33,13 @@ import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.FlowchartList;
 import com.sbancuz.plannh.gui.GuiHelper;
+import com.sbancuz.plannh.gui.GuiIcon;
 import com.sbancuz.plannh.gui.drawable.FilterOff;
 import com.sbancuz.plannh.gui.theme.PlannhThemes;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
+
+import lombok.Getter;
 
 /**
  * The summary HUD: a draggable, screen-fixed panel that reads the global {@link Summary} from
@@ -44,11 +55,19 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
     private static final int SCROLLBAR_GAP = 4;
     private static final int MIN_VIEWPORT_H = 45;
     private static final int PANEL_CHROME = SummaryHeader.HEADER_H + 1 + SECTION_GAP * 4;
+    private static final int MENU_WIDTH = 110;
+    /** The gap between the sections button and the menu under the button. */
+    private static final int MENU_DROP = 1;
 
     protected final CanvasWidget canvas;
     protected final Summary data;
 
     private final FlowchartList sectionsList;
+    private final ButtonWidget<?> sectionsButton;
+    // the screen adds the menu after this widget, so the menu draws over the sections
+    @Getter
+    private final Menu<?> sectionsMenu;
+    private boolean sectionsMenuOpen;
     private boolean moving = false;
     private int dragStartMouseX, dragStartMouseY;
     private int dragStartX, dragStartY;
@@ -82,6 +101,14 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
             data.setSectionOrder(order);
         });
 
+        sectionsButton = sectionsButton();
+        sectionsMenu = sectionsMenu();
+
+        listenGuiAction((IGuiAction.MousePressed) mouseButton -> {
+            if (!sectionsMenu.isBelowMouse() && !sectionsButton.isBelowMouse()) sectionsMenuOpen = false;
+            return false;
+        });
+
         for (final int ordinal : data.getSectionOrder()) {
             final Summary.Section section = Summary.Section.VALUES[ordinal];
             sectionsList.child(new SummarySection(this, section, sectionsList).marginBottom(SECTION_GAP));
@@ -103,6 +130,7 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
                         .fullWidth()
                         .height(SummaryHeader.HEADER_H)
                         .paddingLeft(TITLE_INSET_X)
+                        .paddingRight(SCROLLBAR_GAP)
                         .childPadding(PADDING)
                         .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
                         .widgetTheme(PlannhThemes.PANEL_HEADER)
@@ -135,6 +163,7 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
                                 .child(modeToggle())
                                 .child(rateToggle())
                                 .child(scopeClearButton())
+                                .child(sectionsButton)
                                 .child(SummaryHeader.foldToggle(data, Summary.Section.ALL))))
                 .child(
                     new Widget<>().name("summary.header.rule")
@@ -147,9 +176,9 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
     private static CycleButtonWidget rateToggle() {
         final Summary summary = Plan.getInstance()
             .getSummary();
-        final CycleButtonWidget toggle = new CycleButtonWidget().name("summary.rate")
+        final CycleButtonWidget toggle = SummaryHeader.headerButton(new CycleButtonWidget())
+            .name("summary.rate")
             .stateCount(GuiHelper.RateUnit.VALUES.length)
-            .size(SummaryHeader.HEADER_H, SummaryHeader.HEADER_H)
             .tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE)
             .tooltipBuilder(tooltip -> {
                 final TooltipBuilder out = TooltipBuilder.create(tooltip)
@@ -180,9 +209,13 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
     private CycleButtonWidget modeToggle() {
         final Summary summary = Plan.getInstance()
             .getSummary();
-        return new CycleButtonWidget().name("summary.mode")
+        final IDrawable cycles = GuiIcon.CYCLES.asIcon()
+            .size(SummaryHeader.ICON_SIZE);
+        final IDrawable throughput = GuiIcon.THROUGHPUT.asIcon()
+            .size(SummaryHeader.ICON_SIZE);
+        return SummaryHeader.headerButton(new CycleButtonWidget())
+            .name("summary.mode")
             .stateCount(Summary.Mode.values().length)
-            .size(SummaryHeader.HEADER_H, SummaryHeader.HEADER_H)
             .tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE)
             .tooltipBuilder(
                 tooltip -> TooltipBuilder.create(tooltip)
@@ -210,16 +243,16 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
                 summary.setMode(val);
                 summary.recompute(canvas.getGraph());
             }))
-            .stateOverlay(Summary.Mode.CYCLES, IKey.lang("plannh.summary.mode.cycles.short"))
-            .stateOverlay(Summary.Mode.THROUGHPUT, IKey.lang("plannh.summary.mode.throughput.short"));
+            .stateOverlay(Summary.Mode.CYCLES, cycles)
+            .stateOverlay(Summary.Mode.THROUGHPUT, throughput);
     }
 
     private ButtonWidget<?> scopeClearButton() {
-        return new ButtonWidget<>().name("summary.scope.clear")
-            .size(SummaryHeader.HEADER_H, SummaryHeader.HEADER_H)
+        return SummaryHeader.headerButton(new ButtonWidget<>())
+            .name("summary.scope.clear")
             .overlay(
                 new FilterOff().asIcon()
-                    .size(12))
+                    .size(SummaryHeader.ICON_SIZE))
             .tooltipBuilder(
                 tooltip -> TooltipBuilder.create(tooltip)
                     .langRow("plannh.summary.scope.clear")
@@ -232,6 +265,77 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
                 if (mouseButton == 0) canvas.getGraph()
                     .allData()
                     .forEach(value -> value.setSummaryFiltered(false));
+                return true;
+            });
+    }
+
+    private ButtonWidget<?> sectionsButton() {
+        final IDrawable icon = GuiIcon.SECTIONS.asIcon()
+            .size(SummaryHeader.ICON_SIZE);
+        return SummaryHeader.headerButton(new ButtonWidget<>())
+            .name("summary.sections")
+            .overlay(icon)
+            .tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE)
+            .tooltipBuilder(
+                tooltip -> TooltipBuilder.create(tooltip)
+                    .langRow("plannh.summary.sections.hint")
+                    .flush())
+            .onMousePressed(mouseButton -> {
+                if (mouseButton != 0) return false;
+                final Area button = sectionsButton.getArea();
+                sectionsMenu.pos(button.x + button.width - MENU_WIDTH, button.y + button.height + MENU_DROP);
+                sectionsMenuOpen = !sectionsMenuOpen;
+                return true;
+            });
+    }
+
+    private Menu<?> sectionsMenu() {
+        // The panel theme goes on the column, not on the menu. MUI2 paints the backgrounds of all panel children before
+        // any of their contents, so a fill on the menu would sit under the summary text.
+        final Flow toggles = Flow.column()
+            .name("summary.sections.menu.list")
+            .fullWidth()
+            .coverChildrenHeight()
+            .padding(PADDING)
+            .widgetTheme(PlannhThemes.PANEL_OPAQUE);
+        for (final Summary.Section section : Summary.Section.VALUES) {
+            if (section != Summary.Section.ALL) toggles.child(sectionToggle(section));
+        }
+
+        return new Menu<>().name("summary.sections.menu")
+            .relativeToScreen()
+            .width(MENU_WIDTH)
+            .coverChildrenHeight()
+            .background()
+            .setEnabledIf(_ -> sectionsMenuOpen)
+            .child(toggles);
+    }
+
+    // the box is in the label's text color, so only the tick is in the theme's icon color
+    private static final UITexture CHECKBOX_IN_TEXT_COLOR = UITexture
+        .fullImage(PlanNH.MODID, "gui/checkbox", ColorType.TEXT);
+
+    private ButtonWidget<?> sectionToggle(final Summary.Section section) {
+        final IDrawable box = CHECKBOX_IN_TEXT_COLOR.asIcon()
+            .size(SummaryHeader.ICON_SIZE)
+            .alignment(Alignment.CenterLeft);
+        final IDrawable tick = GuiIcon.CHECK.asIcon()
+            .size(SummaryHeader.ICON_SIZE)
+            .alignment(Alignment.CenterLeft);
+        final IDrawable shownTick = new DynamicDrawable(() -> data.isSectionHidden(section) ? IDrawable.EMPTY : tick);
+        final IDrawable label = IKey.lang(section.titleKey())
+            .alignment(Alignment.CenterLeft)
+            .asIcon()
+            .marginLeft(SummaryBody.TEXT_X);
+
+        return new ButtonWidget<>().name("summary.sections.toggle")
+            .fullWidth()
+            .height(SummaryBody.LINE_H)
+            .widgetTheme(PlannhThemes.CHECKLIST_ROW)
+            .overlay(box, shownTick, label)
+            .onMousePressed(mouseButton -> {
+                if (mouseButton != 0) return false;
+                data.setSectionHidden(section, !data.isSectionHidden(section));
                 return true;
             });
     }
