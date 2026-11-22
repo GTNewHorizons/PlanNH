@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import net.minecraft.item.ItemStack;
 
@@ -14,7 +15,9 @@ import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.annotation.Versioned;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
+import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
+import com.sbancuz.plannh.data.NodeBadge;
 import com.sbancuz.plannh.data.ProfileFactory;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.effect.Effects;
@@ -85,6 +88,7 @@ public final class AE2Provider implements PropertyProvider {
     private final ProfileFactory<InscriberModel> INSCRIBER_FACTORY = MachineProfile.template()
         .setting(Settings.MACHINES)
         .setting(Settings.TICK_MODIFIER)
+        .badge(AE2Provider::readCardBadge)
         .provider(this)
         .asFactory(
             (builder, model) -> builder.setting(ACCELERATION_CARDS, 0, model.maxCards())
@@ -127,6 +131,7 @@ public final class AE2Provider implements PropertyProvider {
         .setting(Settings.MACHINES)
         .setting(Settings.TICK_MODIFIER)
         .setting(ACCELERATION_CARDS, 0, 5)
+        .badge(AE2Provider::readCardBadge)
         .effect(Effects.duration((cfg, ctx) -> {
             final int cards = ACCELERATION_CARDS.count(cfg, ctx);
             final int speed = TileMolecularAssembler.SPEED[cards];
@@ -237,5 +242,13 @@ public final class AE2Provider implements PropertyProvider {
                 }
             }
         }
+    }
+
+    /** The card with the count of {@link #ACCELERATION_CARDS}, or no badge with no card. */
+    private static @Nullable NodeBadge readCardBadge(final MachineConfig cfg, final RecipeContext ctx) {
+        final int cards = ACCELERATION_CARDS.count(cfg, ctx);
+        final ItemStack card = cfg.value(ACCELERATION_CARDS, ctx);
+        if (cards <= 0 || card == null) return null;
+        return new NodeBadge(card, Integer.toString(cards));
     }
 }

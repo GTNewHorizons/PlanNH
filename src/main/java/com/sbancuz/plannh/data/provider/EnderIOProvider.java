@@ -16,7 +16,9 @@ import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
+import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
+import com.sbancuz.plannh.data.NodeBadge;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.effect.steps.CoFHCompat;
@@ -128,6 +130,7 @@ public class EnderIOProvider implements PropertyProvider {
         .setting(Settings.MACHINES)
         .setting(Settings.TICK_MODIFIER)
         .setting(CAPACITOR, (cfg, ctx) -> energy(ctx) > 0 && ctx.getOrDefault(FIXED_RF_PER_TICK, null) == null)
+        .badge(EnderIOProvider::readCapacitorBadge)
         .setting(Settings.RF_PER_TICK, (cfg, ctx) -> energy(ctx) > 0)
         .setting(Settings.DURATION_TICKS, (cfg, ctx) -> energy(ctx) > 0)
         .derive(Settings.RF_PER_TICK, (cfg, ctx) -> {
@@ -160,6 +163,7 @@ public class EnderIOProvider implements PropertyProvider {
         .setting(Settings.MACHINES)
         .setting(Settings.TICK_MODIFIER)
         .setting(CAPACITOR)
+        .badge(EnderIOProvider::readCapacitorBadge)
         // TODO: Open an upstream PR to expose TileCrafter tick intervals and completion semantics instead of copying
         // them here.
         .effect(Effects.duration((cfg, ctx) -> {
@@ -179,6 +183,18 @@ public class EnderIOProvider implements PropertyProvider {
                 : new ItemDrawable(EnderIO.blockCrafter))
         .provider(this)
         .build();
+
+    /** The item of {@link #CAPACITOR}, while the capacitor setting is visible. */
+    private static @Nullable NodeBadge readCapacitorBadge(final MachineConfig cfg, final RecipeContext ctx) {
+        final boolean visible = cfg.getProfile()
+            .visibleSettings(cfg, ctx)
+            .anyMatch(CAPACITOR::equals);
+        if (!visible) return null;
+
+        final ItemStack selected = cfg.value(CAPACITOR, ctx);
+        final ItemStack capacitor = selected == null ? capacitorType(null).getItemStack() : selected;
+        return new NodeBadge(capacitor, "");
+    }
 
     @Override
     public void register() {
