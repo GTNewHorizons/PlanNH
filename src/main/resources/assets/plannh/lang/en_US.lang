@@ -269,6 +269,8 @@ plannh.gui.node.port.percent=%%
 plannh.gui.node.port.target=Target
 plannh.gui.node.port.target.met=On target
 plannh.gui.node.port.target.overshot=Overshoots target
+plannh.gui.node.badge.tier=%s%s§r
+plannh.gui.node.badge.power=%s %sA
 plannh.gui.node.port.shift_hint=Hold §f§l[LSHIFT]§7 for the rate in every unit
 plannh.gui.node.port.configure_hint=Right-Click to Configure
 

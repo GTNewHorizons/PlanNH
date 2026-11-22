@@ -137,9 +137,12 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
                     .name("node.options.folds")
                     .coverChildren()
                     .childPadding(4)
+                    .crossAxisAlignment(Alignment.CrossAxis.CENTER)
+                    .collapseDisabledChild()
                     .child(propertiesFold)
                     .child(targetFold)
-                    .child(settingsFold))
+                    .child(settingsFold)
+                    .child(new ProfileBadge(this)))
                 .child(new ExtractorWidget(this));
             mainColumn.child(optionRow);
             mainColumn.child(new ThroughputInfoWidget(this));

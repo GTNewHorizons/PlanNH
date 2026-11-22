@@ -37,6 +37,7 @@ import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.RecipeHandlerRef;
+import lombok.Getter;
 
 public final class MachineProfile {
 
@@ -50,6 +51,13 @@ public final class MachineProfile {
     public interface PortMultiplier {
 
         double apply(EffectResult effect, MachineConfig cfg, RecipeContext ctx, int index);
+    }
+
+    @FunctionalInterface
+    public interface BadgeRule {
+
+        @Nullable
+        NodeBadge apply(MachineConfig cfg, RecipeContext ctx);
     }
 
     public record Entry(SettingDef<?> def, BiPredicate<MachineConfig, RecipeContext> visible) {
@@ -74,6 +82,8 @@ public final class MachineProfile {
     private final Map<SettingDef<?>, int[]> settingBounds;
     private final PortMultiplier inputMultiplier;
     private final PortMultiplier outputMultiplier;
+    @Getter
+    private final BadgeRule badge;
 
     private MachineProfile(final String id, final Definition<?> definition) {
         this.id = id;
@@ -86,6 +96,7 @@ public final class MachineProfile {
         this.settingBounds = Map.copyOf(definition.settingBounds);
         this.inputMultiplier = definition.inputMultiplier;
         this.outputMultiplier = definition.outputMultiplier;
+        this.badge = definition.badge;
     }
 
     public String id() {
@@ -234,6 +245,7 @@ public final class MachineProfile {
         private EffectComputer effectComputer = Effects.durationFromHandler();
         private PortMultiplier inputMultiplier = (_, _, _, _) -> 1d;
         private PortMultiplier outputMultiplier = (_, _, _, _) -> 1d;
+        private BadgeRule badge = (_, _) -> null;
 
         private Definition() {}
 
@@ -247,6 +259,7 @@ public final class MachineProfile {
             effectComputer = source.effectComputer;
             inputMultiplier = source.inputMultiplier;
             outputMultiplier = source.outputMultiplier;
+            badge = source.badge;
         }
 
         protected abstract B self();
@@ -359,6 +372,11 @@ public final class MachineProfile {
 
         public B outputMultiplier(final PortMultiplier rule) {
             outputMultiplier = rule;
+            return self();
+        }
+
+        public B badge(final BadgeRule rule) {
+            badge = rule;
             return self();
         }
 

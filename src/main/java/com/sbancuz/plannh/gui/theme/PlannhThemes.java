@@ -78,6 +78,7 @@ public final class PlannhThemes {
         CARD_OUTPUT = CARD.createSubKey("cardOutput"),
         CARD_INFO   = CARD.createSubKey("cardInfo"),
         CARD_POWER  = CARD.createSubKey("cardPower"),
+        CARD_BADGE  = CARD.createSubKey("cardBadge"),
         NOTE        = CARD.createSubKey("note"),
         NOTE_HEADER = NOTE.createSubKey("noteHeader");
 
@@ -207,6 +208,8 @@ public final class PlannhThemes {
             .textColor(CARD_OUTPUT, PlannhColors.CARD_OUTPUT.getColor())
             .textColor(CARD_INFO, PlannhColors.CARD_INFO.getColor())
             .textColor(CARD_POWER, PlannhColors.CARD_POWER.getColor())
+            .textColor(CARD_BADGE, PlannhColors.TEXT.getColor())
+            .textShadow(CARD_BADGE, true)
             .background(NOTE, new DrawableStack(noteAccentFrame, cardFrame))
             .background(NOTE_HEADER, fill(noteAccent));
 
