@@ -31,11 +31,14 @@ import codechicken.nei.recipe.StackInfo;
 import lombok.Getter;
 
 /**
- * The NEI slot of one port stack, with the count and the chance badge. Under {@link PortDisplay#RATE} the count is the
- * solved rate in the plan's unit, coloured on an output with a rate target. Under {@link PortDisplay#RECIPE}
- * {@code PositionedStack.draw()} draws the stack with the recipe's count.
+ * {@link PortSlot} draws the count and the chance badge of one port stack in the stack's NEI slot. When the port
+ * display is {@link PortDisplay#RATE}, the count is the solved rate in the plan's unit. The rate of an output with a
+ * rate target is coloured. When the port display is {@link PortDisplay#RECIPE}, or the stack is a {@code Tank} or
+ * smaller than an item, {@code PositionedStack.draw()} draws the stack with the recipe's count.
  */
 public final class PortSlot {
+
+    private static final int ITEM_SIZE = 16;
 
     private final NodeWidget parent;
     private final PortWidget owner;
@@ -43,6 +46,7 @@ public final class PortSlot {
     private final Rectangle4i badgeArea;
     private final int itemX;
     private final int itemY;
+    private final boolean fitsRate;
 
     // what the slot was last built from, compared by identity
     private @Nullable Balancer.NodeBalance builtBalance;
@@ -53,7 +57,7 @@ public final class PortSlot {
 
     private List<Badge> badges = List.of();
     private @Nullable String rateText;
-    /** The mark of {@link #rateText}. {@code null} when {@link #rateText} has no colour. */
+    /** The mark of {@link #rateText}. {@code null} when {@link #rateText} doesn't have a colour. */
     @Getter
     private @Nullable TargetMark rateTarget;
     private float rateScale;
@@ -66,8 +70,12 @@ public final class PortSlot {
         badgeArea = new Rectangle4i(stack.relx, stack.rely, stack.width, stack.height);
 
         // `PositionedStack.draw()` centres the 16 pixel item in the stack's area
-        itemX = stack.relx + (stack.width - 16) / 2;
-        itemY = stack.rely + (stack.height - 16) / 2;
+        itemX = stack.relx + (stack.width - ITEM_SIZE) / 2;
+        itemY = stack.rely + (stack.height - ITEM_SIZE) / 2;
+
+        // `PositionedStack.Tank.draw()` draws a fluid gauge in place of an item. The count doesn't fit on a smaller
+        // stack
+        fitsRate = !(stack instanceof PositionedStack.Tank) && stack.width >= ITEM_SIZE && stack.height >= ITEM_SIZE;
     }
 
     /** Rebuild the count and the badges when the solve, the effect, the display, the unit or the item changed. */
@@ -112,12 +120,12 @@ public final class PortSlot {
     }
 
     private @Nullable String formatRate(@Nullable final Balancer.NodeBalance balance, final RateUnit unit) {
-        if (owner.getPortType() == PortWidget.PortType.CATALYST) return null;
+        if (!fitsRate || owner.getPortType() == PortWidget.PortType.CATALYST) return null;
         final double perCycle = owner.perCycle(balance);
         if (perCycle <= 0) return null;
 
         final String rate = GuiHelper.formatSlotRate(GuiHelper.rate(perCycle, balance.durationPerOp(), unit));
-        // NEI writes the amount of a fluid in liters, as "144L"
+        // NEI writes the amount of a fluid in liters: "144L"
         return StackInfo.isFluidDisplayItem(stack.item) ? rate + "L" : rate;
     }
 
@@ -131,8 +139,8 @@ public final class PortSlot {
     }
 
     /**
-     * {@code FluidDisplayRenderer} writes the recipe amount of a fluid on the bottom edge, beside the rate. For a
-     * fluid, return a copy with an amount of 0. The renderer skips an amount of 0.
+     * {@code FluidDisplayRenderer} writes the recipe amount of a fluid on the bottom edge beside the rate. For a fluid,
+     * return a copy with an amount of 0. The renderer skips an amount of 0.
      */
     private static ItemStack itemWithoutAmount(final ItemStack item) {
         if (!StackInfo.isFluidDisplayItem(item)) return item;
@@ -159,8 +167,8 @@ public final class PortSlot {
     }
 
     /**
-     * The badges of {@code RecipeWidget.getBadges()}, with the effective chance in place of the recipe's. A chance the
-     * user set gets {@link PlannhColors#WARNING}.
+     * Return the badges of {@code RecipeWidget.getBadges()} with the effective chance in place of the recipe's chance.
+     * A chance the user set gets {@link PlannhColors#WARNING}.
      */
     private List<Badge> chanceBadges(@Nullable final EffectResult effect) {
         final Port<?> port = owner.getPort();
@@ -172,7 +180,7 @@ public final class PortSlot {
             .chanceOverride(input, index);
         final List<Badge> handlerBadges = stack.getBadges();
 
-        // a handler's badges, such as GT's NC*, are about the recipe chance. Show them only while the user set no
+        // a handler's badges, such as GT's NC*, are about the recipe chance. Show them only while the user hasn't set a
         // chance
         if (override == null && handlerBadges != null) return handlerBadges;
         if (input && port.getAmount() <= 0) return List.of(Badge.notConsumed());
@@ -186,10 +194,10 @@ public final class PortSlot {
         return List.of(badge);
     }
 
-    /** The colour of a targeted rate, with the tooltip line for the colour. */
+    /** The colour of a targeted rate and the tooltip line for the colour. */
     public enum TargetMark {
 
-        /** The target of {@link RateTarget#binding}. At the solved machine count, the output makes this rate. */
+        /** The target of {@link RateTarget#binding}. The output makes this rate at the solved machine count. */
         MET(TooltipTheme.Role.ACCENT, "plannh.gui.node.port.target.met"),
         /** The output overshoots this target. The machine count for another target of the machine is higher. */
         OVERSHOT(TooltipTheme.Role.TUNABLE, "plannh.gui.node.port.target.overshot");
