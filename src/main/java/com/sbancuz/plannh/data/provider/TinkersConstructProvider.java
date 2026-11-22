@@ -5,6 +5,7 @@ import java.util.List;
 import javax.annotation.Nonnull;
 
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidStack;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.drawable.GuiTextures;
@@ -19,6 +20,7 @@ import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.IRecipeHandler;
+import codechicken.nei.recipe.StackInfo;
 import codechicken.nei.recipe.TemplateRecipeHandler;
 import tconstruct.armor.TinkerArmor;
 import tconstruct.library.crafting.CastingRecipe;
@@ -116,35 +118,34 @@ public final class TinkersConstructProvider implements PropertyProvider {
         recipe.outputs().clear();
         if (!(cached instanceof final CachedCastingRecipe casting)) return;
 
+        // TC lists the metal tank first, then the cast only when the recipe has one.
+        final List<PositionedStack> ingredients = casting.getIngredients();
+        if (!(ingredients.getFirst() instanceof final PositionedStack.Tank metal)) return;
+        final FluidStack metalFluid = StackInfo.getFluid(metal.item);
+        if (metalFluid == null) return;
+        final List<PositionedStack> casts = ingredients.subList(1, ingredients.size());
+        final ItemStack castItem = casts.isEmpty() ? null : casts.getFirst().item;
+
+        // NEI's fluid display stack keeps the long amount under Count.
+        final long metalAmount = StackInfo.itemStackToNBT(metal.item)
+            .getLong("Count");
         final PositionedStack result = casting.getResult();
-        final CastingRecipe match = findCastingRecipe(handler, casting, result);
-        if (match == null) return;
 
-        if (match.castingMetal.amount > 0) {
-            final var position = casting.getFluidTanks().getFirst().position;
-            recipe.input(Port.fluid(match.castingMetal, 1f, position.x, position.y));
-        }
-        if (match.cast != null) {
-            final var cast = Port.itemPort(casting.getIngredients().getFirst());
-            if (!match.consumeCast) cast.getValue().amount = 0;
-            recipe.input(cast);
-        }
-        recipe.output(Port.itemPort(result));
-        if (match.coolTime > 0) recipe.property(RecipePropertyAPI.DURATION_TICKS, match.coolTime);
-    }
-
-    /** Match the cached recipe's complete backing recipe, not merely its output item. */
-    private static CastingRecipe findCastingRecipe(final RecipeHandlerCastingBase handler,
-        final CachedCastingRecipe cached, final PositionedStack result) {
-        final List<PositionedStack> ingredients = cached.getIngredients();
-        final ItemStack cast = ingredients.isEmpty() ? null : ingredients.getFirst().item;
-        final var cachedMetal = cached.getFluidTanks()
-            .getFirst().fluid;
+        // Match the complete backing recipe, not merely its output item.
         for (final CastingRecipe candidate : handler.getCastingRecipes()) {
             if (!ItemStack.areItemStacksEqual(candidate.output, result.item)) continue;
-            if (candidate.castingMetal.amount != cachedMetal.amount || !candidate.matches(cachedMetal, cast)) continue;
-            return candidate;
+            if (candidate.castingMetal.amount != metalAmount || !candidate.matches(metalFluid, castItem)) continue;
+
+            if (metalAmount > 0) recipe.input(Port.fluid(candidate.castingMetal, metalAmount, 1f, metal.copy()));
+            // Molds are reused, so they never count as consumed.
+            for (final PositionedStack cast : casts) {
+                final var castPort = Port.itemPort(cast);
+                castPort.getValue().amount = 0;
+                recipe.input(castPort);
+            }
+            recipe.output(Port.itemPort(result));
+            if (candidate.coolTime > 0) recipe.property(RecipePropertyAPI.DURATION_TICKS, candidate.coolTime);
+            return;
         }
-        return null;
     }
 }

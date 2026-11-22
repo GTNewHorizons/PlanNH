@@ -100,14 +100,14 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
             .flatMap(
                 port -> port.getAllStacks()
                     .stream());
-        final int portsWidth = portStacks.mapToInt(stack -> PortWidget.portRight(stack.relx))
+        final int portsWidth = portStacks.mapToInt(stack -> PortWidget.portRight(stack))
             .max()
             .orElse(0);
         final int portsHeight = Stream.concat(inputs.stream(), outputs.stream())
             .flatMap(
                 port -> port.getAllStacks()
                     .stream())
-            .mapToInt(stack -> PortWidget.portBottom(stack.rely, yShift))
+            .mapToInt(stack -> PortWidget.portBottom(stack, yShift))
             .max()
             .orElse(0);
         recipeWidth = widthWithPorts(recipeWidth, portsWidth);

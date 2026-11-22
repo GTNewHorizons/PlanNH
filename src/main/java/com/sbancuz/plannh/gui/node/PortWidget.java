@@ -64,7 +64,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     // needed for proper positioning of ports
     static final int PORT_OFFSET_X = 1;
     static final int PORT_OFFSET_Y = -1;
-    static final int PORT_SIZE = 18;
+    static final int PORT_BORDER = 2;
 
     private final CanvasWidget canvas;
 
@@ -121,7 +121,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
                     .color(inactiveDemand ? PlannhColors.PORT_INACTIVE.getColor() : pinColor())));
         hoverOverlay(new DynamicDrawable(() -> new Rectangle().color(PlannhColors.HIGHLIGHT.getColor())));
         pos(stack.relx + PORT_OFFSET_X, stack.rely + PORT_OFFSET_Y + yShift);
-        size(PORT_SIZE);
+        size(stack.width + PORT_BORDER, stack.height + PORT_BORDER);
 
         tooltipBuilder(this::writeTooltip);
         tooltipAutoUpdate(true);
@@ -331,12 +331,12 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         markTooltipDirty();
     }
 
-    static int portRight(final int stackX) {
-        return stackX + PORT_OFFSET_X + PORT_SIZE;
+    static int portRight(final PositionedStack stack) {
+        return stack.relx + PORT_OFFSET_X + stack.width + PORT_BORDER;
     }
 
-    static int portBottom(final int stackY, final int yShift) {
-        return stackY + PORT_OFFSET_Y + yShift + PORT_SIZE;
+    static int portBottom(final PositionedStack stack, final int yShift) {
+        return stack.rely + PORT_OFFSET_Y + yShift + stack.height + PORT_BORDER;
     }
 
     @Override
