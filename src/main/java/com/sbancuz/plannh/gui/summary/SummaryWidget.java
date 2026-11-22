@@ -294,7 +294,7 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
         // any of their contents, so a fill on the menu would sit under the summary text.
         final Flow toggles = Flow.column()
             .name("summary.sections.menu.list")
-            .widthRel(1f)
+            .fullWidth()
             .coverChildrenHeight()
             .padding(PADDING)
             .widgetTheme(PlannhThemes.PANEL_OPAQUE);
@@ -329,7 +329,7 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
             .marginLeft(SummaryBody.TEXT_X);
 
         return new ButtonWidget<>().name("summary.sections.toggle")
-            .widthRel(1f)
+            .fullWidth()
             .height(SummaryBody.LINE_H)
             .widgetTheme(PlannhThemes.CHECKLIST_ROW)
             .overlay(box, shownTick, label)

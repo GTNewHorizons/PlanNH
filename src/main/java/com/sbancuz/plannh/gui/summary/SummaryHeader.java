@@ -82,7 +82,7 @@ class SummaryHeader extends ParentWidget<SummaryHeader> {
     }
 
     public static <W extends Widget<?>> W headerButton(final W button) {
-        button.size(HEADER_H, HEADER_H);
+        button.size(HEADER_H);
         return button;
     }
 
