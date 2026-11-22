@@ -5,7 +5,7 @@ import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.screen.viewport.GuiContext;
 import com.cleanroommc.modularui.theme.WidgetTheme;
 import com.cleanroommc.modularui.utils.Color;
-import com.sbancuz.plannh.gui.IngredientColors;
+import com.sbancuz.plannh.gui.PlannhColors;
 
 /** Outlined brackets along the left and right edges of a header. */
 public final class Brackets implements IDrawable {
@@ -15,7 +15,7 @@ public final class Brackets implements IDrawable {
 
     public Brackets(final int color) {
         this.color = Color.withAlpha(color, 0xFF);
-        this.outline = IngredientColors.outlineFor(this.color);
+        this.outline = PlannhColors.outlineFor(this.color);
     }
 
     @Override

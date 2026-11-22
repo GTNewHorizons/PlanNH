@@ -14,10 +14,10 @@ import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.GuiHelper.RateUnit;
-import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.common.FlowchartFlow;
 import com.sbancuz.plannh.gui.common.FlowchartTextWidget;
 import com.sbancuz.plannh.gui.node.NodeWidget;
+import com.sbancuz.plannh.gui.theme.PlannhThemes;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
@@ -92,10 +92,7 @@ public final class OutputRateTarget implements TargetKind {
             .coverChildrenHeight()
             .padding(2)
             .child(
-                new FlowchartTextWidget(
-                    IKey.lang(LANG + "no_outputs", new Object[] {})
-                        .color(PlannhColors.TEXT_DIM.getColor()),
-                    parent));
+                new FlowchartTextWidget(IKey.lang(LANG + "no_outputs"), parent).widgetTheme(PlannhThemes.CARD_MUTED));
         return column;
     }
 
@@ -121,10 +118,9 @@ public final class OutputRateTarget implements TargetKind {
     }
 
     private Flow row(final NodeWidget parent, final Port<?> port, final int index, final Consumer<Runnable> edit) {
-        final IWidget label = new FlowchartTextWidget(
-            IKey.str(port.getDisplayName())
-                .color(rate(index) > 0 ? PlannhColors.SETTING_ON.getColor() : PlannhColors.TEXT_DIM.getColor()),
-            parent).widthRel(2 / 3f);
+        final IWidget label = new FlowchartTextWidget(IKey.str(port.getDisplayName()), parent)
+            .widgetTheme(rate(index) > 0 ? PlannhThemes.CARD_OUTPUT : PlannhThemes.CARD_MUTED)
+            .widthRel(2 / 3f);
 
         final FlowchartFlow flow = FlowchartFlow.row(parent);
         flow.name("target.rates.row")

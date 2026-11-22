@@ -4,10 +4,11 @@ import java.util.function.IntSupplier;
 
 import org.jetbrains.annotations.NotNull;
 
+import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.DynamicDrawable;
 import com.cleanroommc.modularui.drawable.Rectangle;
-import com.cleanroommc.modularui.utils.Color;
+import com.sbancuz.plannh.gui.theme.PlannhThemes;
 
 public class HeaderTextWidget extends FlowchartTextFieldWidget {
 
@@ -21,17 +22,15 @@ public class HeaderTextWidget extends FlowchartTextFieldWidget {
      */
     public static final int HEIGHT = 14;
 
-    public HeaderTextWidget(FlowchartWidget<?, ?> parent, IntSupplier bgColor) {
+    public HeaderTextWidget(FlowchartWidget<?, ?> parent) {
         super(parent);
         name("header");
+        widgetTheme(PlannhThemes.TEXT_FIELD);
 
         height(HEIGHT);
         margin(1);
         setScale(1f);
         expanded();
-        background(
-            new DynamicDrawable(
-                () -> new Rectangle().color(isEditing ? bgColor.getAsInt() : Color.argb(1f, 1f, 1f, 0))));
 
         handler.getText()
             .add(
@@ -39,8 +38,11 @@ public class HeaderTextWidget extends FlowchartTextFieldWidget {
                     .getHeader());
     }
 
-    public HeaderTextWidget(FlowchartWidget<?, ?> parent, int bgColor) {
-        this(parent, () -> bgColor);
+    /** A title that is highlighted in {@code editingColor} while it is being edited. */
+    public HeaderTextWidget(FlowchartWidget<?, ?> parent, IntSupplier editingColor) {
+        this(parent);
+        background(
+            new DynamicDrawable(() -> isEditing ? new Rectangle().color(editingColor.getAsInt()) : IDrawable.EMPTY));
     }
 
     @Override

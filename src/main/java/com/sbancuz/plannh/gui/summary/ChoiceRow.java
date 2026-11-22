@@ -7,7 +7,6 @@ import javax.annotation.Nonnull;
 import com.cleanroommc.modularui.api.GuiAxis;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.Interactable;
-import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.widgets.TextWidget;
@@ -15,7 +14,7 @@ import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.data.flowchart.balancer.Note;
-import com.sbancuz.plannh.gui.PlannhColors;
+import com.sbancuz.plannh.gui.theme.PlannhThemes;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
@@ -31,14 +30,12 @@ final class ChoiceRow extends SummaryFlow implements Interactable {
         this.choice = choice;
 
         fullWidth().coverChildrenHeight(SummaryBody.LINE_H)
-            .hoverBackground(new Rectangle().color(PlannhColors.SUMMARY_ROW_HOVER.getColor()))
+            .widgetTheme(PlannhThemes.ROW)
             .child(
                 new TextWidget<>(IKey.str((choice.active() ? "> " : "  ") + choice.displayName()))
                     .name("summary.choice.text")
                     .paddingLeft(SummaryBody.TEXT_X)
-                    .color(
-                        choice.active() ? PlannhColors.ACCENT_CYAN2.getColor()
-                            : PlannhColors.SUMMARY_TEXT_MUTED.getColor())
+                    .widgetTheme(choice.active() ? PlannhThemes.TEXT_SELECTED : PlannhThemes.TEXT_MUTED)
                     .textAlign(Alignment.CenterLeft)
                     .fullWidth());
 

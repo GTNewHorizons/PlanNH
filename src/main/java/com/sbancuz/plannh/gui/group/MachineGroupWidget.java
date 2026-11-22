@@ -8,7 +8,6 @@ import com.cleanroommc.modularui.api.IPanelHandler;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.utils.Alignment;
-import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
@@ -22,9 +21,9 @@ import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.GuiIcon;
-import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.node.NodeWidget;
+import com.sbancuz.plannh.gui.theme.PlannhThemes;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
@@ -127,9 +126,7 @@ public class MachineGroupWidget extends GroupWidget<MachineGroup> {
     private ButtonWidget<?> capacityButton(final String label, final int step) {
         return new ButtonWidget<>().name(step > 0 ? "group.capacity.add" : "group.capacity.remove")
             .size(HEADER_BUTTON_SIZE)
-            .overlay(
-                IKey.str(label)
-                    .color(Color.WHITE.main))
+            .overlay(IKey.str(label))
             .onMousePressed(_ -> {
                 PlanAPI.recordEdit(canvas.getGraph(), () -> {
                     data.setMachineCapacity(Math.max(0, data.getMachineCapacity() + step));
@@ -159,7 +156,7 @@ public class MachineGroupWidget extends GroupWidget<MachineGroup> {
             return used + " / "
                 + (data.getMachineCapacity() > 0 ? Integer.toString(data.getMachineCapacity()) : "\u221e");
         })).name("group.load")
-            .color(PlannhColors.SUMMARY_TEXT_MUTED.getColor())
+            .widgetTheme(PlannhThemes.TEXT)
             .textAlign(Alignment.CenterRight)
             .tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE)
             .tooltipBuilder(this::writeMachineTooltip)

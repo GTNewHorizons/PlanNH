@@ -6,9 +6,9 @@ import com.cleanroommc.modularui.api.GuiAxis;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.screen.viewport.LocatedWidget;
-import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.common.FlowchartFlow;
 import com.sbancuz.plannh.gui.common.FlowchartTextWidget;
+import com.sbancuz.plannh.gui.theme.PlannhThemes;
 
 /**
  * Foldable aware area part of the configuration widget
@@ -59,11 +59,9 @@ abstract class NodeFold extends FlowchartFlow {
 
     /** One dimmed line, standing in for the rows a fold has none of. */
     protected IWidget hint(final String key, final Object... args) {
-        return new FlowchartTextWidget(
-            IKey.lang(key, args)
-                .color(PlannhColors.TEXT_DIM.getColor()),
-            node).fullWidth()
-                .name("node.hint");
+        return new FlowchartTextWidget(IKey.lang(key, args), node).widgetTheme(PlannhThemes.CARD_MUTED)
+            .fullWidth()
+            .name("node.hint");
     }
 
     protected void commitEdit(final Runnable change) {
