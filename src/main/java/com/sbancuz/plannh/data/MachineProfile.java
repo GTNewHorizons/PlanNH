@@ -194,11 +194,8 @@ public final class MachineProfile {
         return drawable;
     }
 
-    public void addIconTooltip(final IDrawable drawable, final RichTooltip tooltip) {
-        if (drawable instanceof ItemDrawable item && hasItem(item)) {
-            tooltip.addFromItem(item.getItem());
-            return;
-        }
+    /** The tooltip of an icon that is not an item. {@code ItemWidget} writes the tooltip of an item. */
+    public void addIconTooltip(final RichTooltip tooltip) {
         if (iconTooltip != null) iconTooltip.accept(tooltip);
         if (tooltip.isEmpty()) TooltipBuilder.create(tooltip)
             .flag(
