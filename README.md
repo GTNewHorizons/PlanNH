@@ -26,12 +26,12 @@ In-game flowchart-based production planner for Minecraft 1.7.10 for the GTNH pac
 
 ## Optional Offscreen Window
 
-Press **F8** to open the planner in-game. [Offscreen](https://github.com/sbancuz/Offscreen) is optional and lets you open the planner in a separate window, which can be moved to another monitor.
+Press **F8** to open the planner in-game. [Offscreen](https://github.com/GTNewHorizons/Offscreen) is optional and lets you open the planner in a separate window, which can be moved to another monitor.
 
 To use the separate window in another modpack:
 
 1. Install PlanNH and its dependencies in the client instance.
-2. Download [offscreen-0.3-alpha.jar](https://github.com/sbancuz/Offscreen/releases/download/0.3-alpha/offscreen-0.3-alpha.jar) from the [Offscreen releases](https://github.com/sbancuz/Offscreen/releases) and put it in the instance's `mods/` folder. The `offscreen-0.3-alpha-dev.jar` in this repository's `libs/` folder is for development, not normal modpack installation.
+2. Download [offscreen-0.0.5.jar](https://github.com/GTNewHorizons/Offscreen/releases/download/0.0.5/offscreen-0.0.5.jar) from the [Offscreen releases](https://github.com/GTNewHorizons/Offscreen/releases) and put it in the instance's `mods/` folder.
 3. Restart Minecraft, join a world, and press **F7** to toggle the separate planner window. Both keybinds can be changed in Minecraft's Controls menu.
 
 ## Credits
