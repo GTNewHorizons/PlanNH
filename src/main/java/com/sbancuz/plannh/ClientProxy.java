@@ -7,8 +7,6 @@ import net.minecraftforge.common.MinecraftForge;
 
 import org.lwjgl.input.Keyboard;
 
-import com.cleanroommc.modularui.screen.GuiContainerWrapper;
-import com.cleanroommc.modularui.screen.ModularContainer;
 import com.sbancuz.plannh.client.ChatHandler;
 import com.sbancuz.plannh.client.GPUProgram;
 import com.sbancuz.plannh.client.ImportCommand;
@@ -16,7 +14,7 @@ import com.sbancuz.plannh.client.MessageHandler;
 import com.sbancuz.plannh.client.OffscreenHandler;
 import com.sbancuz.plannh.client.UnsupportedPackException;
 import com.sbancuz.plannh.client.WorldHandler;
-import com.sbancuz.plannh.gui.FlowchartScreen;
+import com.sbancuz.plannh.gui.FlowchartGui;
 import com.sbancuz.plannh.gui.layout.ElkLayoutStrategy;
 import com.sbancuz.plannh.gui.theme.PlannhThemes;
 
@@ -90,11 +88,7 @@ public class ClientProxy extends CommonProxy {
     @SubscribeEvent
     public void onKeyInput(final InputEvent.KeyInputEvent event) {
         if (openFlowchartKey.isPressed()) {
-            final ModularContainer container = new ModularContainer();
-            container.constructClientOnly();
-            final FlowchartScreen screen = FlowchartScreen.create();
-            Minecraft.getMinecraft()
-                .displayGuiScreen(new GuiContainerWrapper(container, screen));
+            FlowchartGui.openFlowchart();
         }
     }
 }
