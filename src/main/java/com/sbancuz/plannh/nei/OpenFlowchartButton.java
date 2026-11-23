@@ -2,15 +2,9 @@ package com.sbancuz.plannh.nei;
 
 import java.util.List;
 
-import javax.annotation.Nullable;
-
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiScreen;
-import net.minecraft.client.gui.inventory.GuiInventory;
 
-import com.cleanroommc.modularui.screen.GuiContainerWrapper;
-import com.cleanroommc.modularui.screen.ModularContainer;
-import com.sbancuz.plannh.gui.FlowchartScreen;
+import com.sbancuz.plannh.gui.FlowchartGui;
 import com.sbancuz.plannh.gui.GuiIcon;
 
 import codechicken.nei.Button;
@@ -35,21 +29,14 @@ public class OpenFlowchartButton extends Button {
             size);
     }
 
-    @Nullable
-    private GuiScreen previousScreen = null;
-
     @Override
     public boolean onButtonPress(final boolean rightclick) {
         if (!rightclick) {
             final Minecraft mc = Minecraft.getMinecraft();
-            if (mc.currentScreen instanceof GuiContainerWrapper) {
-                mc.displayGuiScreen(previousScreen != null ? previousScreen : new GuiInventory(mc.thePlayer));
+            if (mc.currentScreen instanceof final FlowchartGui flowchart) {
+                flowchart.returnToPreviousScreen();
             } else {
-                previousScreen = mc.currentScreen;
-                final FlowchartScreen screen = FlowchartScreen.create();
-                final ModularContainer container = new ModularContainer();
-                container.constructClientOnly();
-                mc.displayGuiScreen(new GuiContainerWrapper(container, screen));
+                FlowchartGui.openFlowchart(mc.currentScreen);
             }
             return true;
         }
