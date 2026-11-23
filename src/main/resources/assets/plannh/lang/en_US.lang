@@ -504,6 +504,7 @@ plannh.gui.rate.day.suffix=/d
 ## GUI - Numbers
 ## How a count of something is written, beside the thing it counts
 plannh.gui.number.multiple=×%s
+plannh.gui.tooltip.group=§7-- §f%s §7--
 
 ## Unsupported pack screen
 ## FML shows this screen at startup in place of the main menu, when a mod is older than PlanNH supports

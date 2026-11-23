@@ -75,6 +75,7 @@ public enum Compat {
         public static final String AE2 = "appliedenergistics2";
         public static final String BLOODMAGIC = "AWWayofTime";
         public static final String BOTANIA = "Botania";
+        public static final String CHROMATICTOOLTIPSCOMPAT = "chromatictooltipscompat";
         public static final String DRACONICEVOLUTION = "DraconicEvolution";
         public static final String ENDERIO = "EnderIO";
         public static final String FORESTRY = "Forestry";

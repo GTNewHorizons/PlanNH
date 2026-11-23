@@ -297,14 +297,14 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         if (mark != null) out.row(TooltipTheme.key(mark.getRole(), StatCollector.translateToLocal(mark.getLangKey())));
 
         if (perCycle <= 0) return;
-        if (GuiHelper.shiftHeld()) {
-            out.group("plannh.gui.node.port.per_unit", rows -> {
+        out.shiftDetail(
+            "plannh.gui.node.port.shift_hint",
+            detail -> detail.group("plannh.gui.node.port.per_unit", rows -> {
                 for (final RateUnit each : RateUnit.VALUES) {
                     final String text = rateText(perCycle, balance.durationPerOp(), each);
                     rows.entry(IKey.EMPTY, TooltipTheme.Role.RATE, IKey.str(text));
                 }
-            });
-        } else out.langRow("plannh.gui.node.port.shift_hint");
+            }));
     }
 
     public double perCycle(final @Nullable Balancer.NodeBalance balance) {

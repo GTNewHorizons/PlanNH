@@ -191,13 +191,7 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
         out.group("plannh.summary.title.properties", rows -> properties(rows, node, effect));
 
         writeTarget(out);
-
-        // Shift trades the hint that says what shift does for the thing it does, which is the only
-        // reason to have a hint.
-        if (GuiHelper.shiftHeld()) writeSettings(out);
-        else out.separator()
-            .langRow(LANG + "shift_hint");
-
+        out.shiftDetail(LANG + "shift_hint", this::writeSettings);
         out.flush();
     }
 

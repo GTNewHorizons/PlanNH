@@ -5,14 +5,20 @@ import java.util.List;
 import java.util.Locale;
 import java.util.function.Consumer;
 
+import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
 
 import org.jetbrains.annotations.Nullable;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.screen.RichTooltip;
+import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.GuiHelper.RateUnit;
+import com.slprime.chromatictooltips.api.TooltipLines;
+import com.slprime.chromatictooltipscompat.CompatConfig;
+
+import cpw.mods.fml.common.Loader;
 
 public final class TooltipBuilder {
 
@@ -26,6 +32,17 @@ public final class TooltipBuilder {
     private static final int MAX_INDENT = 4;
 
     private static final String COLON = ": ";
+
+    private static final String GROUP_LANG = "plannh.gui.tooltip.group";
+
+    // When the MUI2 compat of ChromaticTooltipsCompat is on, `RichTooltipMixin` passes each line of a `RichTooltip` to
+    // `TooltipHandler` of ChromaticTooltips. The line converters of ChromaticTooltips turn a divider, a divider with
+    // text and a shift marker into components of ChromaticTooltips
+    private static final boolean CHROMATIC = Loader.isModLoaded(Compat.IDs.CHROMATICTOOLTIPSCOMPAT)
+        && CompatConfig.modularUI2Enabled;
+
+    // `DividerConverter` of ChromaticTooltips matches a colour code, then three dashes or more
+    private static final String CHROMATIC_DIVIDER = EnumChatFormatting.GRAY + "---";
 
     /** Where the finished lines go. Null on a nested builder, which hands them to its parent. */
     private final RichTooltip target;
@@ -53,6 +70,7 @@ public final class TooltipBuilder {
 
     /** The divider between two groups, as wide as the tooltip turns out to be. */
     public TooltipBuilder separator() {
+        if (CHROMATIC) return line(IKey.str(CHROMATIC_DIVIDER));
         rows.add(Row.divider());
         return this;
     }
@@ -70,14 +88,17 @@ public final class TooltipBuilder {
     }
 
     /**
-     * A group of rows under a header, with a rule above it.
+     * Write a rule, the header of {@code headerKey} and the rows of {@code body}. When {@code body} doesn't write a
+     * row, don't write the rule or the header. When {@link #CHROMATIC} is true, write one divider of ChromaticTooltips
+     * with the header's text in place of the rule and the header.
      */
     public TooltipBuilder group(final String headerKey, final Consumer<TooltipBuilder> body) {
         final TooltipBuilder nested = nest();
         nested.indent = Math.min(MAX_INDENT, indent + 1);
         body.accept(nested);
         if (nested.rows.isEmpty()) return this;
-        separator().header(headerKey);
+        if (CHROMATIC) row(IKey.lang(GROUP_LANG, StatCollector.translateToLocal(headerKey)));
+        else separator().header(headerKey);
         rows.addAll(nested.rows);
         return this;
     }
@@ -160,6 +181,18 @@ public final class TooltipBuilder {
     public TooltipBuilder detail(final String label, final TooltipTheme.Role role, final String value) {
         return indent().entry(label, role, value)
             .outdent();
+    }
+
+    /**
+     * Write the rows of {@code detail} while shift is down, else the row of {@code hintKey}. When {@link #CHROMATIC} is
+     * true, write {@link TooltipLines#SHIFT_MODIFIER} in place of the hint row. {@code ModifierConverter} of
+     * ChromaticTooltips turns the marker into a [shift] badge. The badge is gold while shift is down.
+     */
+    public TooltipBuilder shiftDetail(final String hintKey, final Consumer<TooltipBuilder> detail) {
+        if (CHROMATIC) line(IKey.str(TooltipLines.SHIFT_MODIFIER));
+        if (GuiHelper.shiftHeld()) detail.accept(this);
+        else if (!CHROMATIC) langRow(hintKey);
+        return this;
     }
 
     /**
