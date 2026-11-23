@@ -85,16 +85,12 @@ final class MeasureRow extends SummaryFlow {
                         rate ? amount : raw);
                 }
 
-                if (rate) {
-                    if (GuiHelper.shiftHeld()) {
-                        out.group("plannh.gui.node.port.per_unit", rows -> {
-                            for (final GuiHelper.RateUnit unit : GuiHelper.RateUnit.VALUES) {
-                                rows.entry(IKey.EMPTY, TooltipTheme.Role.RATE,
-                                    TooltipBuilder.rate(measure.displayAmount(measure.amount() * unit.secondsPerUnit), unit));
-                            }
-                        });
-                    } else out.langRow("plannh.gui.node.port.shift_hint");
-                }
+                if (rate) out.shiftDetail("plannh.gui.node.port.shift_hint", detail -> detail.group("plannh.gui.node.port.per_unit", rows -> {
+                    for (final GuiHelper.RateUnit unit : GuiHelper.RateUnit.VALUES) {
+                        rows.entry(IKey.EMPTY, TooltipTheme.Role.RATE,
+                            TooltipBuilder.rate(measure.displayAmount(measure.amount() * unit.secondsPerUnit), unit));
+                    }
+                }));
                 out.flush();
                 if (measure.label() instanceof ResourceProperty<?> resource) {
                     resource.addTooltip(tooltip, measure.resource());
