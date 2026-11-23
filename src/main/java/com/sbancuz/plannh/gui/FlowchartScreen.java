@@ -67,6 +67,7 @@ public class FlowchartScreen extends ModularScreen {
             .coverChildren()
             .background()
             .relativeToScreen()
+            .excludeAreaInRecipeViewer()
             .child(actions);
 
         final ParentWidget<?> messages = new ParentWidget<>().name("screen.messages")

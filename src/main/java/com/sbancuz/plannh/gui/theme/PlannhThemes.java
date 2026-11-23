@@ -46,7 +46,7 @@ public final class PlannhThemes {
     // spotless:off
     public static final WidgetThemeKey<WidgetTheme> ROOT = IThemeApi.get()
         .widgetThemeKeyBuilder("plannh", WidgetTheme.class)
-        .defaultTheme(new WidgetTheme(0, 0, null, Color.WHITE.main, Color.WHITE.main, false, Color.WHITE.main))
+        .defaultTheme(new WidgetTheme(18, 18, null,Color.WHITE.main, Color.WHITE.main, false, Color.WHITE.main))
         .register();
 
     // ── Text on panels ──
