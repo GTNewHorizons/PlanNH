@@ -64,6 +64,7 @@ public class ClientProxy extends CommonProxy {
             .register(handler);
 
         MinecraftForge.EVENT_BUS.register(new ChatHandler());
+        MinecraftForge.EVENT_BUS.register(new FlowchartGui.CloseListener());
         ClientCommandHandler.instance.registerCommand(new ImportCommand());
 
         FMLCommonHandler.instance()
@@ -88,7 +89,7 @@ public class ClientProxy extends CommonProxy {
     @SubscribeEvent
     public void onKeyInput(final InputEvent.KeyInputEvent event) {
         if (openFlowchartKey.isPressed()) {
-            FlowchartGui.openFlowchart();
+            FlowchartGui.openFlowchart(null);
         }
     }
 }

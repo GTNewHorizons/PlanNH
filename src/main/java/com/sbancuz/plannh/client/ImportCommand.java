@@ -39,7 +39,7 @@ public class ImportCommand extends CommandBase {
         }
 
         PlanAPI.importGraph(graph);
-        FlowchartGui.openFlowchart();
+        FlowchartGui.openFlowchart(null);
     }
 
     @Override
