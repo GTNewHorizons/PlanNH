@@ -48,7 +48,7 @@ public class EnumSettingDef<E extends Enum<E>> extends SettingDef<E> {
 
     @Override
     public Consumer<TooltipBuilder> tooltip(final E value) {
-        return out -> out.entry(getLabel(), TooltipTheme.Role.TUNABLE, displayValue(value));
+        return out -> out.entry(IKey.str(getLabel()), TooltipTheme.TUNABLE, displayValue(value));
     }
 
     @Override

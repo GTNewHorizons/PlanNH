@@ -11,15 +11,16 @@ import java.util.function.Supplier;
 import net.minecraft.item.ItemStack;
 
 import com.cleanroommc.modularui.api.UpOrDown;
+import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.integration.recipeviewer.RecipeViewerGhostIngredientSlot;
 import com.cleanroommc.modularui.integration.recipeviewer.RecipeViewerIngredientProvider;
-import com.cleanroommc.modularui.screen.RichTooltip;
 import com.sbancuz.plannh.data.setting.ChoiceSettingDef;
 import com.sbancuz.plannh.gui.common.ItemSelectionGrid;
 import com.sbancuz.plannh.gui.common.ItemWidget;
 import com.sbancuz.plannh.gui.common.SelectionPicker;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
+import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
 /** Client-only item selection: NEI drops edit the plan, never an inventory or server-side slot. */
 public final class ItemChoiceWidget extends ItemWidget<ItemChoiceWidget>
@@ -31,8 +32,8 @@ public final class ItemChoiceWidget extends ItemWidget<ItemChoiceWidget>
     private Supplier<List<ItemStack>> choices;
     private Runnable reset;
     private SelectionPicker picker;
-    private String hint = "plannh.settings.item_drop_hint";
-    private BiConsumer<RichTooltip, ItemStack> pickerTooltip;
+    private String hint = "plannh.settings.item_choice_hint";
+    private BiConsumer<TooltipBuilder, ItemStack> pickerTooltip;
     private IntConsumer scrollHandler;
     private final IntUnaryOperator selectionCount;
 
@@ -52,10 +53,7 @@ public final class ItemChoiceWidget extends ItemWidget<ItemChoiceWidget>
         name("settings.item_choice");
         size(18).padding(1)
             .background(GuiTextures.SLOT_ITEM)
-            .tooltipBuilder(
-                tooltip -> TooltipBuilder.create(tooltip)
-                    .langRow(hint)
-                    .flush())
+            .tooltipBuilder(TooltipBuilder.build(out -> out.line(TooltipTheme.HINT, IKey.lang(hint))))
             .tooltipAutoUpdate(true);
     }
 
@@ -71,7 +69,7 @@ public final class ItemChoiceWidget extends ItemWidget<ItemChoiceWidget>
         return this;
     }
 
-    public ItemChoiceWidget pickerTooltip(final BiConsumer<RichTooltip, ItemStack> tooltip) {
+    public ItemChoiceWidget pickerTooltip(final BiConsumer<TooltipBuilder, ItemStack> tooltip) {
         this.pickerTooltip = tooltip;
         return this;
     }

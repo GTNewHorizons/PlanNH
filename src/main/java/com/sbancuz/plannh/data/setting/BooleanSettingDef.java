@@ -18,7 +18,7 @@ public class BooleanSettingDef extends SettingDef<Boolean> {
 
     @Override
     public Consumer<TooltipBuilder> tooltip(final Boolean value) {
-        return value ? out -> out.flag(getLabel()) : out -> {};
+        return value ? out -> out.flag(IKey.str(getLabel())) : out -> {};
     }
 
     @Override

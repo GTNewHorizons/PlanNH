@@ -18,6 +18,7 @@ import com.sbancuz.plannh.gui.GuiIcon;
 import com.sbancuz.plannh.gui.common.ItemWidget;
 import com.sbancuz.plannh.gui.common.SelectionGrid;
 import com.sbancuz.plannh.gui.common.SelectionPicker;
+import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 
 /** The selected extractor is an icon; its alternatives share the item picker's panel and layout. */
 public final class ExtractorWidget extends ItemWidget<ExtractorWidget> {
@@ -96,6 +97,6 @@ public final class ExtractorWidget extends ItemWidget<ExtractorWidget> {
             .size(icon instanceof GuiIcon ? 12 : 16);
         if (profile == null) return slot.overlay(guiIcon);
         return slot.overlay(guiIcon)
-            .tooltipBuilder(profile::addIconTooltip);
+            .tooltipBuilder(TooltipBuilder.build(profile::addIconTooltip));
     }
 }

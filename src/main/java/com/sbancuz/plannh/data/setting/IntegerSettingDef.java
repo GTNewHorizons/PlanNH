@@ -27,8 +27,8 @@ public class IntegerSettingDef extends SettingDef<Integer> {
     }
 
     @Override
-    protected TooltipTheme.Role valueRole() {
-        return TooltipTheme.Role.TUNABLE;
+    protected TooltipTheme valueRole() {
+        return TooltipTheme.TUNABLE;
     }
 
     public static int fieldWidth(final int min, final int max) {

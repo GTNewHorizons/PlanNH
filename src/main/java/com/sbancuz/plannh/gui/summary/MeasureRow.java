@@ -14,6 +14,7 @@ import com.sbancuz.plannh.data.flowchart.resource.LongFluidStack;
 import com.sbancuz.plannh.data.flowchart.resource.LongItemStack;
 import com.sbancuz.plannh.data.properties.ResourceProperty;
 import com.sbancuz.plannh.gui.GuiHelper;
+import com.sbancuz.plannh.gui.LangScope;
 import com.sbancuz.plannh.gui.theme.PlannhThemes;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
@@ -23,6 +24,7 @@ import codechicken.nei.item.ItemFluidDisplay;
 final class MeasureRow extends SummaryFlow {
 
     private static final float NAME_RATIO = 2 / 3f;
+    private static final LangScope SUMMARY = LangScope.ROOT.child("summary.tooltip.measure");
 
     MeasureRow(final Summary.Line.Measure<?> measure, final String suffix, final double scale,
         final Summary.Section section, final Summary.Mode mode) {
@@ -66,36 +68,27 @@ final class MeasureRow extends SummaryFlow {
                     .textAlign(Alignment.CenterRight)
                     .widthRel(1 - NAME_RATIO))
             .tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE)
-            .tooltipBuilder(tooltip -> {
-                if (hasItem) tooltip.addFromItem(stack);
-                else tooltip.addLine(TooltipTheme.key(TooltipTheme.Role.LABEL, measure.displayName()));
-                final TooltipBuilder out = TooltipBuilder.create(tooltip).separator();
+            .tooltipBuilder(TooltipBuilder.build(SUMMARY, out -> {
+                if (hasItem) out.item(stack);
+                else out.title(IKey.str(measure.displayName()));
+                out.separator();
 
                 if (section == Summary.Section.MACHINE_COUNTS) {
-                    out.entry(
-                        IKey.lang("plannh.summary.tooltip.measure.workload"),
-                        TooltipTheme.Role.IDENTITY,
-                        TooltipBuilder.multiple(measure.amount() * scale));
+                    out.entry("load", TooltipTheme.VALUE, GuiHelper.multiple(measure.amount() * scale));
+                } else if (rate) {
+                    out.entry("rate", TooltipTheme.RATE, amount);
+                    out.ratesInEveryUnit(unit -> {
+                        final String perUnit = measure.displayAmount(measure.amount() * unit.secondsPerUnit);
+                        return GuiHelper.formatRate(perUnit, unit);
+                    });
                 } else {
-                    out.entry(
-                        IKey.lang(rate ? "plannh.gui.node.port.rate"
-                            : resourceRow ? "plannh.summary.tooltip.measure.per_cycle"
-                                : "plannh.summary.tooltip.measure.amount"),
-                        rate ? TooltipTheme.Role.RATE : TooltipTheme.Role.IDENTITY,
-                        rate ? amount : raw);
+                    out.entry(resourceRow ? "per_cycle" : "amount", TooltipTheme.VALUE, raw);
                 }
 
-                if (rate) out.shiftDetail("plannh.gui.node.port.shift_hint", detail -> detail.group("plannh.gui.node.port.per_unit", rows -> {
-                    for (final GuiHelper.RateUnit unit : GuiHelper.RateUnit.VALUES) {
-                        rows.entry(IKey.EMPTY, TooltipTheme.Role.RATE,
-                            TooltipBuilder.rate(measure.displayAmount(measure.amount() * unit.secondsPerUnit), unit));
-                    }
-                }));
-                out.flush();
                 if (measure.label() instanceof ResourceProperty<?> resource) {
-                    resource.addTooltip(tooltip, measure.resource());
+                    resource.addTooltip(out, measure.resource());
                 }
-            })
+            }))
             .tooltipAutoUpdate(true);
     }
 }

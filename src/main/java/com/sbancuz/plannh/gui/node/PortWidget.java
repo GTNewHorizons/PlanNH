@@ -6,7 +6,6 @@ import java.util.SortedMap;
 import java.util.UUID;
 
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.StatCollector;
 import net.minecraftforge.fluids.FluidStack;
 
 import org.jetbrains.annotations.NotNull;
@@ -40,6 +39,7 @@ import com.sbancuz.plannh.data.setting.RateTarget;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.GuiHelper.RateUnit;
+import com.sbancuz.plannh.gui.LangScope;
 import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.common.ItemSelectionGrid;
 import com.sbancuz.plannh.gui.common.PickerContent;
@@ -63,7 +63,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     private static final int RECIPE_KEYCODE = KeyManager.getKeyCode("recipe.recipe");
     private static final int USAGE_KEYCODE = KeyManager.getKeyCode("recipe.usage");
 
-    private static final String LANG = "plannh.gui.node.port.";
+    private static final LangScope PORT = LangScope.ROOT.child("gui.node.port");
 
     // needed for proper positioning of ports
     static final int PORT_OFFSET_X = 1;
@@ -131,7 +131,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         pos(stack.relx + PORT_OFFSET_X, stack.rely + PORT_OFFSET_Y + yShift);
         size(stack.width + PORT_BORDER, stack.height + PORT_BORDER);
 
-        tooltipBuilder(this::writeTooltip);
+        tooltipBuilder(TooltipBuilder.build(PORT, this::writeTooltip));
         tooltipAutoUpdate(true);
 
         // `Badge.draw()` draws the chance badge in the top left corner. The badge is at half scale when the GUI scale
@@ -246,20 +246,18 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         return ((PositionedStackAccessor) stack).getPermutated();
     }
 
-    private void writeTooltip(final RichTooltip tooltip) {
+    private void writeTooltip(final TooltipBuilder out) {
         refreshInactiveState();
         final EffectResult tooltipEffect = currentEffect();
-        if (stack.item != null && stack.item.getItem() != null) tooltip.addFromItem(stack.item);
-        else tooltip.addLine(IKey.str(port.getDisplayName()));
+        if (stack.item != null && stack.item.getItem() != null) out.item(stack.item);
+        else out.title(IKey.str(port.getDisplayName()));
 
-        final TooltipBuilder out = TooltipBuilder.create(tooltip);
-        if (portType != PortType.CATALYST || configurable()) out.langRow("plannh.gui.node.port.configure_hint");
-        if (inactiveDemand) out.langRow(LANG + "inactive");
+        if (portType != PortType.CATALYST || configurable()) out.hint("configure_hint");
+        if (inactiveDemand) out.text("inactive");
 
         writeThroughput(out, parent.balance(), tooltipEffect);
-        out.flush();
         port.getType()
-            .addTooltip(tooltip, port.getValue());
+            .addTooltip(out, port.getValue());
     }
 
     /** The rate, chance and target rows of the tooltip, and with shift the rate in every unit. */
@@ -268,43 +266,28 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         if (effect == null || portType == PortType.CATALYST) return;
         final int portIndex = index.leftInt();
         final double perCycle = perCycle(balance);
-        final RateUnit unit = rateUnit();
+        final RateUnit unit = Plan.getInstance()
+            .getSummary()
+            .getRateUnit();
 
-        // a separator before these rows, unless the tooltip is empty so far
-        if (!out.isEmpty()) out.separator();
-        if (perCycle > 0) out.entry(
-            IKey.lang("plannh.gui.node.port.rate"),
-            TooltipTheme.Role.RATE,
-            IKey.str(rateText(perCycle, balance.durationPerOp(), unit)));
+        out.separator();
+        if (perCycle > 0) out.entry("rate", TooltipTheme.RATE, rateText(perCycle, balance.durationPerOp(), unit));
         final float chance = (float) effect.multiplier(input, portIndex);
-        out.entry(
-            IKey.lang("plannh.gui.node.port.chance"),
-            TooltipTheme.Role.TUNABLE,
-            NEIClientUtils.formatChance(chance));
+        out.entry("chance", TooltipTheme.TUNABLE, NEIClientUtils.formatChance(chance));
 
+        // the rate target of the port, marked met or overshot
         final RateTarget rates = node.getMachineConfig()
             .getRates();
         final double target = input || !parent.isRateTargeted() ? 0 : rates.rate(portIndex);
         if (target > 0) {
             final String amount = port.getType()
                 .formatAmount(target * unit.secondsPerUnit);
-            out.entry(
-                IKey.lang("plannh.gui.node.port.target"),
-                TooltipTheme.Role.RATE,
-                TooltipBuilder.rate(amount, unit));
+            out.entry("target", TooltipTheme.RATE, GuiHelper.formatRate(amount, unit));
         }
         final PortSlot.TargetMark mark = slot.getRateTarget();
-        if (mark != null) out.row(TooltipTheme.key(mark.getRole(), StatCollector.translateToLocal(mark.getLangKey())));
+        if (mark != null) out.line(mark.getRole(), IKey.lang(mark.getLangKey()));
 
-        if (perCycle <= 0) return;
-        out.shiftDetail(
-            "plannh.gui.node.port.shift_hint",
-            detail -> detail.group("plannh.gui.node.port.per_unit", rows -> {
-                for (final RateUnit each : RateUnit.VALUES) {
-                    final String text = rateText(perCycle, balance.durationPerOp(), each);
-                    rows.entry(IKey.EMPTY, TooltipTheme.Role.RATE, IKey.str(text));
-                }
-            }));
+        if (perCycle > 0) out.ratesInEveryUnit(each -> rateText(perCycle, balance.durationPerOp(), each));
     }
 
     public double perCycle(final @Nullable Balancer.NodeBalance balance) {
@@ -315,16 +298,9 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     }
 
     private String rateText(final double perCycle, final int duration, final RateUnit unit) {
-        return TooltipBuilder.rate(
-            port.getType()
-                .formatAmount(GuiHelper.rate(perCycle, duration, unit)),
-            unit);
-    }
-
-    private static RateUnit rateUnit() {
-        return Plan.getInstance()
-            .getSummary()
-            .getRateUnit();
+        final String amount = port.getType()
+            .formatAmount(GuiHelper.rate(perCycle, duration, unit));
+        return GuiHelper.formatRate(amount, unit);
     }
 
     private boolean configuredInactiveDemand() {

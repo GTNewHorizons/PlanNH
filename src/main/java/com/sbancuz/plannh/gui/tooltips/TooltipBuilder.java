@@ -2,303 +2,279 @@ package com.sbancuz.plannh.gui.tooltips;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.EnumChatFormatting;
-import net.minecraft.util.StatCollector;
 
-import org.jetbrains.annotations.Nullable;
+import org.apache.commons.lang3.StringUtils;
 
+import com.cleanroommc.modularui.api.MCHelper;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.screen.RichTooltip;
 import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.GuiHelper.RateUnit;
+import com.sbancuz.plannh.gui.LangScope;
 import com.slprime.chromatictooltips.api.TooltipLines;
 import com.slprime.chromatictooltipscompat.CompatConfig;
 
 import cpw.mods.fml.common.Loader;
 
+/**
+ * Writes the lines of a tooltip. {@link #build} returns the tooltip of a widget:
+ *
+ * <pre>
+ * .tooltipBuilder(TooltipBuilder.build(PORT, out -> out.title("title").hint("configure_hint")))
+ * </pre>
+ *
+ * A {@code String} argument for a line, a label, or a group header is the last part of a lang key. The
+ * {@link LangScope} of the builder has the prefix of the key. An {@link IKey} argument is text that is ready to show,
+ * and a value is display text. {@link TooltipTheme} has the colour of each kind of text.
+ */
 public final class TooltipBuilder {
 
-    /** One level. Three spaces, the width ModularUI's own tooltips indent by. */
     private static final String INDENT = "   ";
 
-    /**
-     * How deep nesting goes before it stops indenting. A tooltip is one column wide, so depth buys
-     * nothing and costs the right-hand edge.
-     */
+    // each level of indent narrows the text of a row
     private static final int MAX_INDENT = 4;
 
     private static final String COLON = ": ";
+    private static final String LIST_SEPARATOR = ", ";
+    private static final String MARK = "> ";
+    private static final String NO_MARK = "  ";
 
-    private static final String GROUP_LANG = "plannh.gui.tooltip.group";
+    private static final LangScope TOOLTIP = LangScope.ROOT.child("gui.tooltip");
+    private static final LangScope SETTINGS = LangScope.ROOT.child("settings");
 
     // When the MUI2 compat of ChromaticTooltipsCompat is on, `RichTooltipMixin` passes each line of a `RichTooltip` to
-    // `TooltipHandler` of ChromaticTooltips. The line converters of ChromaticTooltips turn a divider, a divider with
-    // text and a shift marker into components of ChromaticTooltips
+    // `TooltipHandler` of ChromaticTooltips, and `DividerConverter` turns a divider line into a divider component
     private static final boolean CHROMATIC = Loader.isModLoaded(Compat.IDs.CHROMATICTOOLTIPSCOMPAT)
         && CompatConfig.modularUI2Enabled;
 
-    // `DividerConverter` of ChromaticTooltips matches a colour code, then three dashes or more
-    private static final String CHROMATIC_DIVIDER = EnumChatFormatting.GRAY + "---";
+    // `DividerConverter` matches a colour code, then three dashes or more
+    private static final String CHROMATIC_DIVIDER = TooltipTheme.DIVIDER.prefix() + "---";
+    // `MCHelper.getItemToolTip()` of MUI2 puts §7 before each line after the name, and `ModifierConverter` matches a
+    // modifier marker such as `§!shift` only at the start of a line
+    private static final String ITEM_LINE_PREFIX = EnumChatFormatting.GRAY.toString();
+    private static final String MODIFIER_PREFIX = "§!";
 
-    /** Where the finished lines go. Null on a nested builder, which hands them to its parent. */
-    private final RichTooltip target;
-
-    private final List<Row> rows;
-
+    private LangScope scope;
+    private final List<Consumer<RichTooltip>> rows = new ArrayList<>();
     private int indent;
 
-    private TooltipBuilder(final RichTooltip target) {
-        this.target = target;
-        this.rows = new ArrayList<>();
+    private TooltipBuilder(final LangScope scope) {
+        this.scope = scope;
     }
 
-    /**
-     * A builder over the tooltip it is about to fill.
-     */
-    public static TooltipBuilder create(final RichTooltip tooltip) {
-        return new TooltipBuilder(tooltip);
+    public static Consumer<RichTooltip> build(final Consumer<TooltipBuilder> body) {
+        return build(LangScope.ROOT, body);
     }
 
-    /** A builder with no tooltip behind it, for a group that has to know what it holds first. */
-    private TooltipBuilder nest() {
-        return new TooltipBuilder(null);
+    public static Consumer<RichTooltip> build(final LangScope scope, final Consumer<TooltipBuilder> body) {
+        return tooltip -> {
+            final TooltipBuilder out = new TooltipBuilder(scope);
+            body.accept(out);
+            for (final Consumer<RichTooltip> row : out.rows) row.accept(tooltip);
+        };
     }
 
-    /** The divider between two groups, as wide as the tooltip turns out to be. */
-    public TooltipBuilder separator() {
-        if (CHROMATIC) return line(IKey.str(CHROMATIC_DIVIDER));
-        rows.add(Row.divider());
+    /** Write the rows of {@code body}. The names that {@code body} passes are under {@code scope}. */
+    public TooltipBuilder scoped(final LangScope scope, final Consumer<TooltipBuilder> body) {
+        final LangScope outer = this.scope;
+        this.scope = scope;
+        body.accept(this);
+        this.scope = outer;
         return this;
     }
 
-    /** One step in, up to {@link #MAX_INDENT}. */
+    /**
+     * Write the lines of the tooltip of {@code stack}. The first line is the name of the stack. When CHROMATIC is true,
+     * strip the §7 before a modifier marker of ChromaticTooltips. ChromaticTooltips then puts the badge of the modifier
+     * in the header.
+     */
+    public TooltipBuilder item(final ItemStack stack) {
+        if (!CHROMATIC) {
+            rows.add(tooltip -> tooltip.addFromItem(stack));
+            return this;
+        }
+
+        rows.add(tooltip -> {
+            final List<String> lines = MCHelper.getItemToolTip(stack);
+            tooltip.addLine(lines.get(0));
+            if (lines.size() > 1) tooltip.spaceLine();
+            for (final String line : lines.subList(1, lines.size())) {
+                final String bare = StringUtils.removeStart(line, ITEM_LINE_PREFIX);
+                tooltip.addLine(bare.startsWith(MODIFIER_PREFIX) ? bare : line);
+            }
+        });
+        return this;
+    }
+
+    public TooltipBuilder title(final String name, final Object... args) {
+        return title(scope.lang(name, args));
+    }
+
+    public TooltipBuilder title(final IKey text) {
+        return add(TooltipTheme.NAME.style(text));
+    }
+
+    /** One line of text for each name. */
+    public TooltipBuilder texts(final String... names) {
+        for (final String name : names) text(name);
+        return this;
+    }
+
+    public TooltipBuilder text(final String name, final Object... args) {
+        return line(TooltipTheme.BODY.style(scope.lang(name, args)));
+    }
+
+    public TooltipBuilder hint(final String name, final Object... args) {
+        return line(TooltipTheme.HINT, scope.lang(name, args));
+    }
+
+    /** Write {@code text} at the current indent. */
+    public TooltipBuilder line(final IKey text) {
+        if (indent == 0) return add(text);
+        return add(IKey.comp(IKey.str(INDENT.repeat(indent)), text));
+    }
+
+    public TooltipBuilder line(final TooltipTheme role, final IKey text) {
+        return line(role.style(text));
+    }
+
+    /** Write an {@link #entry} one level further in than the current indent. */
+    public TooltipBuilder detail(final IKey label, final TooltipTheme role, final String value) {
+        indent();
+        entry(label, role, value);
+        return outdent();
+    }
+
     public TooltipBuilder indent() {
-        if (indent < MAX_INDENT) indent++;
+        indent = Math.min(MAX_INDENT, indent + 1);
         return this;
     }
 
-    /** One step back out, never past the left edge. */
     public TooltipBuilder outdent() {
-        if (indent > 0) indent--;
+        indent = Math.max(0, indent - 1);
         return this;
+    }
+
+    public TooltipBuilder entry(final String name, final TooltipTheme role, final String value) {
+        return entry(scope.lang(name), role, IKey.str(value));
+    }
+
+    public TooltipBuilder entry(final String name, final TooltipTheme role, final IKey value) {
+        return entry(scope.lang(name), role, value);
+    }
+
+    public TooltipBuilder entry(final IKey label, final TooltipTheme role, final String value) {
+        return entry(label, role, IKey.str(value));
+    }
+
+    public TooltipBuilder entry(final IKey label, final TooltipTheme role, final IKey value) {
+        return line(IKey.comp(TooltipTheme.BODY.style(label), TooltipTheme.BODY.style(COLON), role.style(value)));
+    }
+
+    /** Write a label without a value, for a setting that is on. {@code flag()} skips a blank label. */
+    public TooltipBuilder flag(final IKey label) {
+        if (label.get()
+            .isBlank()) return this;
+        return line(TooltipTheme.BODY.style(label));
+    }
+
+    /** A row of a list of choices. The mark and the colour tell the choice in use from the others. */
+    public TooltipBuilder marker(final IKey label, final boolean selected) {
+        final TooltipTheme role = selected ? TooltipTheme.SELECTED : TooltipTheme.MUTED;
+        return line(role.style(IKey.comp(IKey.str(selected ? MARK : NO_MARK), label)));
     }
 
     /**
-     * Write a rule, the header of {@code headerKey} and the rows of {@code body}. When {@code body} doesn't write a
-     * row, don't write the rule or the header. When {@link #CHROMATIC} is true, write one divider of ChromaticTooltips
-     * with the header's text in place of the rule and the header.
+     * Write a duration in {@code unit} and in ticks. When {@code allUnits} is true, write the duration in each unit of
+     * {@link RateUnit#VALUES} that is a duration, then in ticks.
      */
-    public TooltipBuilder group(final String headerKey, final Consumer<TooltipBuilder> body) {
-        final TooltipBuilder nested = nest();
+    public TooltipBuilder duration(final IKey label, final int ticks, final RateUnit unit, final boolean allUnits) {
+        final String inTicks = GuiHelper.formatDuration(ticks, RateUnit.TICKS);
+        if (!allUnits) {
+            final String inUnit = GuiHelper.formatDuration(ticks, unit);
+            return entry(label, TooltipTheme.TIME, TOOLTIP.lang("duration", inUnit, inTicks));
+        }
+
+        final List<String> each = new ArrayList<>();
+        for (final RateUnit duration : RateUnit.VALUES) {
+            if (duration.duration) each.add(GuiHelper.formatDuration(ticks, duration));
+        }
+        each.add(inTicks);
+        return entry(label, TooltipTheme.TIME, String.join(LIST_SEPARATOR, each));
+    }
+
+    /** Write a group with the rate in each unit of {@link RateUnit#VALUES} while shift is down. */
+    public TooltipBuilder ratesInEveryUnit(final Function<RateUnit, String> rateIn) {
+        return shiftDetail(
+            detail -> detail.group(
+                TOOLTIP.lang("per_unit"),
+                rows -> {
+                    for (final RateUnit unit : RateUnit.VALUES) rows.value(TooltipTheme.RATE, rateIn.apply(unit));
+                }));
+    }
+
+    /**
+     * Write the rows of {@code detail} while shift is down. When CHROMATIC is true, write the {@code §!shift} marker,
+     * and ChromaticTooltips puts the [shift] badge in the header. Else write the shift hint while shift is up.
+     */
+    public TooltipBuilder shiftDetail(final Consumer<TooltipBuilder> detail) {
+        final boolean held = GuiHelper.shiftHeld();
+        if (CHROMATIC) rows.add(tooltip -> tooltip.addLine(TooltipLines.SHIFT_MODIFIER));
+        if (held) detail.accept(this);
+        else if (!CHROMATIC) line(TooltipTheme.HINT, TOOLTIP.lang("shift_hint"));
+        return this;
+    }
+
+    public TooltipBuilder value(final TooltipTheme role, final String value) {
+        return line(role.style(value));
+    }
+
+    public TooltipBuilder group(final String name, final Consumer<TooltipBuilder> body) {
+        return group(scope.lang(name), body);
+    }
+
+    /**
+     * Write a divider, the header, and the rows of {@code body}. The rows are one level in. When {@code body} doesn't
+     * write a row, don't write the divider or the header. ChromaticTooltips centres the text of a divider with text, so
+     * the header is a separate line at the left edge.
+     */
+    public TooltipBuilder group(final IKey header, final Consumer<TooltipBuilder> body) {
+        final TooltipBuilder nested = new TooltipBuilder(scope);
         nested.indent = Math.min(MAX_INDENT, indent + 1);
         body.accept(nested);
         if (nested.rows.isEmpty()) return this;
-        if (CHROMATIC) row(IKey.lang(GROUP_LANG, StatCollector.translateToLocal(headerKey)));
-        else separator().header(headerKey);
+
+        separator().line(TooltipTheme.NAME.style(header));
         rows.addAll(nested.rows);
         return this;
     }
 
-    /**
-     * A header in the label colour with a colon, the way the pack has always written one.
-     */
-    public TooltipBuilder header(final String langKey) {
-        return row(TooltipTheme.key(TooltipTheme.Role.LABEL, StatCollector.translateToLocal(langKey) + COLON));
-    }
-
-    public TooltipBuilder langRow(final String langKey) {
-        return row(IKey.lang(langKey));
-    }
-
-    public TooltipBuilder langRow(final String langKey, final Object... args) {
-        return row(IKey.lang(langKey, args));
-    }
-
-    /** Translated rows, each on its own. */
-    public TooltipBuilder langRows(final String... langKeys) {
-        for (final String langKey : langKeys) langRow(langKey);
+    /** The divider between two groups, as wide as the tooltip. */
+    public TooltipBuilder separator() {
+        if (CHROMATIC) return add(IKey.str(CHROMATIC_DIVIDER));
+        rows.add(tooltip -> tooltip.addLine(TooltipRule.INSTANCE));
         return this;
     }
 
-    /** A line of text on its own, from a key already built. A label that is not a translation. */
-    public TooltipBuilder row(final IKey key) {
-        return line(IKey.comp(pad(), key));
-    }
-
-    /** A label and its value: the tooltip's workhorse. */
-    public TooltipBuilder entry(final String label, final TooltipTheme.Role role, final String value) {
-        return entry(label, role, value, null);
-    }
-
-    /**
-     * A label and its value, with a tail in the body's colour - a duration's ticks beside its
-     * seconds, say. A null tail prints nothing, and the line is the same line without it.
-     */
-    public TooltipBuilder entry(final String label, final TooltipTheme.Role role, final String value,
-        final @Nullable String tail) {
-        return entry(IKey.str(label), role, value, tail);
-    }
-
-    /** An {@link #entry} whose label is a key, which is the form every lang-backed row reads best in. */
-    public TooltipBuilder entry(final IKey label, final TooltipTheme.Role role, final String value) {
-        return entry(label, role, value, null);
-    }
-
-    /** An {@link #entry} whose value is a key too, for a value a lang sentence carries. */
-    public TooltipBuilder entry(final IKey label, final TooltipTheme.Role role, final IKey value) {
-        return entry(label, role, value, null);
-    }
-
-    /** An {@link #entry} over keys throughout, tail included by way of the string overload. */
-    public TooltipBuilder entry(final IKey label, final TooltipTheme.Role role, final IKey value,
-        final @Nullable String tail) {
-        return entry(label, role, value.get(), tail);
-    }
-
-    public TooltipBuilder entry(final IKey label, final TooltipTheme.Role role, final String value,
-        final @Nullable String tail) {
-        final IKey tailKey = tail == null ? IKey.EMPTY : TooltipTheme.key(TooltipTheme.Role.BODY, " (" + tail + ")");
-        return line(
-            IKey.comp(
-                pad(),
-                TooltipTheme.key(
-                    TooltipTheme.Role.LABEL,
-                    IKey.comp(label, IKey.str(COLON))
-                        .get()),
-                TooltipTheme.key(role, value),
-                tailKey));
-    }
-
-    /**
-     * An {@link #entry} one further in than this level - for a value that belongs to one particular
-     * row of the group rather than to the group itself. A {@link #group} already indents its body, so
-     * this is what takes a value to the level below that.
-     */
-    public TooltipBuilder detail(final String label, final TooltipTheme.Role role, final String value) {
-        return indent().entry(label, role, value)
-            .outdent();
-    }
-
-    /**
-     * Write the rows of {@code detail} while shift is down, else the row of {@code hintKey}. When {@link #CHROMATIC} is
-     * true, write {@link TooltipLines#SHIFT_MODIFIER} in place of the hint row. {@code ModifierConverter} of
-     * ChromaticTooltips turns the marker into a [shift] badge. The badge is gold while shift is down.
-     */
-    public TooltipBuilder shiftDetail(final String hintKey, final Consumer<TooltipBuilder> detail) {
-        if (CHROMATIC) line(IKey.str(TooltipLines.SHIFT_MODIFIER));
-        if (GuiHelper.shiftHeld()) detail.accept(this);
-        else if (!CHROMATIC) langRow(hintKey);
+    /** Write whether the user set the value. When the user set the value, write the hint for the middle-click reset. */
+    public TooltipBuilder resetHint(final boolean explicit) {
+        line(TooltipTheme.BODY.style(SETTINGS.lang(explicit ? "choice_manual" : "choice_auto")));
+        if (explicit) line(TooltipTheme.HINT, SETTINGS.lang("middle_reset_hint"));
         return this;
     }
 
-    /**
-     * A bare label with no value: a flag that is on, and only ever on.
-     */
-    public TooltipBuilder flag(final @Nullable String label) {
-        if (label == null || label.isBlank()) return this;
-        return row(TooltipTheme.key(TooltipTheme.Role.BODY, label));
-    }
-
-    /**
-     * A row out of a list where one is in use. The mark keeps its width whether or not it is drawn, so
-     * the taken row's label sits where the untaken ones' labels sit.
-     */
-    public TooltipBuilder marker(final String mark, final String label, final boolean on) {
-        final TooltipTheme.Role role = on ? TooltipTheme.Role.ACCENT : TooltipTheme.Role.MUTED;
-        return line(IKey.comp(pad(), IKey.str(mark + " "), TooltipTheme.key(role, label)));
-    }
-
-    public TooltipBuilder duration(final String label, final int ticks, final RateUnit unit, final boolean allUnits) {
-        return entry(
-            label,
-            TooltipTheme.Role.IDENTITY,
-            durationValue(ticks, unit, allUnits),
-            allUnits || !unit.duration ? null : ticks + " " + mark(RateUnit.TICKS));
-    }
-
-    /** An amount with its per-unit suffix, the way every rate in the pack is written. */
-    public static String rate(final String amount, final RateUnit unit) {
-        return amount + StatCollector.translateToLocal(unit.suffixKey());
-    }
-
-    /**
-     * Formats something like 3 -> x3
-     */
-    public static IKey multiple(final double factor) {
-        return IKey.lang("plannh.gui.number.multiple", GuiHelper.formatCount(factor));
-    }
-
-    private static String durationValue(final int ticks, final RateUnit unit, final boolean allUnits) {
-        final double seconds = ticks / (double) GuiHelper.TICKS_PER_SECOND;
-        if (!allUnits) return number(seconds / unit.secondsPerUnit) + " " + mark(unit);
-
-        final StringBuilder all = new StringBuilder();
-        for (final RateUnit each : RateUnit.VALUES) {
-            if (!each.duration) continue;
-            all.append(number(seconds / each.secondsPerUnit))
-                .append(' ')
-                .append(mark(each))
-                .append(", ");
-        }
-        return all.append(ticks)
-            .append(' ')
-            .append(mark(RateUnit.TICKS))
-            .toString();
-    }
-
-    private static String mark(final RateUnit unit) {
-        return StatCollector.translateToLocal(unit.langKey);
-    }
-
-    private static String number(final double value) {
-        return GuiHelper.trimTrailingZeros(String.format(Locale.ROOT, "%.2f", value));
-    }
-
-    /**
-     * Hands the rows to the tooltip. Called once per build, on the builder {@link #create} made, after
-     * the content is written - which is every time, {@link RichTooltip} starting from scratch on a
-     * hover.
-     */
-    public void flush() {
-        if (target == null) throw new IllegalStateException("only the root builder writes to a tooltip");
-        for (final Row row : rows) row.writeTo(target);
-        rows.clear();
-    }
-
-    /**
-     * Whether anything has been written here yet. A group's emptiness is read through this.
-     */
     public boolean isEmpty() {
         return rows.isEmpty();
     }
 
-    private TooltipBuilder line(final IKey key) {
-        rows.add(Row.text(key));
+    private TooltipBuilder add(final IKey text) {
+        rows.add(tooltip -> tooltip.addLine(text));
         return this;
-    }
-
-    private IKey pad() {
-        return indent == 0 ? IKey.EMPTY : IKey.str(INDENT.repeat(indent));
-    }
-
-    /** A line: either text, or the divider. They cannot be one thing, because a rule is drawn. */
-    private record Row(IKey key, TooltipRule rule) {
-
-        static Row text(final IKey key) {
-            return new Row(key, null);
-        }
-
-        static Row divider() {
-            return new Row(null, new TooltipRule());
-        }
-
-        void writeTo(final RichTooltip tooltip) {
-            if (rule != null) tooltip.addLine(rule);
-            else tooltip.addLine(key);
-        }
     }
 }

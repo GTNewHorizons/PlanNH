@@ -20,7 +20,6 @@ import javax.annotation.Nullable;
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.drawable.ItemDrawable;
-import com.cleanroommc.modularui.screen.RichTooltip;
 import com.sbancuz.plannh.data.effect.EffectComputer;
 import com.sbancuz.plannh.data.effect.EffectFunction;
 import com.sbancuz.plannh.data.effect.EffectResult;
@@ -74,7 +73,7 @@ public final class MachineProfile {
     private final String id;
     private final PropertyProvider provider;
     private final BiFunction<IRecipeHandler, Integer, IDrawable> icon;
-    private final Consumer<RichTooltip> iconTooltip;
+    private final Consumer<TooltipBuilder> iconTooltip;
 
     private final List<Entry> settings;
     private final EffectComputer effectComputer;
@@ -206,16 +205,15 @@ public final class MachineProfile {
     }
 
     /** The tooltip of an icon that is not an item. {@code ItemWidget} writes the tooltip of an item. */
-    public void addIconTooltip(final RichTooltip tooltip) {
-        if (iconTooltip != null) iconTooltip.accept(tooltip);
-        if (tooltip.isEmpty()) TooltipBuilder.create(tooltip)
-            .flag(
-                id == null || id.isBlank() ? IKey.lang("plannh.gui.node.machine")
-                    .get()
-                    : id.replace(':', ' ')
-                        .replace('_', ' ')
-                        .replace('.', ' '))
-            .flush();
+    public void addIconTooltip(final TooltipBuilder out) {
+        if (iconTooltip != null) iconTooltip.accept(out);
+        if (!out.isEmpty()) return;
+
+        final String name = id == null || id.isBlank() ? null
+            : id.replace(':', ' ')
+                .replace('_', ' ')
+                .replace('.', ' ');
+        out.title(name == null ? IKey.lang("plannh.gui.node.machine") : IKey.str(name));
     }
 
     private static boolean hasItem(final ItemDrawable drawable) {
@@ -241,7 +239,7 @@ public final class MachineProfile {
         private final Map<SettingDef<?>, int[]> settingBounds = new HashMap<>();
         private PropertyProvider provider;
         private BiFunction<IRecipeHandler, Integer, IDrawable> icon = (_, _) -> IDrawable.EMPTY;
-        private Consumer<RichTooltip> iconTooltip;
+        private Consumer<TooltipBuilder> iconTooltip;
         private EffectComputer effectComputer = Effects.durationFromHandler();
         private PortMultiplier inputMultiplier = (_, _, _, _) -> 1d;
         private PortMultiplier outputMultiplier = (_, _, _, _) -> 1d;
@@ -273,7 +271,8 @@ public final class MachineProfile {
             return icon(icon, null);
         }
 
-        public B icon(final BiFunction<IRecipeHandler, Integer, IDrawable> icon, final Consumer<RichTooltip> tooltip) {
+        public B icon(final BiFunction<IRecipeHandler, Integer, IDrawable> icon,
+            final Consumer<TooltipBuilder> tooltip) {
             this.icon = icon;
             this.iconTooltip = tooltip;
             return self();

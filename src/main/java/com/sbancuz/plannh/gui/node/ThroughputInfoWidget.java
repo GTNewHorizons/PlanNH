@@ -10,7 +10,6 @@ import javax.annotation.Nullable;
 import net.minecraft.util.StatCollector;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
-import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
@@ -34,6 +33,7 @@ import com.sbancuz.plannh.data.setting.SettingDef;
 import com.sbancuz.plannh.data.setting.TargetKind;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.GuiHelper.RateUnit;
+import com.sbancuz.plannh.gui.LangScope;
 import com.sbancuz.plannh.gui.common.FlowchartFlow;
 import com.sbancuz.plannh.gui.common.FlowchartTextWidget;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
@@ -43,8 +43,8 @@ import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
 public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> implements IFlowchartDraggable {
 
-    private static final String LANG = "plannh.gui.node.throughput.";
-    private static final String TARGET = "plannh.gui.node.target.";
+    private static final LangScope THROUGHPUT = LangScope.ROOT.child("gui.node.throughput");
+    private static final LangScope TARGET = LangScope.ROOT.child("gui.node.target");
 
     private final NodeWidget parent;
     private final Flow lines;
@@ -91,7 +91,9 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
             .getGraph()
             .getVersion();
         final boolean shift = GuiHelper.shiftHeld();
-        final RateUnit unit = rateUnit();
+        final RateUnit unit = Plan.getInstance()
+            .getSummary()
+            .getRateUnit();
         if (version == lastVersion && shift == lastShift && unit == lastUnit) return;
         lastVersion = version;
         lastShift = shift;
@@ -113,9 +115,9 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
         idle = reason;
 
         final IKey copies;
-        if (balance == null) copies = IKey.lang("plannh.gui.node.throughput.unbalanced");
-        else if (idle != null) copies = IKey.lang(idle.key);
-        else copies = IKey.comp(IKey.lang(LANG + "copies_needed"), TooltipBuilder.multiple(operations));
+        if (balance == null) copies = THROUGHPUT.lang("unbalanced");
+        else if (idle != null) copies = THROUGHPUT.lang(idle.key);
+        else copies = IKey.comp(THROUGHPUT.lang("copies_needed"), GuiHelper.multiple(operations));
 
         lines.removeAll();
 
@@ -127,10 +129,10 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
             .coverChildrenHeight()
             .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
             .childPadding(2)
-            .tooltipBuilder(this::writeTooltip)
+            .tooltipBuilder(TooltipBuilder.build(this::writeTooltip))
             .child(new FlowchartTextWidget(copies, parent).name("node.info.copies"))
             .child(
-                new FlowchartTextWidget(IKey.lang(LANG + "duration", GuiHelper.formatDuration(duration)), parent)
+                new FlowchartTextWidget(THROUGHPUT.lang("duration", GuiHelper.formatDuration(duration)), parent)
                     .name("node.info.duration")
                     .textAlign(Alignment.CenterRight));
         lines.child(row);
@@ -168,40 +170,41 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
         return Idle.NO_RATE;
     }
 
-    private void writeTooltip(final RichTooltip tooltip) {
+    private void writeTooltip(final TooltipBuilder out) {
         final Node node = parent.getData();
         final Balancer.NodeBalance balance = parent.balance();
         final boolean balanced = balance != null && balance.durationPerOp() > 0;
-        final RateUnit unit = rateUnit();
+        final RateUnit unit = Plan.getInstance()
+            .getSummary()
+            .getRateUnit();
         final EffectResult effect = parent.effectSnapshot();
         final int ticks = balanced ? balance.durationPerOp() : durationTicks(node, effect);
 
-        final TooltipBuilder out = TooltipBuilder.create(tooltip);
         if (idle != null) writeIdle(out, idle);
 
-        if (ticks > 0) out.duration(RecipePropertyAPI.DURATION_TICKS.displayName(), ticks, unit, GuiHelper.shiftHeld());
-        else out.langRow(LANG + "unbalanced");
+        final IKey durationLabel = IKey.str(RecipePropertyAPI.DURATION_TICKS.displayName());
+        if (ticks > 0) out.duration(durationLabel, ticks, unit, GuiHelper.shiftHeld());
+        else out.text("gui.node.throughput.unbalanced");
 
         out.group(
-            "plannh.summary.title.outputs",
+            "summary.title.outputs",
             rows -> { if (balanced) ports(rows, node.getOutputs(), balance.effectiveOutputs(), ticks, unit); });
         out.group(
-            "plannh.summary.title.inputs",
+            "summary.title.inputs",
             rows -> { if (balanced) ports(rows, node.getInputs(), balance.effectiveInputs(), ticks, unit); });
-        out.group("plannh.summary.title.properties", rows -> properties(rows, node, effect));
+        out.group("summary.title.properties", rows -> properties(rows, node, effect));
 
         writeTarget(out);
-        out.shiftDetail(LANG + "shift_hint", this::writeSettings);
-        out.flush();
+        out.shiftDetail(this::writeSettings);
     }
 
     /** Write what the state of {@code reason} means, then what the player can change. */
     private void writeIdle(final TooltipBuilder out, final Idle reason) {
         final String copies = StatCollector.translateToLocal(Pin.FIXED_COPIES.key());
         final String rate = StatCollector.translateToLocal(Pin.TARGET_RATE.key());
-        final String targetRows = StatCollector.translateToLocal(NodeWidget.TARGET_LANG);
-        final String copyCount = StatCollector.translateToLocal("plannh.gui.node.target.copies");
-        final String balanceMode = StatCollector.translateToLocal("plannh.gui.toolbar.balance.title");
+        final String targetRows = TARGET.translate("rows");
+        final String copyCount = TARGET.translate("copies");
+        final String balanceMode = LangScope.ROOT.translate("gui.toolbar.balance.title");
         final String modeName = parent.balanceMode()
             .displayName();
         final Object[] whyArgs = switch (reason) {
@@ -216,8 +219,10 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
             case SOLVE_FAILED, NO_RATE, NOT_NEEDED -> new Object[0];
         };
 
-        out.langRow(reason.key + ".why", whyArgs)
-            .langRow(reason.key + ".fix", fixArgs)
+        out.scoped(THROUGHPUT, rows -> {
+            rows.text(reason.key + ".why", whyArgs);
+            rows.text(reason.key + ".fix", fixArgs);
+        })
             .separator();
     }
 
@@ -235,11 +240,9 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
         final Pin selected = cfg.getTargetKind();
         final TargetKind kind = TargetKind.of(cfg, selected);
 
-        out.group(TARGET + "title", rows -> {
-            for (final Pin pin : held) {
-                rows.marker(selected == pin ? ">" : " ", StatCollector.translateToLocal(pin.key()), selected == pin);
-            }
-            if (selected == Pin.NONE) rows.langRow(TARGET + "none_hint");
+        out.group(TARGET.lang("title"), rows -> {
+            for (final Pin pin : held) rows.marker(IKey.lang(pin.key()), selected == pin);
+            if (selected == Pin.NONE) rows.text("gui.node.target.none_hint");
             else if (kind != null) kind.tooltip(rows, parent);
         });
     }
@@ -251,7 +254,7 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
         final MachineConfig cfg = node.getMachineConfig();
         final RecipeContext ctx = node.recipeContext();
 
-        out.group(LANG + "settings", rows -> {
+        out.group(THROUGHPUT.lang("settings"), rows -> {
             for (final SettingDef<?> def : visible(cfg, ctx)) {
                 final Object value = cfg.getProfile()
                     .value(def, cfg, ctx);
@@ -278,13 +281,9 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
             final Double rate = perCycle.get(i);
             if (rate == null || rate <= 0) continue;
             final Port<?> port = ports.get(i);
-            out.detail(
-                port.getDisplayName(),
-                TooltipTheme.Role.RATE,
-                TooltipBuilder.rate(
-                    port.getType()
-                        .formatAmount(GuiHelper.rate(rate, duration, unit)),
-                    unit));
+            final String amount = port.getType()
+                .formatAmount(GuiHelper.rate(rate, duration, unit));
+            out.detail(IKey.str(port.getDisplayName()), TooltipTheme.RATE, GuiHelper.formatRate(amount, unit));
         }
     }
 
@@ -305,8 +304,8 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
             final String name = prop.formatDisplayName(prop.getDefaultValue());
             final double value = ((Number) properties.get(prop)).doubleValue();
             // A property named per tick is energy, and the pack marks energy wherever it turns up.
-            out.detail(name, name.endsWith("/t") ? TooltipTheme.Role.POWER : TooltipTheme.Role.BODY,
-                prop.formatAmount(value));
+            final TooltipTheme role = name.endsWith("/t") ? TooltipTheme.POWER : TooltipTheme.VALUE;
+            out.detail(IKey.str(name), role, prop.formatAmount(value));
         }
     }
 
@@ -317,24 +316,18 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
         return raw instanceof final Number n ? Math.max(0, n.intValue()) : 0;
     }
 
-    private static RateUnit rateUnit() {
-        return Plan.getInstance()
-            .getSummary()
-            .getRateUnit();
-    }
-
     /**
      * Each constant is a reason for 0 operations after a balance. The lang file has a row label and two tooltip rows
-     * for each constant.
+     * for each constant. Each key starts with the prefix of {@link #THROUGHPUT}.
      */
     private enum Idle {
 
-        NO_TARGET("plannh.gui.node.throughput.idle.no_target"),
-        SOLVE_FAILED("plannh.gui.node.throughput.idle.solve_failed"),
-        ZERO_COPIES("plannh.gui.node.throughput.idle.zero_copies"),
-        RATE_IGNORED("plannh.gui.node.throughput.idle.rate_ignored"),
-        NO_RATE("plannh.gui.node.throughput.idle.no_rate"),
-        NOT_NEEDED("plannh.gui.node.throughput.idle.not_needed");
+        NO_TARGET("idle.no_target"),
+        SOLVE_FAILED("idle.solve_failed"),
+        ZERO_COPIES("idle.zero_copies"),
+        RATE_IGNORED("idle.rate_ignored"),
+        NO_RATE("idle.no_rate"),
+        NOT_NEEDED("idle.not_needed");
 
         private final String key;
 

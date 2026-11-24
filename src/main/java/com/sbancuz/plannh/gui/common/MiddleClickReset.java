@@ -5,7 +5,7 @@ import org.jetbrains.annotations.NotNull;
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 
-/** A row that a middle-click resets. {@link #addResetRows} adds the tooltip rows of the reset. */
+/** A row that a middle-click resets. {@link TooltipBuilder#resetHint} writes the tooltip rows of the reset. */
 public interface MiddleClickReset extends Interactable {
 
     @Override
@@ -26,9 +26,4 @@ public interface MiddleClickReset extends Interactable {
     boolean isExplicit();
 
     void reset();
-
-    default TooltipBuilder addResetRows(final TooltipBuilder out) {
-        return out.langRow(isExplicit() ? "plannh.settings.choice_manual" : "plannh.settings.choice_auto")
-            .langRow("plannh.settings.middle_reset_hint");
-    }
 }
