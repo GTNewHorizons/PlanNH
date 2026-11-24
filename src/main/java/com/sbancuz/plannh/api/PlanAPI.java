@@ -290,7 +290,8 @@ public final class PlanAPI {
         }
     }
 
-    static void atomicWrite(final File target, final String content, @Nullable final File backup) throws IOException {
+    public static void atomicWrite(final File target, final String content, @Nullable final File backup)
+        throws IOException {
         final File parent = target.getParentFile();
         if (parent == null || (!parent.exists() && !parent.mkdirs()) || !parent.isDirectory()) {
             throw new IOException("Unable to create save directory " + parent);
