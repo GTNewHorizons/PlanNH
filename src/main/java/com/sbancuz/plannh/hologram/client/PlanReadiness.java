@@ -5,6 +5,7 @@ import java.lang.ref.WeakReference;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.World;
 
+import codechicken.nei.NEIClientConfig;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
@@ -27,7 +28,9 @@ public final class PlanReadiness {
 
     public static boolean isReady() {
         final World world = Minecraft.getMinecraft().theWorld;
-        return world != null && world == readyWorld.get();
+        // NEI registers recipe handlers on its "NEI Plugin Loader" thread after joining; reading the plan earlier
+        // resolves every node as unavailable for the whole session.
+        return world != null && world == readyWorld.get() && NEIClientConfig.isLoaded();
     }
 
     @SubscribeEvent
