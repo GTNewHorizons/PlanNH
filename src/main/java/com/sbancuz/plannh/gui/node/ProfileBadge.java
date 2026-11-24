@@ -4,6 +4,7 @@ import javax.annotation.Nullable;
 
 import com.cleanroommc.modularui.api.GuiAxis;
 import com.cleanroommc.modularui.api.drawable.IKey;
+import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.MachineConfig;
@@ -27,6 +28,8 @@ public final class ProfileBadge extends FlowchartFlow {
         this.node = node;
         name("node.options.badge");
         coverChildren();
+        padding(2, 1);
+        background(GuiTextures.SLOT_ITEM);
         childPadding(1);
         crossAxisAlignment(Alignment.CrossAxis.CENTER);
         rebuild();
@@ -62,8 +65,7 @@ public final class ProfileBadge extends FlowchartFlow {
         if (!code.isEmpty()) child(
             new FlowchartTextWidget(IKey.str(code), node).name("node.badge.code")
                 .widgetTheme(PlannhThemes.CARD_BADGE)
-                .height(ITEM)
-                .textAlign(Alignment.Center));
+                .height(ITEM));
     }
 
     private @Nullable NodeBadge readBadge() {
@@ -73,7 +75,7 @@ public final class ProfileBadge extends FlowchartFlow {
             return cfg.getProfile()
                 .getBadge()
                 .apply(cfg, data.recipeContext());
-        } catch (RuntimeException | LinkageError failure) { // noqa: NAR142, degrade and report over another mod's code
+        } catch (RuntimeException | LinkageError failure) {
             PlanNH.LOG.warn("node.badge.failed machine={}", data.getMachineName(), failure);
             return null;
         }
