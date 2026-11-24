@@ -24,7 +24,6 @@ public class HologramEditKey {
 
     public static void init() {
         ClientRegistry.registerKeyBinding(EDIT_KEY);
-        PlanReadiness.init();
         FMLCommonHandler.instance()
             .bus()
             .register(new HologramEditKey());
