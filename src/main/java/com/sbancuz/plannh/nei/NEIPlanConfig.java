@@ -34,9 +34,9 @@ public class NEIPlanConfig implements IConfigureNEI {
         if (!(gui.firstGui instanceof final GuiContainerWrapper wrapper
             && wrapper.getScreen() instanceof FlowchartScreen)) return;
         final RecipeHandlerRef ref = event.handlerRef;
-        if (!HANDLER.canCraft(wrapper, ref.handler, ref.recipeIndex)) return;
 
-        PlanRecipeButton.configure(event.buttonList, ref, event.width, event.height, () -> {
+        final boolean canAdd = HANDLER.canCraft(wrapper, ref.handler, ref.recipeIndex);
+        PlanRecipeButton.configure(event, canAdd, () -> {
             wrapper.mc.displayGuiScreen(wrapper);
             HANDLER.overlayRecipe(wrapper, ref.handler, ref.recipeIndex, false);
         });

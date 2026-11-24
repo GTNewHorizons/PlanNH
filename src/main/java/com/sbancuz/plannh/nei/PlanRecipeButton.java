@@ -7,6 +7,7 @@ import net.minecraft.util.StatCollector;
 
 import codechicken.nei.recipe.GuiOverlayButton;
 import codechicken.nei.recipe.GuiRecipeButton;
+import codechicken.nei.recipe.GuiRecipeButton.UpdateRecipeButtonsEvent;
 import codechicken.nei.recipe.RecipeHandlerRef;
 
 /** {@code PlanRecipeButton} adds a recipe to the plan. */
@@ -20,21 +21,29 @@ final class PlanRecipeButton extends GuiRecipeButton {
     }
 
     /**
-     * Replace the NEI overlay button in {@code buttons} with a {@code PlanRecipeButton}. When {@code buttons} doesn't
-     * have an overlay button, add a {@code PlanRecipeButton} at the lowest free position on the right edge.
+     * Replace the NEI overlay button in {@code event.buttonList} with a {@code PlanRecipeButton}, disabled unless
+     * {@code canAdd}. When the list doesn't have an overlay button and {@code canAdd} is true, add a
+     * {@code PlanRecipeButton} at the lowest free position on the right edge.
      */
-    static void configure(final List<GuiRecipeButton> buttons, final RecipeHandlerRef ref, final int width,
-        final int height, final Runnable addRecipe) {
+    public static void configure(final UpdateRecipeButtonsEvent.Post event, final boolean canAdd,
+        final Runnable addRecipe) {
+        final List<GuiRecipeButton> buttons = event.buttonList;
+        final RecipeHandlerRef ref = event.handlerRef;
+
         for (int i = 0; i < buttons.size(); i++) {
             final GuiRecipeButton button = buttons.get(i);
             if (button instanceof PlanRecipeButton) return;
             if (!(button instanceof GuiOverlayButton)) continue;
-            buttons.set(i, new PlanRecipeButton(ref, button.xPosition, button.yPosition, addRecipe));
+
+            final var replacement = new PlanRecipeButton(ref, button.xPosition, button.yPosition, addRecipe);
+            replacement.enabled = canAdd;
+            buttons.set(i, replacement);
             return;
         }
+        if (!canAdd) return;
 
-        final int x = Math.min(166, width) - BUTTON_WIDTH;
-        int y = height - BUTTON_HEIGHT - 6;
+        final int x = Math.min(166, event.width) - BUTTON_WIDTH;
+        int y = event.height - BUTTON_HEIGHT - 6;
         while (true) {
             final int candidateY = y;
             if (buttons.stream()
@@ -55,7 +64,8 @@ final class PlanRecipeButton extends GuiRecipeButton {
 
     @Override
     public List<String> handleTooltip(final List<String> currenttip) {
-        currenttip.add(StatCollector.translateToLocal("plannh.gui.recipe.add_to_plan"));
+        final String key = enabled ? "plannh.gui.recipe.add_to_plan" : "plannh.gui.recipe.cannot_add_to_plan";
+        currenttip.add(StatCollector.translateToLocal(key));
         return currenttip;
     }
 
