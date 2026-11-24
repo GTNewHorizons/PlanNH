@@ -17,6 +17,7 @@ import com.sbancuz.plannh.client.WorldHandler;
 import com.sbancuz.plannh.gui.FlowchartGui;
 import com.sbancuz.plannh.gui.layout.ElkLayoutStrategy;
 import com.sbancuz.plannh.gui.theme.PlannhThemes;
+import com.sbancuz.plannh.hologram.client.HologramRenderer;
 
 import cpw.mods.fml.client.registry.ClientRegistry;
 import cpw.mods.fml.common.FMLCommonHandler;
@@ -65,6 +66,7 @@ public class ClientProxy extends CommonProxy {
 
         MinecraftForge.EVENT_BUS.register(new ChatHandler());
         MinecraftForge.EVENT_BUS.register(new FlowchartGui.CloseListener());
+        MinecraftForge.EVENT_BUS.register(new HologramRenderer());
         ClientCommandHandler.instance.registerCommand(new ImportCommand());
 
         FMLCommonHandler.instance()
