@@ -1,8 +1,0 @@
-## Holograms
-plannh.hologram.error.save=Не вдалося зберегти голограми
-plannh.hologram.error.load=Не вдалося завантажити голограми, використано резервну копію або їх скинуто
-key.plannh.hologram.edit=Створити/змінити голограму
-plannh.hologram.editor.title=Голограма
-plannh.hologram.editor.save=Зберегти
-plannh.hologram.editor.delete=Видалити
-plannh.hologram.editor.cancel=Скасувати

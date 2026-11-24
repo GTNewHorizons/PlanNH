@@ -533,12 +533,3 @@ plannh.gui.toolbar.share.guidenh.title=Copy graph as GuideNH Markdown
 plannh.gui.toolbar.share.shift=Shift + left-click: copy for GuideNH
 plannh.gui.toolbar.copy.title=Copy graph
 plannh.gui.toolbar.import.title=Import graph
-
-## Holograms
-plannh.hologram.error.save=Failed to save holograms
-plannh.hologram.error.load=Failed to load holograms, a backup was used or they were reset
-key.plannh.hologram.edit=Create/edit hologram
-plannh.hologram.editor.title=Hologram
-plannh.hologram.editor.save=Save
-plannh.hologram.editor.delete=Delete
-plannh.hologram.editor.cancel=Cancel

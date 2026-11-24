@@ -2,7 +2,11 @@ package com.sbancuz.plannh.data.flowchart;
 
 import java.util.UUID;
 
+import javax.annotation.Nullable;
+
 import org.apache.commons.lang3.StringUtils;
+
+import com.sbancuz.plannh.hologram.BlockPin;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -17,6 +21,9 @@ public abstract class GraphData implements IValidated {
     protected String header;
     protected final String type = getType();
     private boolean summaryFiltered;
+    /** Block in the world this element is shown above as a hologram; null if not pinned. */
+    @Nullable
+    private BlockPin pin;
 
     protected GraphData(UUID id) {
         this.id = id;
