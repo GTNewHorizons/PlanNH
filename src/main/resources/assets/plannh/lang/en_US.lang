@@ -533,3 +533,6 @@ plannh.gui.toolbar.share.guidenh.title=Copy graph as GuideNH Markdown
 plannh.gui.toolbar.share.shift=Shift + left-click: copy for GuideNH
 plannh.gui.toolbar.copy.title=Copy graph
 plannh.gui.toolbar.import.title=Import graph
+
+## Holograms
+plannh.hologram.unnamed_group=Group
