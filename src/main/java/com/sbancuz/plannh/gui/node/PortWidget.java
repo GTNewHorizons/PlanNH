@@ -134,8 +134,8 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         tooltipBuilder(this::writeTooltip);
         tooltipAutoUpdate(true);
 
-        // the chance badge of `Badge.draw()` is in the top left corner, at half scale on a GUI scale of 2 or more.
-        // There, a gear of 6 pixels leaves a badge of four characters clear
+        // `Badge.draw()` draws the chance badge in the top left corner. The badge is at half scale when the GUI scale
+        // is 2 or more. A gear of 6 pixels in the top right corner then leaves room for a badge of four characters
         if (configurable()) overlay(
             GuiTextures.GEAR.asIcon()
                 .size(6)
@@ -189,7 +189,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         return Result.ACCEPT;
     }
 
-    /** A port that is not consumed gets only the grid of alternatives: no chance and no target apply. */
+    /** A port that is not consumed gets only the grid of alternatives: a chance and a target don't apply. */
     private PickerContent createPicker() {
         final ItemSelectionGrid alternatives = configurable()
             ? new ItemSelectionGrid(List.of(stack.items), this::selectConfiguration)

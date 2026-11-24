@@ -35,7 +35,7 @@ public abstract class RecipeWidgetMixin implements RecipeWidgetAccessor {
     private List<PositionedStack> plannh$outputs;
 
     @Unique
-    private StackDrawer plannh$stackDrawer; // noqa: NAR130
+    private StackDrawer plannh$stackDrawer;
 
     @Inject(method = "getCyclingStacks", at = @At("HEAD"), cancellable = true)
     private void plannh$getInputs(CallbackInfoReturnable<List<PositionedStack>> cir) {
@@ -49,10 +49,8 @@ public abstract class RecipeWidgetMixin implements RecipeWidgetAccessor {
         if (plannh$outputs != null) cir.setReturnValue(plannh$outputs);
     }
 
-    /** Draw the stack with {@code plannh$stackDrawer}, when the drawer is set and draws the stack. */
     @Inject(method = "drawItem", at = @At("HEAD"), cancellable = true)
-    private void plannh$drawItem(PositionedStack stack, int x, int y, int shift, boolean input, // noqa: NAR130, NAR131
-        CallbackInfo ci) {
+    private void plannh$drawItem(PositionedStack stack, int x, int y, int shift, boolean input, CallbackInfo ci) {
         if (plannh$stackDrawer != null && plannh$stackDrawer.drawStack(stack)) ci.cancel();
     }
 

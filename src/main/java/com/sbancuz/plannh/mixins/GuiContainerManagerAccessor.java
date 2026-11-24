@@ -9,13 +9,8 @@ import codechicken.nei.guihook.GuiContainerManager;
 @Mixin(value = GuiContainerManager.class, remap = false)
 public interface GuiContainerManagerAccessor {
 
-    /**
-     * NEI's count text at {@code scale}, right-aligned on the bottom edge of the 16 pixel item at x, y.
-     *
-     * @throws AssertionError if Mixin did not apply the invoker
-     */
     @Invoker("drawBigStackSize")
-    static void plannh$drawBigStackSize(int x, int y, String stackSize, float scale) { // noqa: NAR130, NAR131
+    static void plannh$drawBigStackSize(int x, int y, String stackSize, float scale) {
         throw new AssertionError();
     }
 }

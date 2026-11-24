@@ -78,7 +78,7 @@ class RateTargetTest {
     private static double[] quantities(final Random random) {
         final double[] quantities = new double[random.nextInt(4)];
         for (int i = 0; i < quantities.length; i++) {
-            // an output with a quantity of 0 has no live target
+            // an output with a quantity of 0 doesn't have a live target
             quantities[i] = random.nextInt(4) == 0 ? 0 : random.nextDouble() * 100;
         }
         return quantities;

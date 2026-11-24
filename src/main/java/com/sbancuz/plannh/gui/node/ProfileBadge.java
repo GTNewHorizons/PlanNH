@@ -75,7 +75,7 @@ public final class ProfileBadge extends FlowchartFlow {
             return cfg.getProfile()
                 .getBadge()
                 .apply(cfg, data.recipeContext());
-        } catch (RuntimeException | LinkageError failure) { // noqa: NAR142, degrade and report over another mod's code
+        } catch (RuntimeException | LinkageError failure) {
             PlanNH.LOG.warn("node.badge.failed machine={}", data.getMachineName(), failure);
             return null;
         }

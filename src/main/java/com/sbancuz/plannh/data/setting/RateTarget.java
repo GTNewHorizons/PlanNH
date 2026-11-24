@@ -21,8 +21,8 @@ import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
 /**
- * The output-rate target: how much of each output a machine should produce, per second. Keyed by output index. An
- * output with no entry has no target.
+ * {@code RateTarget} maps an output index to the rate per second that the machine should produce of that output. An
+ * output without an entry doesn't have a target.
  */
 public final class RateTarget implements TargetKind {
 
@@ -54,7 +54,7 @@ public final class RateTarget implements TargetKind {
         return binding == null ? 0 : binding.extent();
     }
 
-    /** The target with the largest extent, the first one on a tie. Null when no target is live. */
+    /** The target with the largest extent, the first one on a tie. Null when {@link #liveTargets} is empty. */
     public @Nullable Live binding(final double[] outQty) {
         Live binding = null;
         for (final Live live : liveTargets(outQty)) {
@@ -63,7 +63,7 @@ public final class RateTarget implements TargetKind {
         return binding;
     }
 
-    /** Every target on an output with a quantity above zero, in output order. */
+    /** Return the targets on outputs with a quantity above zero in output order. */
     public List<Live> liveTargets(final double[] outQty) {
         final List<Live> live = new ArrayList<>();
         for (final Map.Entry<Integer, Double> target : rates.entrySet()) {
@@ -86,7 +86,7 @@ public final class RateTarget implements TargetKind {
             .child(new FlowchartTextWidget(hint, parent).widgetTheme(PlannhThemes.CARD_MUTED));
     }
 
-    /** Every target still in force, one row each. */
+    /** Add a row to {@code out} for each target in force. */
     @Override
     public void tooltip(final TooltipBuilder out, final NodeWidget parent) {
         final List<Port<?>> outputs = parent.getData()

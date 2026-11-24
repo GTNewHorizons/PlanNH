@@ -38,7 +38,7 @@ public final class ItemChoiceWidget extends ItemWidget<ItemChoiceWidget>
 
     /**
      * A slot with the item of {@code selection}. A selected item gets a count in the range of {@code anchor}, or 1 when
-     * {@code anchor} has no count. Each change of the selection runs inside {@code edit}.
+     * {@code anchor} doesn't have a count. Each change of the selection runs inside {@code edit}.
      */
     public ItemChoiceWidget(final ChoiceSettingDef<?> anchor, final Supplier<ItemStack> selection,
         final Predicate<ItemStack> accepts, final Consumer<ItemStack> select, final Consumer<Runnable> edit) {

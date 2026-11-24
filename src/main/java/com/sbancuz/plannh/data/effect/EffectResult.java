@@ -79,7 +79,6 @@ public class EffectResult {
         return quantities;
     }
 
-    /** What one operation consumes or produces of {@code port}, throughput factor included. */
     public double quantity(final boolean input, final int index, final Port<?> port) {
         return Math.max(0d, port.getAmount()) * multiplier(input, index) * throughputFactor;
     }

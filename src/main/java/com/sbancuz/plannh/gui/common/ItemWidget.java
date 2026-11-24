@@ -23,14 +23,16 @@ import lombok.Getter;
  * item's tooltip, and a later {@code tooltipBuilder} adds rows below: MUI2 chains the builders. The tooltip is rebuilt
  * when the item changes, and when shift goes down or up, because an item's tooltip can have more rows under shift.
  * <p>
- * A button: a click handler makes the widget clickable. With no handler, a click goes on to the widget below. The
- * button background of the theme is off, and the hover background of the theme is on.
+ * A button: a click handler makes the widget clickable. When the widget doesn't have a handler, a click goes on to the
+ * widget below. The button background of the theme is off, and the hover background of the theme is on.
  */
 public class ItemWidget<W extends ItemWidget<W>> extends ButtonWidget<W> {
 
     private final Supplier<ItemStack> source;
     private final ItemDrawable drawable = new ItemDrawable();
-    /** A copy of the item of {@code source} at the last update, or {@code null} for no item. */
+    /**
+     * A copy of the item of {@code source} at the last update. {@code null} when {@code source} doesn't have an item.
+     */
     @Getter
     private @Nullable ItemStack shownItem;
     private IDrawable count = IDrawable.EMPTY;

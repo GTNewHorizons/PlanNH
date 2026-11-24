@@ -76,7 +76,6 @@ public final class KeybindsConfig {
             this.modifiers = modifiers;
         }
 
-        /** NEI's name of the binding with the modifiers, or {@code null} when the binding has no key. */
         public @Nullable String keyName() {
             return KeyManager.getKeyName(ident, modifiers);
         }

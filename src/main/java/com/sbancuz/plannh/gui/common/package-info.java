@@ -1,2 +1,4 @@
-@javax.annotation.ParametersAreNonnullByDefault
+@ParametersAreNonnullByDefault
 package com.sbancuz.plannh.gui.common;
+
+import javax.annotation.ParametersAreNonnullByDefault;

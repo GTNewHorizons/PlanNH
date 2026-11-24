@@ -15,5 +15,5 @@ public interface RecipeWidgetAccessor {
 
     void plannh$setOutputs(List<PositionedStack> outputs);
 
-    void plannh$setStackDrawer(StackDrawer drawer); // noqa: NAR130
+    void plannh$setStackDrawer(StackDrawer drawer);
 }

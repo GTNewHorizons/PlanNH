@@ -127,7 +127,6 @@ public class MachineConfig {
         targetKind = kind;
     }
 
-    /** The user's chance for a port, as a fraction where 1 is every craft. Null when the profile's chance applies. */
     public @Nullable Double chanceOverride(final boolean input, final int index) {
         return (input ? inputChance : outputChance).get(index);
     }
