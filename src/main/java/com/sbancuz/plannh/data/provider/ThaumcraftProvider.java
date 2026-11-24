@@ -12,6 +12,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.item.ItemStack;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
+import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.cleanroommc.modularui.drawable.UITexture;
@@ -41,7 +42,6 @@ import com.sbancuz.plannh.data.setting.ChoiceSettingDef;
 import com.sbancuz.plannh.data.setting.EnumSettingDef;
 import com.sbancuz.plannh.data.setting.IntegerSettingDef;
 import com.sbancuz.plannh.data.setting.Settings;
-import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.mixins.CachedThaumRecipeAccessor;
 import com.sbancuz.plannh.mixins.InfusionCachedRecipeAccessor;
 import com.sbancuz.plannh.mixins.ResearchInfoAccessor;
@@ -174,11 +174,7 @@ public class ThaumcraftProvider implements PropertyProvider {
         // TileThaumatorium transfers one essentia per five-tick check, then completes on the next check.
         Effects.durationFromFormula((cfg, ctx) -> thaumatoriumDuration(ctx.getOrDefault(ESSENTIA_UNITS, 0)))
             .applyParallelism())
-        .icon(
-            (_, _) -> THAUMATORIUM_ICON,
-            tooltip -> TooltipBuilder.create(tooltip)
-                .langRow("tc.research_name.THAUMATORIUM")
-                .flush())
+        .icon((_, _) -> THAUMATORIUM_ICON, out -> out.title(IKey.lang("tc.research_name.THAUMATORIUM")))
         .build();
 
     private final MachineProfile INFERNAL_FURNACE = BASE_FACTORY.builder(
@@ -192,10 +188,8 @@ public class ThaumcraftProvider implements PropertyProvider {
         .outputMultiplier(this::infernalBonusMultiplier)
         .icon(
             (_, _) -> INFERNAL_FURNACE_ICON,
-            tooltip -> TooltipBuilder.create(tooltip)
-                .langRow("tc.research_name.INFERNALFURNACE")
-                .langRow("plannh.tooltip.thaumcraft.furnace_steady_state")
-                .flush())
+            out -> out.title(IKey.lang("tc.research_name.INFERNALFURNACE"))
+                .text("tooltip.thaumcraft.furnace_steady_state"))
         .build();
 
     private static final String[] PRIMAL_TAGS = { "aer", "terra", "ignis", "aqua", "ordo", "perditio" };

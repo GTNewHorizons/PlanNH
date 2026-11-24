@@ -27,6 +27,7 @@ import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
 import com.sbancuz.plannh.data.flowchart.balancer.Pin;
 import com.sbancuz.plannh.gui.CanvasWidget;
+import com.sbancuz.plannh.gui.LangScope;
 import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.common.CloseButtonWidget;
 import com.sbancuz.plannh.gui.common.FlowchartFlow;
@@ -44,9 +45,7 @@ import lombok.Getter;
 
 public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
 
-    private static final String SETTINGS_LANG = "plannh.gui.node.settings";
-    private static final String TARGET_LANG = "plannh.gui.node.target.rows";
-    private static final String PROPERTIES_LANG = "plannh.gui.node.properties";
+    private static final LangScope NODE = LangScope.ROOT.child("gui.node");
 
     /** Compact square toggles for the node's configuration folds. */
     private static final int FOLD_BUTTON = 12;
@@ -119,9 +118,9 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
         mainColumn.child(recipeAreaWidget);
 
         if (data.isAvailable()) {
-            propertiesFold = fold(GuiTextures.FILE, PROPERTIES_LANG, data::isPropertiesOpen, data::setPropertiesOpen);
-            targetFold = fold(GuiTextures.GRAPH, TARGET_LANG, data::isTargetOpen, data::setTargetOpen);
-            settingsFold = fold(GuiTextures.GEAR, SETTINGS_LANG, data::isSettingsOpen, data::setSettingsOpen);
+            propertiesFold = fold(GuiTextures.FILE, "properties", data::isPropertiesOpen, data::setPropertiesOpen);
+            targetFold = fold(GuiTextures.GRAPH, "target.rows", data::isTargetOpen, data::setTargetOpen);
+            settingsFold = fold(GuiTextures.GEAR, "settings", data::isSettingsOpen, data::setSettingsOpen);
 
             // What this machine is, on the left as the folds that decide what else it says, and on the
             // right the profile it is being read as - which is what the settings fold below is a list of.
@@ -166,7 +165,7 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
         child(mainColumn);
     }
 
-    private CycleButtonWidget fold(final UITexture icon, final String langKey, final BooleanSupplier open,
+    private CycleButtonWidget fold(final UITexture icon, final String name, final BooleanSupplier open,
         final Consumer<Boolean> set) {
         return new CycleButtonWidget().size(FOLD_BUTTON)
             .name("fold.toggle")
@@ -178,10 +177,7 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
                     () -> icon.withColorOverride(PlannhColors.CARD_TEXT.getColor())
                         .asIcon()))
             .value(new BoolValue.Dynamic(open, set::accept))
-            .tooltipBuilder(
-                tooltip -> TooltipBuilder.create(tooltip)
-                    .langRows(langKey, langKey + (open.getAsBoolean() ? ".hide_hint" : ".show_hint"))
-                    .flush());
+            .tooltipBuilder(TooltipBuilder.build(NODE, out -> out.title(name)));
     }
 
     /** Records an edit to this node's machine, so undo can take it back and the chart is re-solved. */

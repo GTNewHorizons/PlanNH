@@ -3,6 +3,7 @@ package com.sbancuz.plannh.nei;
 import java.util.List;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.util.StatCollector;
 
 import com.sbancuz.plannh.gui.FlowchartGui;
 import com.sbancuz.plannh.gui.GuiIcon;
@@ -52,6 +53,6 @@ public class OpenFlowchartButton extends Button {
 
     @Override
     public void addTooltips(List<String> tooltip) {
-        tooltip.add("Open / Close flowchart");
+        tooltip.add(StatCollector.translateToLocal("plannh.nei.open_flowchart"));
     }
 }

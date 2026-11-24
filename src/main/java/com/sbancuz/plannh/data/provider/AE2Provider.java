@@ -244,7 +244,7 @@ public final class AE2Provider implements PropertyProvider {
         }
     }
 
-    /** The card with the count of {@link #ACCELERATION_CARDS}, or no badge with no card. */
+    /** The card with the count of {@link #ACCELERATION_CARDS}. {@code null} when the machine doesn't have a card. */
     private static @Nullable NodeBadge readCardBadge(final MachineConfig cfg, final RecipeContext ctx) {
         final int cards = ACCELERATION_CARDS.count(cfg, ctx);
         final ItemStack card = cfg.value(ACCELERATION_CARDS, ctx);

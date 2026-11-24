@@ -17,6 +17,7 @@ import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.setting.ChoiceSettingDef;
 import com.sbancuz.plannh.gui.GuiHelper;
+import com.sbancuz.plannh.gui.LangScope;
 import com.sbancuz.plannh.gui.setting.ItemChoiceWidget;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
@@ -26,6 +27,8 @@ import forestry.core.circuits.EnumCircuitBoardType;
 
 /** Compact native item editors for the Extra Bees alveary upgrades. */
 public final class AlvearyStimulatorWidget extends Flow {
+
+    private static final LangScope BEES = LangScope.ROOT.child("gui.bees");
 
     private static final int SLOT = 18;
     private static final int GAP = 3;
@@ -74,8 +77,7 @@ public final class AlvearyStimulatorWidget extends Flow {
                 .name("alveary.stimulator.board")
                 .size(SLOT)
                 .hint("plannh.gui.bees.board_hint")
-                .tooltipBuilder(tooltip -> {
-                    final TooltipBuilder out = TooltipBuilder.create(tooltip);
+                .tooltipBuilder(TooltipBuilder.build(BEES, out -> {
                     final EnumCircuitBoardType type = cfg.value(boardDef, ctx);
                     final long used = AlvearyStimulators.CIRCUITS.get(group)
                         .stream()
@@ -83,27 +85,19 @@ public final class AlvearyStimulatorWidget extends Flow {
                         .filter(uid -> uid != null && !uid.isEmpty())
                         .count();
 
-                    out.entry(
-                        IKey.lang("plannh.gui.bees.stimulator"),
-                        TooltipTheme.Role.IDENTITY,
-                        Integer.toString(group + 1));
-                    out.entry(
-                        IKey.lang("plannh.gui.bees.sockets"),
-                        TooltipTheme.Role.TUNABLE,
-                        used + " / " + (type == null ? 0 : type.getSockets()));
-                    out.entry(
-                        IKey.lang("plannh.gui.bees.total_stimulator_energy"),
-                        TooltipTheme.Role.POWER,
-                        IKey.lang("plannh.bees.mj_per_cycle", AlvearyStimulators.mjPerWorkCycle(cfg, ctx)));
-                    out.langRows("plannh.gui.bees.board_drop", "plannh.gui.bees.board_reset");
-
-                    if (GuiHelper.shiftHeld()) {
-                        out.group(
-                            "plannh.bees.calculation",
-                            rows -> rows.langRows("plannh.gui.bees.board_powered", "plannh.gui.bees.board_caps"));
-                    } else out.langRow("plannh.bees.details_hint");
-                    out.flush();
-                }));
+                    final IKey sockets = GuiHelper.ratio(used, type == null ? 0 : type.getSockets());
+                    final IKey energy = IKey
+                        .lang("plannh.bees.mj_per_cycle", AlvearyStimulators.mjPerWorkCycle(cfg, ctx));
+                    out.entry("stimulator", TooltipTheme.VALUE, Integer.toString(group + 1))
+                        .entry("sockets", TooltipTheme.TUNABLE, sockets)
+                        .entry("total_stimulator_energy", TooltipTheme.POWER, energy)
+                        .hint("board_drop")
+                        .hint("board_reset")
+                        .shiftDetail(
+                            detail -> detail.group(
+                                IKey.lang("plannh.bees.calculation"),
+                                rows -> rows.texts("board_powered", "board_caps")));
+                })));
         final EnumCircuitBoardType type = cfg.value(boardDef, ctx);
         final int sockets = type == null ? 0 : type.getSockets();
         final Flow tubes = new Flow(GuiAxis.X).childPadding(GAP)
@@ -121,25 +115,20 @@ public final class AlvearyStimulatorWidget extends Flow {
             stack -> AlvearyStimulators.canSetTube(cfg, ctx, group, socket, stack),
             stack -> AlvearyStimulators.setTube(cfg, ctx, group, socket, stack),
             edit).picker(this::tubeChoices, () -> cfg.reset(circuitDef))
-                .pickerTooltip((tooltip, tube) -> {
+                .pickerTooltip((out, tube) -> {
                     final ICircuit circuit = AlvearyStimulators.tubeCircuit(tube);
                     if (circuit == null) return;
-                    final TooltipBuilder out = TooltipBuilder.create(tooltip);
-                    out.separator();
-                    AlvearyStimulators.circuitTooltip(out, circuit.getUID());
-                    out.flush();
+                    AlvearyStimulators.circuitTooltip(out.separator(), circuit.getUID());
                 })
                 .name("alveary.stimulator." + (group + 1) + ".tubes.socket" + (socket + 1))
                 .size(SLOT)
                 .hint("plannh.gui.bees.tube_hint")
-                .tooltipBuilder(tooltip -> {
+                .tooltipBuilder(TooltipBuilder.build(BEES, out -> {
                     final String uid = cfg.value(circuitDef, ctx);
-                    final TooltipBuilder out = TooltipBuilder.create(tooltip);
-                    if (uid == null || uid.isEmpty()) out.langRow("plannh.gui.bees.circuit_empty");
+                    if (uid == null || uid.isEmpty()) out.text("circuit_empty");
                     else AlvearyStimulators.circuitTooltip(out, uid);
-                    out.langRow("plannh.gui.bees.tube_reset");
-                    out.flush();
-                });
+                    out.hint("tube_reset");
+                }));
     }
 
     private List<ItemStack> tubeChoices() {

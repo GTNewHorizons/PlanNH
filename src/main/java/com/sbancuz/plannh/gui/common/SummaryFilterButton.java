@@ -31,10 +31,8 @@ public class SummaryFilterButton extends ButtonWidget<SummaryFilterButton> {
                         : GuiTextures.FILTER.asIcon()
                             .size(10)))
             .tooltipBuilder(
-                tooltip -> TooltipBuilder.create(tooltip)
-                    .langRow(isActive() ? "plannh.summary.scope.filter.remove" : "plannh.summary.scope.filter.action")
-                    .langRow("plannh.summary.scope.filter.ctrl_hint")
-                    .flush())
+                TooltipBuilder.build(
+                    out -> out.title(isActive() ? "summary.scope.filter.remove" : "summary.scope.filter.action")))
             .tooltipAutoUpdate(true);
     }
 

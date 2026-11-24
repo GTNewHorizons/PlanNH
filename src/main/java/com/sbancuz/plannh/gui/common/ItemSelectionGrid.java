@@ -10,10 +10,11 @@ import javax.annotation.Nullable;
 
 import net.minecraft.item.ItemStack;
 
+import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.drawable.GuiTextures;
-import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
+import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
 /** Item choices edit the plan, never the source inventory or NEI's stacks. */
 public final class ItemSelectionGrid extends SelectionGrid {
@@ -33,7 +34,7 @@ public final class ItemSelectionGrid extends SelectionGrid {
     }
 
     public ItemSelectionGrid(final List<ItemStack> choices, final Predicate<ItemStack> accepts,
-        final BiConsumer<RichTooltip, ItemStack> contextTooltip, final Consumer<ItemStack> select) {
+        final BiConsumer<TooltipBuilder, ItemStack> contextTooltip, final Consumer<ItemStack> select) {
         this(choices, COLUMNS, 6, accepts, contextTooltip, select);
     }
 
@@ -48,7 +49,7 @@ public final class ItemSelectionGrid extends SelectionGrid {
      * click, and {@code null} on a middle click.
      */
     public ItemSelectionGrid(final List<ItemStack> choices, final int maxColumns, final int maxRows,
-        final Predicate<ItemStack> accepts, @Nullable final BiConsumer<RichTooltip, ItemStack> contextTooltip,
+        final Predicate<ItemStack> accepts, @Nullable final BiConsumer<TooltipBuilder, ItemStack> contextTooltip,
         final Consumer<ItemStack> select) {
         name("item.selection.grid");
         final List<ButtonWidget<?>> buttons = new ArrayList<>();
@@ -61,12 +62,11 @@ public final class ItemSelectionGrid extends SelectionGrid {
                     .size(SLOT)
                     .padding(1)
                     .background(GuiTextures.SLOT_ITEM)
-                    .tooltipBuilder(richTooltip -> {
-                        if (contextTooltip != null) contextTooltip.accept(richTooltip, choice);
-                        if (!accepts.test(choice)) TooltipBuilder.create(richTooltip)
-                            .langRow("plannh.settings.item_choice_invalid")
-                            .flush();
-                    })
+                    .tooltipBuilder(TooltipBuilder.build(out -> {
+                        if (contextTooltip != null) contextTooltip.accept(out, choice);
+                        if (!accepts.test(choice))
+                            out.line(TooltipTheme.CAUTION, IKey.lang("plannh.settings.item_choice_invalid"));
+                    }))
                     .tooltipAutoUpdate(true)
                     .onMousePressed(mouse -> {
                         if (mouse != 0 && mouse != 1 && mouse != 2) return false;

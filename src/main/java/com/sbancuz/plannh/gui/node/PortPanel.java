@@ -31,8 +31,8 @@ import com.sbancuz.plannh.gui.common.ResetTextFieldWidget;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 
 /**
- * The right-click panel of a port that a craft consumes or produces, with the port's alternatives and chance. An output
- * gets a target row when {@link NodeWidget#isRateTargeted} is true.
+ * The right-click panel of a port that a craft consumes or produces. The panel has the port's alternatives and chance.
+ * An output gets a target row when {@link NodeWidget#isRateTargeted} is true.
  */
 public final class PortPanel extends Flow implements PickerContent {
 
@@ -71,7 +71,7 @@ public final class PortPanel extends Flow implements PickerContent {
 
         labelWidth = widestText(List.of(CHANCE_KEY, TARGET_KEY));
         final List<String> sideKeys = new ArrayList<>(List.of(PERCENT_KEY));
-        for (final RateUnit unit : RateUnit.VALUES) sideKeys.add(unit.suffixKey());
+        for (final RateUnit unit : RateUnit.VALUES) sideKeys.add(unit.suffixKey);
         sideWidth = widestText(sideKeys);
 
         int width = labelWidth + FIELD_WIDTH + sideWidth + 2 * GAP;
@@ -128,9 +128,7 @@ public final class PortPanel extends Flow implements PickerContent {
         final ResetRow row = new ResetRow(
             () -> config.chanceOverride(input, index) != null,
             () -> parent.commitEdit(() -> config.overrideChance(input, index, null)));
-        row.tooltipBuilder(
-            tooltip -> row.addResetRows(TooltipBuilder.create(tooltip))
-                .flush())
+        row.tooltipBuilder(TooltipBuilder.build(out -> out.resetHint(row.isExplicit())))
             .tooltipAutoUpdate(true);
         return row.fill(CHANCE_KEY, field, IKey.lang(PERCENT_KEY));
     }
@@ -151,20 +149,14 @@ public final class PortPanel extends Flow implements PickerContent {
         final ResetRow row = new ResetRow(
             () -> rates.rate(index) > 0,
             () -> parent.commitEdit(() -> rates.setRate(index, 0)));
-        row.tooltipBuilder(
-            tooltip -> TooltipBuilder.create(tooltip)
-                .langRow("plannh.settings.middle_reset_hint")
-                .flush())
+        row.tooltipBuilder(TooltipBuilder.build(out -> out.resetHint(row.isExplicit())))
             .tooltipAutoUpdate(true);
 
-        final IKey unit = IKey.dynamicKey(
-            () -> IKey.lang(
-                summary.getRateUnit()
-                    .suffixKey()));
+        final IKey unit = IKey.dynamicKey(() -> IKey.lang(summary.getRateUnit().suffixKey));
         return row.fill(TARGET_KEY, field, unit);
     }
 
-    /** A row of the panel that a middle-click resets, like a settings row. */
+    /** A row of the panel that a middle-click resets. */
     private final class ResetRow extends Flow implements MiddleClickReset {
 
         private final BooleanSupplier explicit;
@@ -186,7 +178,7 @@ public final class PortPanel extends Flow implements PickerContent {
             resetAction.run();
         }
 
-        /** Add the label, the field and the unit, in the columns of the panel. */
+        /** Add the label, the field, and the unit to the columns of the panel. */
         private ResetRow fill(final String labelKey, final TextFieldWidget field, final IKey side) {
             name("port.panel.row").fullWidth()
                 .height(ROW_HEIGHT)

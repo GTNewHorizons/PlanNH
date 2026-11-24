@@ -6,6 +6,7 @@ import java.util.SortedMap;
 import java.util.UUID;
 
 import com.cleanroommc.modularui.api.IPanelHandler;
+import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.drawable.DynamicDrawable;
 import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.drawable.Rectangle;
@@ -127,7 +128,7 @@ public abstract class GroupWidget<G extends Group> extends FlowchartWidget<Group
                     .overlay(
                         GuiIcon.COVER_CHILDREN.asIcon()
                             .size(GuiIcon.COVER_CHILDREN.size()))
-                    .addTooltipLine("Toggle Cover Children"))
+                    .addTooltipLine(IKey.lang("plannh.gui.group.cover_children")))
             .child(
                 new ButtonWidget<>().name("group.color")
                     .size(HEADER_BUTTON_SIZE)
@@ -139,7 +140,7 @@ public abstract class GroupWidget<G extends Group> extends FlowchartWidget<Group
                         else colorPicker.closePanel();
                         return true;
                     })
-                    .addTooltipLine("Open Color Picker"));
+                    .addTooltipLine(IKey.lang("plannh.gui.group.color")));
     }
 
     public boolean canContain(FlowchartWidget<?, ?> widget) {

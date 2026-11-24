@@ -23,6 +23,7 @@ import com.sbancuz.plannh.data.setting.BooleanSettingDef;
 import com.sbancuz.plannh.data.setting.ChoiceSettingDef;
 import com.sbancuz.plannh.data.setting.SettingDef;
 import com.sbancuz.plannh.gui.GuiHelper;
+import com.sbancuz.plannh.gui.LangScope;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
@@ -36,6 +37,8 @@ import forestry.api.genetics.IAlleleFloat;
 import forestry.api.genetics.IAlleleInteger;
 
 public final class BeeSettings {
+
+    private static final LangScope BEES = LangScope.ROOT.child("bees");
 
     public static final ChoiceSettingDef<String> SPEED = allele("bee_speed", EnumBeeChromosome.SPEED);
     public static final ChoiceSettingDef<String> LIFESPAN = allele("bee_lifespan", EnumBeeChromosome.LIFESPAN);
@@ -59,27 +62,24 @@ public final class BeeSettings {
             @Override
             public IWidget settingsWidget(final MachineConfig cfg, final RecipeContext ctx,
                 final Consumer<Runnable> edit) {
-                return ((Widget<?>) super.settingsWidget(cfg, ctx, edit)).tooltipBuilder(tooltip -> {
-                    final boolean enabled = cfg.value(this, ctx);
-                    final TooltipBuilder out = TooltipBuilder.create(tooltip);
-                    out.entry(
-                        getLabel(),
-                        TooltipTheme.Role.TUNABLE,
-                        StatCollector.translateToLocal(enabled ? "plannh.bees.aura_on" : "plannh.bees.aura_off"));
-                    out.langRows("plannh.bees.aura_toggle", "plannh.settings.middle_reset_hint");
-
-                    if (GuiHelper.shiftHeld()) {
-                        out.group(
-                            "plannh.bees.requirements",
-                            rows -> rows.langRows(
-                                "plannh.bees.aura_booster_source",
-                                "plannh.bees.aura_renewal",
-                                "plannh.bees.aura_steady_state",
-                                "plannh.bees.aura_cost",
-                                "plannh.bees.aura_provider_limit"));
-                    } else out.langRow("plannh.bees.details_hint");
-                    out.flush();
-                })
+                return ((Widget<?>) super.settingsWidget(cfg, ctx, edit))
+                    .tooltipBuilder(TooltipBuilder.build(BEES, out -> {
+                        final boolean enabled = cfg.value(this, ctx);
+                        out.entry(
+                            IKey.str(getLabel()),
+                            TooltipTheme.TUNABLE,
+                            BEES.lang(enabled ? "aura_on" : "aura_off"))
+                            .resetHint(cfg.isExplicit(this))
+                            .shiftDetail(
+                                detail -> detail.group(
+                                    "requirements",
+                                    rows -> rows.texts(
+                                        "aura_booster_source",
+                                        "aura_renewal",
+                                        "aura_steady_state",
+                                        "aura_cost",
+                                        "aura_provider_limit")));
+                    }))
                     .tooltipAutoUpdate(true);
             }
         };
@@ -102,29 +102,19 @@ public final class BeeSettings {
 
             @Override
             public Consumer<TooltipBuilder> tooltip(final String uid) {
-                return super.tooltip(uid).andThen(out -> {
+                return super.tooltip(uid).andThen(tooltip -> tooltip.scoped(BEES, out -> {
                     final IAllele allele = AlleleManager.alleleRegistry.getAllele(uid);
                     if (allele instanceof IAlleleFloat speed) {
-                        out.entry(
-                            IKey.lang("plannh.bees.genetic_speed"),
-                            TooltipTheme.Role.TUNABLE,
-                            TooltipBuilder.multiple(speed.getValue()));
+                        out.entry("genetic_speed", TooltipTheme.TUNABLE, GuiHelper.multiple(speed.getValue()));
                     } else if (allele instanceof IAlleleInteger lifespan) {
-                        out.entry(
-                            IKey.lang("plannh.bees.base_lifespan"),
-                            TooltipTheme.Role.IDENTITY,
-                            IKey.lang("plannh.bees.work_cycles", lifespan.getValue()));
+                        out.entry("base_lifespan", TooltipTheme.VALUE, BEES.lang("work_cycles", lifespan.getValue()));
                     }
 
-                    if (GuiHelper.shiftHeld()) {
-                        out.group(
-                            "plannh.bees.calculation",
-                            rows -> rows.langRows(
-                                "plannh.bees.lifetime_model",
-                                "plannh.bees.supplied_conditions",
-                                "plannh.bees.unmodeled_effects"));
-                    } else out.langRow("plannh.bees.details_hint");
-                });
+                    out.shiftDetail(
+                        detail -> detail.group(
+                            "calculation",
+                            rows -> rows.texts("lifetime_model", "supplied_conditions", "unmodeled_effects")));
+                }));
             }
         };
     }

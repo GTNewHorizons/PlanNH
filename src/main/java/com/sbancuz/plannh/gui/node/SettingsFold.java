@@ -61,7 +61,7 @@ public class SettingsFold extends NodeFold {
         scheduleResize();
     }
 
-    /** Add the row of {@code def}, with the editor, and a tooltip of the setting's value and the reset rows. */
+    /** Add the row of {@code def} with the editor. The row's tooltip has the reset rows. */
     private <T> void addSetting(final MachineConfig cfg, final RecipeContext ctx, final SettingDef<T> def) {
         final IWidget editor = def.settingsWidget(cfg, ctx, change -> {
             commitEdit(change);
@@ -77,13 +77,7 @@ public class SettingsFold extends NodeFold {
             .marginBottom(ROW_GAP)
             .coverChildrenHeight()
             .childPadding(2)
-            .tooltipBuilder(tooltip -> {
-                final TooltipBuilder out = TooltipBuilder.create(tooltip);
-                if (!def.isFullWidthEditor()) def.tooltip(cfg.value(def, ctx))
-                    .accept(out);
-                row.addResetRows(out)
-                    .flush();
-            })
+            .tooltipBuilder(TooltipBuilder.build(out -> out.resetHint(row.isExplicit())))
             .tooltipAutoUpdate(true);
 
         final String label = def.getEditorLabel();

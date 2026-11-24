@@ -110,9 +110,9 @@ class TargetFold extends NodeFold {
                 return true;
             })
             .tooltipBuilder(
-                tooltip -> TooltipBuilder.create(tooltip)
-                    .langRows(LANG + (delta < 0 ? "prev" : "next"))
-                    .flush());
+                TooltipBuilder.build(
+                    out -> out
+                        .title(IKey.lang(delta < 0 ? "plannh.gui.node.target.prev" : "plannh.gui.node.target.next"))));
     }
 
     /** The next pin this balance mode honours, stepping only over the ones with a widget to set them. */

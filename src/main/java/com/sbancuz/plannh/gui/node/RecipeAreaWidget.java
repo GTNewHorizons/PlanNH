@@ -51,7 +51,7 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
     @Getter
     private int recipeWidth = 0;
 
-    /** The NEI recipe of {@code parent}, with a {@link PortWidget} over each stack. */
+    /** The NEI recipe of {@code parent}. A {@link PortWidget} covers each stack. */
     public RecipeAreaWidget(NodeWidget parent) {
         name("node.recipe");
         this.parent = parent;

@@ -4,8 +4,6 @@ import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
-import net.minecraft.util.StatCollector;
-
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.utils.Alignment;
@@ -13,6 +11,7 @@ import com.cleanroommc.modularui.value.IntValue;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
 import com.sbancuz.plannh.gui.GuiHelper;
+import com.sbancuz.plannh.gui.LangScope;
 import com.sbancuz.plannh.gui.common.FlowchartFlow;
 import com.sbancuz.plannh.gui.common.FlowchartTextWidget;
 import com.sbancuz.plannh.gui.node.NodeWidget;
@@ -29,7 +28,7 @@ import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
  */
 public final class CopyCountTarget implements TargetKind {
 
-    private static final String LANG = "plannh.gui.node.target.";
+    private static final LangScope TARGET = LangScope.ROOT.child("gui.node.target");
 
     private static final int MIN = 1;
     private static final int MAX = 4096;
@@ -48,9 +47,12 @@ public final class CopyCountTarget implements TargetKind {
 
     @Override
     public IWidget widget(final NodeWidget parent, final Consumer<Runnable> edit) {
-        final IWidget label = new FlowchartTextWidget(IKey.lang(LANG + "copies"), parent).tooltipDynamic(
-            t -> t.addLine(IKey.lang(LANG + "solved"))
-                .addLine(solved(parent)));
+        final IWidget label = new FlowchartTextWidget(TARGET.lang("copies"), parent)
+            .tooltipBuilder(TooltipBuilder.build(out -> {
+                final IKey solved = solved(parent);
+                if (solved != null) out.entry(TARGET.lang("solved"), TooltipTheme.VALUE, solved);
+            }))
+            .tooltipAutoUpdate(true);
         final FlowchartFlow flow = FlowchartFlow.row(parent);
 
         flow.name("target.copies")
@@ -82,8 +84,8 @@ public final class CopyCountTarget implements TargetKind {
         final IKey solved = solved(parent);
         if (solved == null) return;
 
-        out.detail(StatCollector.translateToLocal(LANG + "copies"), TooltipTheme.Role.TUNABLE, String.valueOf(copies));
-        out.detail(StatCollector.translateToLocal(LANG + "solved"), TooltipTheme.Role.IDENTITY, solved.getFormatted());
+        out.detail(TARGET.lang("copies"), TooltipTheme.TUNABLE, String.valueOf(copies));
+        out.detail(TARGET.lang("solved"), TooltipTheme.VALUE, solved.get());
     }
 
     /** What the chart would otherwise have run, or null when it has no answer. */
@@ -96,6 +98,6 @@ public final class CopyCountTarget implements TargetKind {
                 parent.getData()
                     .getId());
         if (balance == null || balance.operations() <= 0) return null;
-        return IKey.str("×" + GuiHelper.formatCount(balance.operations()));
+        return GuiHelper.multiple(balance.operations());
     }
 }

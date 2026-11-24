@@ -72,7 +72,7 @@ dependencies {
     compileOnly("com.github.GTNewHorizons:twilightforest:2.7.47:dev")
     compileOnly("com.github.GTNewHorizons:ProjectRed:4.12.51-GTNH:dev")
     compileOnly("com.github.slprime:ChromaticTooltips:1.1.0-GTNH:dev")
-    compileOnly("com.github.slprime:ChromaticTooltipsCompat:1.1.5-GTNH:dev") { transitive = false }
+    compileOnly("com.github.slprime:ChromaticTooltipsCompat:1.1.6-GTNH:dev") { transitive = false }
 
     // Development runtime only; optional mods are not published as dependencies.
     runtimeOnlyNonPublishable("com.github.GTNewHorizons:EnderIO:2.10.55:dev")

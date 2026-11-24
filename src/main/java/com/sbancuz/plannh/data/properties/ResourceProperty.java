@@ -7,8 +7,8 @@ import java.util.function.ObjLongConsumer;
 import java.util.function.ToIntFunction;
 import java.util.function.ToLongFunction;
 
-import com.cleanroommc.modularui.screen.RichTooltip;
 import com.sbancuz.plannh.data.flowchart.Port;
+import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 
 import lombok.Getter;
 import lombok.experimental.SuperBuilder;
@@ -29,7 +29,7 @@ public class ResourceProperty<T> extends SummaryProperty<T> {
     @lombok.Builder.Default
     private final ToIntFunction<T> colorProvider = _ -> -1;
     @lombok.Builder.Default
-    private final BiConsumer<RichTooltip, T> tooltip = (_, _) -> {};
+    private final BiConsumer<TooltipBuilder, T> tooltip = (_, _) -> {};
 
     /** A pin/arrow color the type leaves to the GUI palette's unknown-port color. */
     public static final int UNSET = 0;
@@ -71,8 +71,8 @@ public class ResourceProperty<T> extends SummaryProperty<T> {
     }
 
     @SuppressWarnings("unchecked")
-    public void addTooltip(final RichTooltip tooltip, final Object value) {
-        this.tooltip.accept(tooltip, (T) value);
+    public void addTooltip(final TooltipBuilder out, final Object value) {
+        this.tooltip.accept(out, (T) value);
     }
 
     public static <T> ResourcePropertyBuilder<T, ?, ?> builder(final String key, final T defaultValue) {

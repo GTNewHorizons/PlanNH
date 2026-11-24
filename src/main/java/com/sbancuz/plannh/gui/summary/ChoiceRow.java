@@ -19,6 +19,7 @@ import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.data.flowchart.balancer.Note;
 import com.sbancuz.plannh.gui.GuiIcon;
+import com.sbancuz.plannh.gui.LangScope;
 import com.sbancuz.plannh.gui.theme.PlannhThemes;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
@@ -27,6 +28,8 @@ import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
  * A clickable choice row: a checkbox ticked on the active answer, and the reason on hover.
  */
 final class ChoiceRow extends SummaryFlow implements Interactable {
+
+    private static final LangScope CHOICE = LangScope.ROOT.child("summary.tooltip.choice");
 
     private final Summary.Line.Choice choice;
 
@@ -56,35 +59,27 @@ final class ChoiceRow extends SummaryFlow implements Interactable {
                     .textAlign(Alignment.CenterLeft)
                     .expanded());
 
-        tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE).tooltipBuilder(tooltip -> {
-            final TooltipBuilder out = TooltipBuilder.create(tooltip)
-                .row(TooltipTheme.key(TooltipTheme.Role.LABEL, choice.displayName()))
+        tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE).tooltipBuilder(TooltipBuilder.build(CHOICE, out -> {
+            final boolean active = choice.active();
+            out.title(IKey.str(choice.displayName()))
                 .separator()
                 .entry(
-                    IKey.lang("plannh.summary.tooltip.choice.status"),
-                    choice.active() ? TooltipTheme.Role.ACCENT : TooltipTheme.Role.MUTED,
-                    IKey.lang(
-                        choice.active() ? "plannh.summary.tooltip.choice.active"
-                            : "plannh.summary.tooltip.choice.alternative"));
-            if (choice.reason() != null) {
-                out.entry(
-                    IKey.lang("plannh.summary.tooltip.choice.reason"),
-                    TooltipTheme.Role.BODY,
-                    choice.reason()
-                        .render());
-            } else {
-                out.langRow("plannh.summary.tooltip.choice.default");
-            }
+                    "status",
+                    active ? TooltipTheme.GOOD : TooltipTheme.MUTED,
+                    CHOICE.lang(active ? "active" : "alternative"));
+            if (choice.reason() != null) out.entry(
+                "reason",
+                TooltipTheme.VALUE,
+                choice.reason()
+                    .render());
+            else out.text("default");
+
             out.separator()
-                .langRow(
-                    choice.active() ? "plannh.summary.tooltip.choice.click.active"
-                        : "plannh.summary.tooltip.choice.click.alternative");
-            if (!notes.isEmpty()) {
-                out.separator();
-                for (final Note note : notes) out.row(IKey.str(note.render()));
-            }
-            out.flush();
-        })
+                .hint(active ? "click.active" : "click.alternative");
+            if (notes.isEmpty()) return;
+            out.separator();
+            for (final Note note : notes) out.line(IKey.str(note.render()));
+        }))
             .tooltipAutoUpdate(true);
     }
 

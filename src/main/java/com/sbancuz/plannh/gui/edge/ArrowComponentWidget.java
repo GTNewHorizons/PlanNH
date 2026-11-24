@@ -2,6 +2,7 @@ package com.sbancuz.plannh.gui.edge;
 
 import org.jetbrains.annotations.NotNull;
 
+import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.widget.Widget;
 import com.sbancuz.plannh.api.PlanAPI;
@@ -13,7 +14,7 @@ public abstract class ArrowComponentWidget extends Widget<ArrowComponentWidget> 
 
     protected ArrowComponentWidget(ArrowWidget parent) {
         this.parent = parent;
-        addTooltipLine("Click arrow to remove");
+        addTooltipLine(IKey.lang("plannh.gui.edge.remove_hint"));
     }
 
     @Override

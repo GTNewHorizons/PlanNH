@@ -16,6 +16,7 @@ import com.cleanroommc.modularui.drawable.text.TextRenderer;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.RecipeContext;
+import com.sbancuz.plannh.gui.LangScope;
 import com.sbancuz.plannh.gui.setting.ItemChoiceWidget;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
@@ -24,6 +25,8 @@ import lombok.Getter;
 
 /** A registered value selected from a runtime registry, rather than a Java enum. */
 public class ChoiceSettingDef<T> extends SettingDef<T> {
+
+    private static final LangScope SETTINGS = LangScope.ROOT.child("settings");
 
     private final Class<T> type;
     private final Supplier<List<T>> choices;
@@ -108,12 +111,13 @@ public class ChoiceSettingDef<T> extends SettingDef<T> {
 
     @Override
     public Consumer<TooltipBuilder> tooltip(final T value) {
+        final IKey label = IKey.str(getLabel());
         if (value instanceof ItemStack item) return out -> {
             final List<String> lines = MCHelper.getItemToolTip(item);
-            if (lines.isEmpty()) out.entry(getLabel(), TooltipTheme.Role.TUNABLE, display.apply(value));
-            else for (final String line : lines) out.row(IKey.str(line));
+            if (lines.isEmpty()) out.entry(label, TooltipTheme.TUNABLE, display.apply(value));
+            else for (final String line : lines) out.line(IKey.str(line));
         };
-        return out -> out.entry(getLabel(), TooltipTheme.Role.TUNABLE, display.apply(value));
+        return out -> out.entry(label, TooltipTheme.TUNABLE, display.apply(value));
     }
 
     @Override
@@ -134,22 +138,16 @@ public class ChoiceSettingDef<T> extends SettingDef<T> {
                         .map(value -> (ItemStack) value)
                         .toList(),
                     () -> cfg.reset(this))
-                    .hint("plannh.settings.item_choice_hint")
                     .tooltipBuilder(
-                        tooltip -> TooltipBuilder.create(tooltip)
-                            .langRow(
-                                cfg.isExplicit(this) ? "plannh.settings.choice_manual" : "plannh.settings.choice_auto")
-                            .flush());
+                        TooltipBuilder
+                            .build(SETTINGS, out -> out.text(cfg.isExplicit(this) ? "choice_manual" : "choice_auto")));
 
             if (counted) widget.scrollHandler(direction -> {
                 final int current = count(cfg, ctx);
                 final int next = Math.clamp(current + direction, minimumCount(cfg, ctx), maximumCount(cfg, ctx));
                 if (next != current) edit.accept(() -> setCount(cfg, ctx, next));
             })
-                .tooltipBuilder(
-                    tooltip -> TooltipBuilder.create(tooltip)
-                        .langRow("plannh.settings.item_count_scroll")
-                        .flush());
+                .tooltipBuilder(TooltipBuilder.build(SETTINGS, out -> out.hint("item_count_scroll")));
 
             return widget;
         }
@@ -165,15 +163,11 @@ public class ChoiceSettingDef<T> extends SettingDef<T> {
                 .orElse(40));
         final ButtonWidget<?> button = new ButtonWidget<>().name("settings.choice")
             .width(width)
-            .tooltipBuilder(tooltip -> {
-                final T value = cfg.getProfile()
-                    .value(this, cfg, ctx);
-                final TooltipBuilder out = TooltipBuilder.create(tooltip);
-                tooltip(value).accept(out);
-                out.langRow(cfg.isExplicit(this) ? "plannh.settings.choice_manual" : "plannh.settings.choice_auto");
-                out.langRow("plannh.settings.choice_hint")
-                    .flush();
-            })
+            .tooltipBuilder(
+                TooltipBuilder.build(
+                    SETTINGS,
+                    out -> out.hint("choice_hint")
+                        .resetHint(cfg.isExplicit(this))))
             .tooltipAutoUpdate(true);
         button.overlay(
             IKey.dynamic(

@@ -21,6 +21,7 @@ import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.GuiIcon;
+import com.sbancuz.plannh.gui.LangScope;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.node.NodeWidget;
 import com.sbancuz.plannh.gui.theme.PlannhThemes;
@@ -28,6 +29,8 @@ import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
 public class MachineGroupWidget extends GroupWidget<MachineGroup> {
+
+    private static final LangScope GROUP = LangScope.ROOT.child("gui.group");
 
     @Nullable
     private Node mainNode;
@@ -107,7 +110,7 @@ public class MachineGroupWidget extends GroupWidget<MachineGroup> {
                 .size(16)
                 .margin(2, 0, 0, 0)
                 .tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE)
-                .tooltipBuilder(this::writeMachineTooltip)
+                .tooltipBuilder(TooltipBuilder.build(GROUP, this::writeMachineTooltip))
                 .tooltipAutoUpdate(true));
     }
 
@@ -135,63 +138,48 @@ public class MachineGroupWidget extends GroupWidget<MachineGroup> {
                 return true;
             })
             .tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE)
-            .tooltipBuilder(tooltip -> {
-                final TooltipBuilder out = TooltipBuilder.create(tooltip)
-                    .row(
-                        IKey.lang(
-                            step > 0 ? "plannh.gui.group.capacity.increase" : "plannh.gui.group.capacity.decrease")
-                            .style(TooltipTheme.Role.LABEL.code()));
-                writeCapacity(out);
-                out.flush();
-            })
+            .tooltipBuilder(
+                TooltipBuilder.build(
+                    GROUP,
+                    out -> writeCapacity(out.title(step > 0 ? "capacity.increase" : "capacity.decrease"))))
             .tooltipAutoUpdate(true);
     }
 
     /** Keep the header compact; the tooltip names the machine and explains its shared load. */
     private TextWidget<?> loadLabel() {
-        return new TextWidget<>(IKey.dynamic(() -> {
+        return new TextWidget<>(IKey.dynamicKey(() -> {
             final double load = copyLoad();
-            if (load <= 0) return "";
-            final String used = "×" + GuiHelper.formatCount(load);
-            return used + " / "
-                + (data.getMachineCapacity() > 0 ? Integer.toString(data.getMachineCapacity()) : "\u221e");
+            if (load <= 0) return IKey.EMPTY;
+            return GuiHelper.ratio(GuiHelper.multiple(load), capacity());
         })).name("group.load")
             .widgetTheme(PlannhThemes.TEXT)
             .textAlign(Alignment.CenterRight)
             .tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE)
-            .tooltipBuilder(this::writeMachineTooltip)
+            .tooltipBuilder(TooltipBuilder.build(GROUP, this::writeMachineTooltip))
             .tooltipAutoUpdate(true);
     }
 
-    private void writeMachineTooltip(final RichTooltip tooltip) {
-        final TooltipBuilder out = TooltipBuilder.create(tooltip)
-            .row(
-                IKey.lang("plannh.gui.group.machine.title")
-                    .style(TooltipTheme.Role.LABEL.code()))
+    private void writeMachineTooltip(final TooltipBuilder out) {
+        out.title("machine.title")
             .entry(
                 IKey.lang("plannh.gui.node.machine"),
-                TooltipTheme.Role.IDENTITY,
-                mainNode == null ? IKey.lang("plannh.gui.group.machine.empty") : IKey.str(machineName()));
+                TooltipTheme.VALUE,
+                mainNode == null ? GROUP.lang("machine.empty") : IKey.str(machineName()));
         if (canvas.getGraph()
-            .balance() != null) {
-            out.entry(
-                IKey.lang("plannh.gui.group.load"),
-                TooltipTheme.Role.IDENTITY,
-                TooltipBuilder.multiple(copyLoad()));
-        } else {
-            out.langRow("plannh.gui.group.load.unbalanced");
-        }
-        writeCapacity(out);
-        out.separator()
-            .langRow("plannh.gui.group.machine.shared")
-            .flush();
+            .balance() != null) out.entry("load", TooltipTheme.VALUE, GuiHelper.multiple(copyLoad()));
+        else out.text("load.unbalanced");
+        writeCapacity(out).separator()
+            .text("machine.shared");
     }
 
-    private void writeCapacity(final TooltipBuilder out) {
-        out.entry(
-            IKey.lang("plannh.gui.group.machine_capacity"),
-            TooltipTheme.Role.TUNABLE,
-            data.getMachineCapacity() > 0 ? Integer.toString(data.getMachineCapacity()) : "\u221e");
+    private TooltipBuilder writeCapacity(final TooltipBuilder out) {
+        return out.entry("machine_capacity", TooltipTheme.TUNABLE, capacity());
+    }
+
+    /** The maximum machine count, or the unlimited mark when the group doesn't have a maximum. */
+    private IKey capacity() {
+        final int capacity = data.getMachineCapacity();
+        return capacity > 0 ? IKey.str(Integer.toString(capacity)) : IKey.lang("plannh.gui.number.unlimited");
     }
 
     /**

@@ -2,6 +2,7 @@ package com.sbancuz.plannh.gui.common;
 
 import org.jetbrains.annotations.NotNull;
 
+import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.sbancuz.plannh.api.PlanAPI;
@@ -21,7 +22,7 @@ public class CloseButtonWidget extends ButtonWidget<CloseButtonWidget> {
             GuiIcon.DELETE.asIcon()
                 .size(GuiIcon.DELETE.size()));
         size(12);
-        addTooltipLine("Delete this widget");
+        addTooltipLine(IKey.lang("plannh.gui.widget.delete"));
         marginRight(2);
     }
 

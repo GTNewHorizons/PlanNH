@@ -8,11 +8,14 @@ import net.minecraft.util.StatCollector;
 import org.apache.commons.lang3.StringUtils;
 import org.lwjgl.input.Keyboard;
 
+import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.drawable.GuiDraw;
 
 public final class GuiHelper {
 
     public static final int TICKS_PER_SECOND = 20;
+
+    private static final LangScope NUMBER = LangScope.ROOT.child("gui.number");
 
     public static int zq(final float v, final float zoom) {
         return Math.round(v * zoom);
@@ -105,7 +108,14 @@ public final class GuiHelper {
         public static final RateUnit[] VALUES = RateUnit.values();
 
         public final String name;
+        /** The unit's symbol: "s". */
         public final String langKey;
+        /** A duration in the unit: "2s". */
+        public final String durationKey;
+        /** The per-unit suffix: "/s". */
+        public final String suffixKey;
+        /** An amount per the unit: "12.5/s". */
+        public final String amountKey;
         public final double secondsPerUnit;
         /** Whether a duration reads well in this unit; a tick is a rate, not a span of time. */
         public final boolean duration;
@@ -113,12 +123,11 @@ public final class GuiHelper {
         RateUnit(final String name, final double secondsPerUnit, final boolean duration) {
             this.name = name;
             this.langKey = "plannh.gui.rate." + name;
+            this.durationKey = langKey + ".duration";
+            this.suffixKey = langKey + ".suffix";
+            this.amountKey = langKey + ".amount";
             this.secondsPerUnit = secondsPerUnit;
             this.duration = duration;
-        }
-
-        public String suffixKey() {
-            return langKey + ".suffix";
         }
     }
 
@@ -131,16 +140,35 @@ public final class GuiHelper {
         return chosen;
     }
 
-    /** Ticks as one duration: "2s", "20m", "3.5h". */
     public static String formatDuration(final long ticks) {
-        if (ticks <= 0) return "0" + mark(RateUnit.SECONDS);
-        final double seconds = ticks / (double) TICKS_PER_SECOND;
-        final RateUnit unit = unitFor(seconds);
-        return trimTrailingZeros(String.format(Locale.ROOT, "%.2f", seconds / unit.secondsPerUnit)) + mark(unit);
+        return formatDuration(ticks, unitFor(ticks / (double) TICKS_PER_SECOND));
     }
 
-    public static String mark(final RateUnit unit) {
-        return StatCollector.translateToLocal(unit.langKey);
+    /**
+     * Ticks as a duration in {@code unit}.
+     *
+     * <pre>
+     *     40, SECONDS  ->  2s
+     *     40, TICKS    ->  40t
+     *     30, MINUTES  ->  0.03m
+     * </pre>
+     */
+    public static String formatDuration(final long ticks, final RateUnit unit) {
+        final double seconds = Math.max(0, ticks) / (double) TICKS_PER_SECOND;
+        final String amount = trimTrailingZeros(String.format(Locale.ROOT, "%.2f", seconds / unit.secondsPerUnit));
+        return StatCollector.translateToLocalFormatted(unit.durationKey, amount);
+    }
+
+    public static String formatRate(final String amount, final RateUnit unit) {
+        return StatCollector.translateToLocalFormatted(unit.amountKey, amount);
+    }
+
+    public static IKey multiple(final double count) {
+        return NUMBER.lang("multiple", formatCount(count));
+    }
+
+    public static IKey ratio(final Object count, final Object maximum) {
+        return NUMBER.lang("ratio", count, maximum);
     }
 
     public static void drawRectBorder(final int x, final int y, final int w, final int h, final int bw,

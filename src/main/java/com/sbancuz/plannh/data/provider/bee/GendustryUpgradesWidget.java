@@ -11,6 +11,7 @@ import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.setting.ChoiceSettingDef;
+import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.setting.ItemChoiceWidget;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
@@ -46,17 +47,14 @@ public final class GendustryUpgradesWidget extends Flow {
                     })
                     .name("gendustry.upgrade." + (index + 1) + ".item")
                     .size(SLOT)
-                    .hint("plannh.settings.item_choice_hint")
-                    .tooltipBuilder(tooltip -> {
-                        final ItemStack selected = cfg.value(upgrade, ctx);
-                        final TooltipBuilder out = TooltipBuilder.create(tooltip);
-                        if (selected != null) out.entry(
-                            IKey.lang("plannh.gui.gendustry.installed"),
-                            TooltipTheme.Role.TUNABLE,
-                            upgrade.count(cfg, ctx) + "/" + Math.max(0, upgrade.maximumCount(cfg, ctx)));
-                        out.langRow("plannh.settings.item_count_scroll")
-                            .flush();
-                    })
+                    .tooltipBuilder(TooltipBuilder.build(out -> {
+                        if (cfg.value(upgrade, ctx) != null) {
+                            final int maximum = Math.max(0, upgrade.maximumCount(cfg, ctx));
+                            final IKey installed = GuiHelper.ratio(upgrade.count(cfg, ctx), maximum);
+                            out.entry("gui.gendustry.installed", TooltipTheme.TUNABLE, installed)
+                                .hint("settings.item_count_scroll");
+                        }
+                    }))
                     .tooltipAutoUpdate(true);
             child(item);
         }
