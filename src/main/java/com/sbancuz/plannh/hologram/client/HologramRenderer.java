@@ -14,8 +14,8 @@ import org.lwjgl.opengl.GL13;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.flowchart.GraphData;
 import com.sbancuz.plannh.data.flowchart.Plan;
-import com.sbancuz.plannh.hologram.BlockPin;
-import com.sbancuz.plannh.hologram.Pins;
+import com.sbancuz.plannh.hologram.Anchors;
+import com.sbancuz.plannh.hologram.BlockAnchor;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
@@ -49,16 +49,16 @@ public class HologramRenderer {
         final double cameraY = camera.lastTickPosY + (camera.posY - camera.lastTickPosY) * partialTicks;
         final double cameraZ = camera.lastTickPosZ + (camera.posZ - camera.lastTickPosZ) * partialTicks;
 
-        for (final GraphData element : Pins.pinnedIn(
+        for (final GraphData element : Anchors.attachedIn(
             Plan.getInstance()
                 .getGraphs(),
             mc.thePlayer.dimension)) {
             final String text = HologramText.of(element);
             if (text.isEmpty()) continue;
-            final BlockPin pin = element.getPin();
-            final double dx = pin.x() + 0.5D - cameraX;
-            final double dy = pin.y() + 0.5D - cameraY;
-            final double dz = pin.z() + 0.5D - cameraZ;
+            final BlockAnchor anchor = element.getAnchor();
+            final double dx = anchor.x() + 0.5D - cameraX;
+            final double dy = anchor.y() + 0.5D - cameraY;
+            final double dz = anchor.z() + 0.5D - cameraZ;
             if (dx * dx + dy * dy + dz * dz > RENDER_DISTANCE * RENDER_DISTANCE) continue;
             draw(mc.fontRenderer, text, HologramText.color(element), dx, dy, dz);
         }

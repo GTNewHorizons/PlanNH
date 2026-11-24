@@ -9,7 +9,7 @@ import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Note;
 
-/** The one line a plan element shows as a hologram and in the pin picker. */
+/** The one line a plan element shows as a hologram and in the anchor picker. */
 final class HologramText {
 
     static final int WHITE = 0xFFFFFF;

@@ -7,14 +7,14 @@ import net.minecraftforge.common.util.ForgeDirection;
 
 import org.lwjgl.input.Keyboard;
 
-import com.sbancuz.plannh.hologram.BlockPin;
+import com.sbancuz.plannh.hologram.BlockAnchor;
 
 import cpw.mods.fml.client.registry.ClientRegistry;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.InputEvent;
 
-/** The key that opens the pin picker for the block face the player is looking at. */
+/** The key that opens the anchor picker for the block face the player is looking at. */
 public class HologramEditKey {
 
     private static final KeyBinding EDIT_KEY = new KeyBinding(
@@ -41,8 +41,8 @@ public class HologramEditKey {
             || hit.typeOfHit != MovingObjectPosition.MovingObjectType.BLOCK) return;
         // The air block in front of the face; looking at a hologram hits the block behind it, so this re-targets it.
         final ForgeDirection side = ForgeDirection.getOrientation(hit.sideHit);
-        PinPickerScreen.open(
-            new BlockPin(
+        AnchorPickerScreen.open(
+            new BlockAnchor(
                 mc.thePlayer.dimension,
                 hit.blockX + side.offsetX,
                 hit.blockY + side.offsetY,

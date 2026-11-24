@@ -14,7 +14,7 @@ import com.sbancuz.plannh.data.flowchart.Note;
 import com.sbancuz.plannh.data.serialization.Serializer;
 
 // Nodes need a recipe handler to construct, so these tests use notes and groups.
-class PinsTest {
+class AnchorsTest {
 
     private static Note noteIn(final Graph graph) {
         final Note note = new Note();
@@ -31,29 +31,29 @@ class PinsTest {
     }
 
     @Test
-    void pinSurvivesEncodeDecode() {
-        final Graph graph = new Graph("pins");
+    void anchorSurvivesEncodeDecode() {
+        final Graph graph = new Graph("anchors");
         final Note note = noteIn(graph);
         final Group group = groupIn(graph);
-        note.setPin(new BlockPin(-1, 5, 64, -7));
-        group.setPin(new BlockPin(0, 1, 2, 3));
+        note.setAnchor(new BlockAnchor(-1, 5, 64, -7));
+        group.setAnchor(new BlockAnchor(0, 1, 2, 3));
 
         final Graph loaded = Serializer.decodeGraph(Serializer.encodeGraph(graph));
 
         assertEquals(
-            new BlockPin(-1, 5, 64, -7),
+            new BlockAnchor(-1, 5, 64, -7),
             loaded.getNotes()
                 .get(note.getId())
-                .getPin());
+                .getAnchor());
         assertEquals(
-            new BlockPin(0, 1, 2, 3),
+            new BlockAnchor(0, 1, 2, 3),
             loaded.getGroups()
                 .get(group.getId())
-                .getPin());
+                .getAnchor());
     }
 
     @Test
-    void unpinnedElementDecodesWithNullPin() {
+    void unanchoredElementDecodesWithNullAnchor() {
         final Graph graph = new Graph("none");
         final Note note = noteIn(graph);
 
@@ -62,62 +62,62 @@ class PinsTest {
         assertNull(
             loaded.getNotes()
                 .get(note.getId())
-                .getPin());
+                .getAnchor());
     }
 
     @Test
-    void pinMovesBlockToNewElement() {
+    void attachMovesBlockToNewElement() {
         final Graph graph = new Graph("move");
         final Note first = noteIn(graph);
         final Note second = noteIn(graph);
-        final BlockPin block = new BlockPin(0, 1, 2, 3);
+        final BlockAnchor block = new BlockAnchor(0, 1, 2, 3);
 
-        Pins.pin(List.of(graph), first, block);
-        Pins.pin(List.of(graph), second, block);
+        Anchors.attach(List.of(graph), first, block);
+        Anchors.attach(List.of(graph), second, block);
 
-        assertNull(first.getPin());
-        assertEquals(block, second.getPin());
-        assertSame(second, Pins.pinnedAt(List.of(graph), block));
+        assertNull(first.getAnchor());
+        assertEquals(block, second.getAnchor());
+        assertSame(second, Anchors.attachedAt(List.of(graph), block));
     }
 
     @Test
-    void pinnedInFiltersDimensionAcrossGraphs() {
+    void attachedInFiltersDimensionAcrossGraphs() {
         final Graph one = new Graph("one");
         final Graph two = new Graph("two");
         final Note overworld = noteIn(one);
         final Group nether = groupIn(one);
         final Note otherOverworld = noteIn(two);
         noteIn(two);
-        Pins.pin(List.of(one, two), overworld, new BlockPin(0, 0, 0, 0));
-        Pins.pin(List.of(one, two), nether, new BlockPin(-1, 0, 0, 0));
-        Pins.pin(List.of(one, two), otherOverworld, new BlockPin(0, 1, 0, 0));
+        Anchors.attach(List.of(one, two), overworld, new BlockAnchor(0, 0, 0, 0));
+        Anchors.attach(List.of(one, two), nether, new BlockAnchor(-1, 0, 0, 0));
+        Anchors.attach(List.of(one, two), otherOverworld, new BlockAnchor(0, 1, 0, 0));
 
         assertEquals(
             2,
-            Pins.pinnedIn(List.of(one, two), 0)
+            Anchors.attachedIn(List.of(one, two), 0)
                 .size());
         assertEquals(
             1,
-            Pins.pinnedIn(List.of(one, two), -1)
+            Anchors.attachedIn(List.of(one, two), -1)
                 .size());
     }
 
     @Test
-    void clearPinsClearsEveryElementKind() {
+    void clearAnchorsClearsEveryElementKind() {
         final Graph graph = new Graph("clear");
         final Note note = noteIn(graph);
         final Group group = groupIn(graph);
         final Note nested = new Note();
         group.getChildren()
             .put(nested.getId(), nested);
-        note.setPin(new BlockPin(0, 0, 0, 0));
-        group.setPin(new BlockPin(0, 1, 0, 0));
-        nested.setPin(new BlockPin(0, 2, 0, 0));
+        note.setAnchor(new BlockAnchor(0, 0, 0, 0));
+        group.setAnchor(new BlockAnchor(0, 1, 0, 0));
+        nested.setAnchor(new BlockAnchor(0, 2, 0, 0));
 
-        Pins.clearPins(graph);
+        Anchors.clearAnchors(graph);
 
-        assertNull(note.getPin());
-        assertNull(group.getPin());
-        assertNull(nested.getPin());
+        assertNull(note.getAnchor());
+        assertNull(group.getAnchor());
+        assertNull(nested.getAnchor());
     }
 }

@@ -30,7 +30,7 @@ import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.UndoHistory;
 import com.sbancuz.plannh.data.serialization.GuideNHExporter;
 import com.sbancuz.plannh.data.serialization.Serializer;
-import com.sbancuz.plannh.hologram.Pins;
+import com.sbancuz.plannh.hologram.Anchors;
 
 import codechicken.nei.NEIClientConfig;
 import codechicken.nei.NEIClientUtils;
@@ -175,7 +175,7 @@ public final class PlanAPI {
      */
     public static void importGraph(@Nonnull final Graph graph) {
         final Plan plan = Plan.getInstance();
-        Pins.clearPins(graph);
+        Anchors.clearAnchors(graph);
         graph.setName(StatCollector.translateToLocal("plannh.share.slot_imported"));
         plan.getGraphs()
             .add(graph);
