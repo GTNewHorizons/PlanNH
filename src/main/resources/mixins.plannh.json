@@ -8,7 +8,6 @@
     "GuiScreenAccessor",
     "LayoutManagerMixin",
     "ItemZoomMixin",
-    "GuiOverlayButtonMixin",
     "GTNEIDefaultHandlerMixin",
     "GTNEIDefaultHandlerAccessor",
     "RecipeWidgetMixin",

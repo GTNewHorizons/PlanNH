@@ -9,7 +9,7 @@ import codechicken.nei.recipe.GuiOverlayButton;
 import codechicken.nei.recipe.GuiRecipeButton;
 import codechicken.nei.recipe.RecipeHandlerRef;
 
-/** A planner action, not an inventory transfer, for recipes without a usable NEI overlay button. */
+/** {@code PlanRecipeButton} adds a recipe to the plan. */
 final class PlanRecipeButton extends GuiRecipeButton {
 
     private final Runnable addRecipe;
@@ -19,18 +19,17 @@ final class PlanRecipeButton extends GuiRecipeButton {
         this.addRecipe = addRecipe;
     }
 
+    /**
+     * Replace the NEI overlay button in {@code buttons} with a {@code PlanRecipeButton}. When {@code buttons} doesn't
+     * have an overlay button, add a {@code PlanRecipeButton} at the lowest free position on the right edge.
+     */
     static void configure(final List<GuiRecipeButton> buttons, final RecipeHandlerRef ref, final int width,
         final int height, final Runnable addRecipe) {
-        final String ident = ref.handler.getOverlayIdentifier();
         for (int i = 0; i < buttons.size(); i++) {
             final GuiRecipeButton button = buttons.get(i);
             if (button instanceof PlanRecipeButton) return;
-            if (!(button instanceof GuiOverlayButton overlay)) continue;
-            if (ident == null || ident.isEmpty()) {
-                buttons.set(i, new PlanRecipeButton(ref, button.xPosition, button.yPosition, addRecipe));
-            } else {
-                overlay.setRequireShiftForOverlayRecipe(false);
-            }
+            if (!(button instanceof GuiOverlayButton)) continue;
+            buttons.set(i, new PlanRecipeButton(ref, button.xPosition, button.yPosition, addRecipe));
             return;
         }
 

@@ -13,7 +13,6 @@ import codechicken.nei.api.IConfigureNEI;
 import codechicken.nei.recipe.GuiRecipe;
 import codechicken.nei.recipe.GuiRecipeButton.UpdateRecipeButtonsEvent;
 import codechicken.nei.recipe.RecipeHandlerRef;
-import codechicken.nei.recipe.RecipeInfo;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
 public class NEIPlanConfig implements IConfigureNEI {
@@ -30,22 +29,6 @@ public class NEIPlanConfig implements IConfigureNEI {
     }
 
     @SubscribeEvent
-    public void onPreButtonUpdate(final UpdateRecipeButtonsEvent.Pre event) {
-        final GuiRecipe<?> gui = (GuiRecipe<?>) event.gui;
-        if (!(gui.firstGui instanceof final GuiContainerWrapper wrapper
-            && wrapper.getScreen() instanceof FlowchartScreen)) return;
-
-        final RecipeHandlerRef ref = event.handlerRef;
-        if (!PlanOverlayHandler.canResolve(ref.handler, ref.recipeIndex)) return;
-
-        final String ident = ref.handler.getOverlayIdentifier();
-        if (ident != null && !ident.isEmpty()
-            && !RecipeInfo.hasOverlayHandler(GuiContainerWrapper.class, ident)) {
-            API.registerGuiOverlayHandler(GuiContainerWrapper.class, HANDLER, ident);
-        }
-    }
-
-    @SubscribeEvent
     public void onPostButtonUpdate(final UpdateRecipeButtonsEvent.Post event) {
         final GuiRecipe<?> gui = (GuiRecipe<?>) event.gui;
         if (!(gui.firstGui instanceof final GuiContainerWrapper wrapper
@@ -53,7 +36,6 @@ public class NEIPlanConfig implements IConfigureNEI {
         final RecipeHandlerRef ref = event.handlerRef;
         if (!HANDLER.canCraft(wrapper, ref.handler, ref.recipeIndex)) return;
 
-        // Informational handlers can omit an overlay identifier or suppress the default '+' entirely.
         PlanRecipeButton.configure(event.buttonList, ref, event.width, event.height, () -> {
             wrapper.mc.displayGuiScreen(wrapper);
             HANDLER.overlayRecipe(wrapper, ref.handler, ref.recipeIndex, false);
