@@ -43,7 +43,7 @@ public class HologramRenderer {
     private static void render(final float partialTicks) {
         final Minecraft mc = Minecraft.getMinecraft();
         final EntityLivingBase camera = mc.renderViewEntity;
-        if (mc.theWorld == null || mc.thePlayer == null || camera == null || mc.gameSettings.hideGUI) return;
+        if (!PlanReadiness.isReady() || mc.thePlayer == null || camera == null || mc.gameSettings.hideGUI) return;
 
         final double cameraX = camera.lastTickPosX + (camera.posX - camera.lastTickPosX) * partialTicks;
         final double cameraY = camera.lastTickPosY + (camera.posY - camera.lastTickPosY) * partialTicks;

@@ -24,6 +24,7 @@ public class HologramEditKey {
 
     public static void init() {
         ClientRegistry.registerKeyBinding(EDIT_KEY);
+        PlanReadiness.init();
         FMLCommonHandler.instance()
             .bus()
             .register(new HologramEditKey());
@@ -34,7 +35,8 @@ public class HologramEditKey {
         if (!EDIT_KEY.isPressed()) return;
         final Minecraft mc = Minecraft.getMinecraft();
         final MovingObjectPosition hit = mc.objectMouseOver;
-        if (mc.currentScreen != null || mc.theWorld == null
+        if (!PlanReadiness.isReady() || mc.currentScreen != null
+            || mc.theWorld == null
             || mc.thePlayer == null
             || hit == null
             || hit.typeOfHit != MovingObjectPosition.MovingObjectType.BLOCK) return;
