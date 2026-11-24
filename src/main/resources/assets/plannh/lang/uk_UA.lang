@@ -1,2 +1,10 @@
 ## Holograms
 plannh.hologram.unnamed_group=Група
+key.plannh.hologram.edit=Прив'язати елемент плану до блока
+plannh.hologram.picker.title=Прив'язати до цього блока
+plannh.hologram.picker.node=Нода
+plannh.hologram.picker.group=Група
+plannh.hologram.picker.note=Нотатка
+plannh.hologram.picker.unpin=Відв'язати
+plannh.hologram.picker.cancel=Скасувати
+plannh.hologram.picker.empty=Активний граф плану порожній

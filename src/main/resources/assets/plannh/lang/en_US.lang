@@ -536,3 +536,11 @@ plannh.gui.toolbar.import.title=Import graph
 
 ## Holograms
 plannh.hologram.unnamed_group=Group
+key.plannh.hologram.edit=Pin plan element to block
+plannh.hologram.picker.title=Pin to this block
+plannh.hologram.picker.node=Node
+plannh.hologram.picker.group=Group
+plannh.hologram.picker.note=Note
+plannh.hologram.picker.unpin=Unpin
+plannh.hologram.picker.cancel=Cancel
+plannh.hologram.picker.empty=The active plan graph is empty
