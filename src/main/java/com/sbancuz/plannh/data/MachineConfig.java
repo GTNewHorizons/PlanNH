@@ -1,8 +1,9 @@
 package com.sbancuz.plannh.data;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.function.Supplier;
 
 import javax.annotation.Nonnull;
@@ -13,7 +14,6 @@ import com.sbancuz.plannh.data.flowchart.balancer.Pin;
 import com.sbancuz.plannh.data.setting.CopyCountTarget;
 import com.sbancuz.plannh.data.setting.RateTarget;
 import com.sbancuz.plannh.data.setting.SettingDef;
-import com.sbancuz.plannh.data.setting.Settings;
 
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -23,18 +23,23 @@ import lombok.Setter;
 @Setter
 public class MachineConfig {
 
-    @Getter(AccessLevel.NONE)
-    private final Map<SettingDef<?>, Object> settings = new HashMap<>();
+    /** The key of {@link #profileConfigs} while the config doesn't have a profile id. */
+    public static final String NO_PROFILE_ID = "";
+
     private transient MachineProfile profile;
+    @Setter(AccessLevel.NONE)
     private String profileId;
 
     private final CopyCountTarget copies = new CopyCountTarget();
     private final RateTarget rates = new RateTarget();
     private Pin targetKind = Pin.NONE;
+    /** The key is a profile id that the player has selected on this machine. The value has the edits of the profile. */
     @Getter(AccessLevel.NONE)
-    private final Map<Integer, Double> inputChance = new HashMap<>();
+    private final SortedMap<String, ProfileConfig> profileConfigs = new TreeMap<>();
+    /** The entry of {@link #profileConfigs} for {@link #profileId}. {@link #current()} looks the entry up. */
     @Getter(AccessLevel.NONE)
-    private final Map<Integer, Double> outputChance = new HashMap<>();
+    @Setter(AccessLevel.NONE)
+    private transient @Nullable ProfileConfig current;
 
     /** Used by Gson so omitted fields retain their defaults. */
     private MachineConfig() {}
@@ -46,18 +51,18 @@ public class MachineConfig {
     /** Creates a sparse user configuration; defaults remain owned by the profile. */
     public MachineConfig(final MachineProfile requested, final Map<SettingDef<?>, Object> settings) {
         setProfile(requested);
-        this.settings.putAll(settings);
+        current().setAll(settings);
     }
 
     public MachineConfig(final MachineConfig source) {
         profile = source.profile;
         profileId = source.profileId;
-        settings.putAll(source.settings);
         copies.setCopies(source.copies.copies());
         rates.copyFrom(source.rates);
         targetKind = source.targetKind;
-        inputChance.putAll(source.inputChance);
-        outputChance.putAll(source.outputChance);
+        for (final Map.Entry<String, ProfileConfig> entry : source.profileConfigs.entrySet()) {
+            profileConfigs.put(entry.getKey(), new ProfileConfig(entry.getValue()));
+        }
     }
 
     public boolean isCopiesTargeted() {
@@ -74,22 +79,20 @@ public class MachineConfig {
         return profile.value(setting, this, ctx);
     }
 
-    @SuppressWarnings("unchecked")
     public <T> T getOrDefault(final SettingDef<T> setting, final Supplier<? extends T> fallback) {
-        if (settings.containsKey(setting)) return (T) settings.get(setting);
-        return fallback.get();
+        return current().getOrDefault(setting, fallback);
     }
 
     public <T> void set(final SettingDef<T> setting, @Nullable final T value) {
-        settings.put(setting, value);
+        current().set(setting, value);
     }
 
     public boolean isExplicit(final SettingDef<?> setting) {
-        return settings.containsKey(setting);
+        return current().isExplicit(setting);
     }
 
     public void reset(final SettingDef<?> setting) {
-        settings.remove(setting);
+        current().reset(setting);
     }
 
     @Nonnull
@@ -99,41 +102,47 @@ public class MachineConfig {
         return profile.computeEffect(this, ctx);
     }
 
+    /**
+     * Resolve the transient profile. When the config has another profile id or no profile id, the edits move to the id
+     * of {@code profile}.
+     */
     public void setProfile(@Nullable final MachineProfile profile) {
         this.profile = profile;
-        if (profile != null) profileId = profile.id();
+        if (profile == null || profile.id()
+            .equals(profileId)) return;
+
+        final ProfileConfig edits = current();
+        profileConfigs.remove(profileId == null ? NO_PROFILE_ID : profileId);
+        profileId = profile.id();
+        profileConfigs.put(profileId, edits);
     }
 
+    /** Select {@code newProfile}. The edits of the profile before the switch stay in {@link #profileConfigs}. */
     public void selectProfile(final MachineProfile newProfile) {
-        if (!Objects.equals(profile, newProfile)) {
-            settings.clear();
-            inputChance.clear();
-            outputChance.clear();
-        }
-        setProfile(newProfile);
+        profile = newProfile;
+        profileId = newProfile.id();
+        current = null;
     }
 
     public void copySettingsFrom(final MachineConfig other) {
         if (!Objects.equals(profile, other.profile)) {
             throw new IllegalArgumentException("Cannot copy settings between different machine profiles");
         }
-        final boolean machinesExplicit = isExplicit(Settings.MACHINES);
-        final Object machines = settings.get(Settings.MACHINES);
-        final Pin kind = targetKind;
-        settings.clear();
-        settings.putAll(other.settings);
-        if (machinesExplicit) settings.put(Settings.MACHINES, machines);
-        else settings.remove(Settings.MACHINES);
-        targetKind = kind;
+        current().copySettingsFrom(other.current());
     }
 
     public @Nullable Double chanceOverride(final boolean input, final int index) {
-        return (input ? inputChance : outputChance).get(index);
+        return current().chanceOverride(input, index);
     }
 
     public void overrideChance(final boolean input, final int index, @Nullable final Double chance) {
-        final Map<Integer, Double> overrides = input ? inputChance : outputChance;
-        if (chance == null) overrides.remove(index);
-        else overrides.put(index, chance);
+        current().overrideChance(input, index, chance);
+    }
+
+    /** Return the config of {@link #profileId}, and create the config when the profile doesn't have one. */
+    private ProfileConfig current() {
+        if (current == null) current = profileConfigs
+            .computeIfAbsent(profileId == null ? NO_PROFILE_ID : profileId, _ -> new ProfileConfig());
+        return current;
     }
 }

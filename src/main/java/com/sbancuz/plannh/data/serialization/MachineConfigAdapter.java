@@ -1,6 +1,8 @@
 package com.sbancuz.plannh.data.serialization;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
@@ -11,6 +13,7 @@ import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import com.sbancuz.plannh.data.MachineConfig;
+import com.sbancuz.plannh.data.ProfileConfig;
 import com.sbancuz.plannh.data.flowchart.balancer.Pin;
 
 /**
@@ -18,6 +21,10 @@ import com.sbancuz.plannh.data.flowchart.balancer.Pin;
  * fields stay reflective, while settings and target cleanup retain the compact current shape.
  */
 public final class MachineConfigAdapter implements TypeAdapterFactory {
+
+    private static final String PROFILE_CONFIGS = "profileConfigs";
+    // saves before per-profile configs have the fields of `ProfileConfig` on the machine config
+    private static final List<String> LEGACY_FIELDS = List.of("settings", "inputChance", "outputChance");
 
     @Override
     public <T> TypeAdapter<T> create(final Gson gson, final TypeToken<T> type) {
@@ -42,6 +49,11 @@ public final class MachineConfigAdapter implements TypeAdapterFactory {
                 object.remove("rates");
                 if (!rates.entrySet()
                     .isEmpty()) object.add("rates", rates);
+                final JsonObject profileConfigs = object.getAsJsonObject(PROFILE_CONFIGS);
+                profileConfigs.entrySet()
+                    .removeIf(entry -> isEmptyConfig(entry.getValue()));
+                if (profileConfigs.entrySet()
+                    .isEmpty()) object.remove(PROFILE_CONFIGS);
                 final boolean serializeNulls = out.getSerializeNulls();
                 out.setSerializeNulls(true);
                 try {
@@ -56,10 +68,11 @@ public final class MachineConfigAdapter implements TypeAdapterFactory {
                 final JsonObject object = jsonElementAdapter.read(in)
                     .getAsJsonObject();
                 // Malformed optional targets leave the constructor defaults intact.
-                for (final String field : new String[] { "copies", "rates" }) {
+                for (final String field : new String[] { "copies", "rates", PROFILE_CONFIGS }) {
                     if (object.has(field) && !object.get(field)
                         .isJsonObject()) object.remove(field);
                 }
+                moveLegacyEdits(object);
                 if (object.has("targetKind") && !object.get("targetKind")
                     .isJsonPrimitive()) object.remove("targetKind");
                 if (object.has("rates")) {
@@ -90,5 +103,39 @@ public final class MachineConfigAdapter implements TypeAdapterFactory {
                 return value;
             }
         }.nullSafe();
+    }
+
+    /** Return whether each field of a saved {@link ProfileConfig} is an empty map. */
+    private static boolean isEmptyConfig(final JsonElement config) {
+        if (!config.isJsonObject()) return true;
+        for (final Map.Entry<String, JsonElement> field : config.getAsJsonObject()
+            .entrySet()) {
+            final JsonElement value = field.getValue();
+            if (!(value.isJsonObject() && value.getAsJsonObject()
+                .entrySet()
+                .isEmpty())) return false;
+        }
+        return true;
+    }
+
+    /**
+     * Move the settings and port chances of a save without {@link ProfileConfig}s into the config of the saved profile
+     * id.
+     */
+    private static void moveLegacyEdits(final JsonObject object) {
+        final JsonObject legacy = new JsonObject();
+        for (final String field : LEGACY_FIELDS) {
+            final JsonElement value = object.remove(field);
+            if (value != null) legacy.add(field, value);
+        }
+        if (legacy.entrySet()
+            .isEmpty()) return;
+
+        final JsonElement rawProfileId = object.get("profileId");
+        final boolean hasProfileId = rawProfileId != null && rawProfileId.isJsonPrimitive();
+        final String profileId = hasProfileId ? rawProfileId.getAsString() : MachineConfig.NO_PROFILE_ID;
+        if (!object.has(PROFILE_CONFIGS)) object.add(PROFILE_CONFIGS, new JsonObject());
+        object.getAsJsonObject(PROFILE_CONFIGS)
+            .add(profileId, legacy);
     }
 }
