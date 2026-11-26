@@ -131,8 +131,8 @@ public class EnderIOProvider implements PropertyProvider {
         .setting(Settings.TICK_MODIFIER)
         .setting(CAPACITOR, (cfg, ctx) -> energy(ctx) > 0 && ctx.getOrDefault(FIXED_RF_PER_TICK, null) == null)
         .badge(EnderIOProvider::readCapacitorBadge)
-        .setting(Settings.RF_PER_TICK, (cfg, ctx) -> energy(ctx) > 0)
-        .setting(Settings.DURATION_TICKS, (cfg, ctx) -> energy(ctx) > 0)
+        .override(Settings.RF_PER_TICK, (cfg, ctx) -> energy(ctx) > 0)
+        .override(Settings.DURATION_TICKS, (cfg, ctx) -> energy(ctx) > 0)
         .derive(Settings.RF_PER_TICK, (cfg, ctx) -> {
             final Integer fixed = ctx.getOrDefault(FIXED_RF_PER_TICK, null);
             if (fixed != null) return fixed;

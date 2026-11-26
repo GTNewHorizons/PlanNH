@@ -74,7 +74,8 @@ public final class AE2Provider implements PropertyProvider {
     private final MachineProfile QUARTZ_GRINDER = MachineProfile.builder("ae2:quartz_grinder")
         .setting(Settings.MACHINES)
         .setting(Settings.TICK_MODIFIER)
-        .setting(Settings.DURATION_TICKS)
+        .override(Settings.DURATION_TICKS)
+        .derive(Settings.DURATION_TICKS, (cfg, ctx) -> ctx.getOrDefault(RecipePropertyAPI.DURATION_TICKS, 0))
         .effect(
             Effects.durationFromConfigOrProperty()
                 .applyParallelism())

@@ -329,6 +329,10 @@ plannh.gui.node.machine=Machine
 ## GUI - Node settings
 plannh.gui.node.settings=Machine settings
 plannh.gui.node.settings.changed=*
+plannh.gui.node.settings.overrides=Overrides
+plannh.gui.node.settings.overrides.hint=PlanNH computes these values from the recipe. Set a value when the recipe is wrong.
+plannh.gui.node.settings.overrides.hide_hint=Click to fold these rows away
+plannh.gui.node.settings.overrides.show_hint=Click to show the rows
 plannh.gui.node.settings.reset=Reset settings
 plannh.gui.node.settings.reset.hint=Set each row marked * back to the default of the machine. Undo brings the values back.
 
