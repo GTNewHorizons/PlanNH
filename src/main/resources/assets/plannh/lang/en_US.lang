@@ -2,11 +2,14 @@
 
 ## Settings
 ## Settings - General
-plannh.settings.duration_ticks=Duration
-plannh.settings.tick_modifier=Accel
-plannh.settings.machines=Mach
-plannh.settings.energy_per_tick=Energy/t
+plannh.settings.duration_ticks=Duration (ticks)
+plannh.settings.duration_ticks.desc=Ticks for one operation, before the tick speed.
+plannh.settings.tick_modifier=Tick Speed %
+plannh.settings.tick_modifier.desc=Speed of the machine in percent. 200 halves the duration and doubles the energy per tick.
+plannh.settings.machines=Machines
+plannh.settings.machines.desc=Machines that run this recipe at once. The throughput grows with the count.
 plannh.settings.inputs_per_tick=Inputs/t
+plannh.settings.inputs_per_tick.desc=Items fed into the compressor per tick. The duration is the compression cost divided by this rate.
 
 ## Settings - GT
 plannh.settings.voltage=Tier
@@ -31,37 +34,50 @@ plannh.settings.laser_oc=Laser OC
 plannh.settings.unlimited_skips=Unl. Skips
 plannh.settings.no_overclock=No OC
 plannh.settings.catalyst_astral_arrays=Astral Arrays
-plannh.settings.catalyst_accel_card=Accel. Card
+plannh.settings.catalyst_accel_card=Acceleration Card
+plannh.settings.catalyst_accel_card.desc=Acceleration cards in the machine. Each card makes the machine faster and raises the power per tick.
 
 ## Settings - Botania
 plannh.settings.mana_per_tick=Mana/t
+plannh.settings.mana_per_tick.desc=Mana delivered per tick. The duration is the mana cost divided by this rate.
 
 ## Settings - Thaumcraft (and friends)
 plannh.settings.vis_per_tick=Vis/t
+plannh.settings.vis_per_tick.desc=Vis supplied per tick. The duration is the vis cost divided by this rate.
 plannh.settings.thaumcraft.bellows=Bellows
-plannh.settings.thaumcraft.fire_vis=Fire Vis
+plannh.settings.thaumcraft.bellows.desc=Bellows next to the furnace. Each one cuts 20 ticks from a smelt and raises the bonus chance.
 plannh.settings.thaumcraft.furnace_boost_source=Boost Supply
+plannh.settings.thaumcraft.furnace_boost_source.desc=Fire vis supply of the furnace. A supplied furnace smelts faster, and uses the vis or the essentia.
 plannh.settings.thaumcraft.vis_discount=Vis Disc.%
+plannh.settings.thaumcraft.vis_discount.desc=Vis discount in percent from the wand and the armor. The discount lowers the vis cost and not the duration.
 plannh.settings.thaumcraft.furnace_boost_source.none=None
 plannh.settings.thaumcraft.furnace_boost_source.network_vis=Vis Network
 plannh.settings.thaumcraft.furnace_boost_source.essentia_nozzle=Essentia Nozzle
 plannh.tooltip.thaumcraft.furnace_steady_state=Assumes continuous supply; excludes startup buffers
 plannh.settings.witchinggadgets.bellows=Bellows
+plannh.settings.witchinggadgets.bellows.desc=Bellows next to the furnace. Each one cuts 40 ticks from a smelt and raises the bonus output.
 
 ## Settings - Furnaces
-plannh.settings.galacticraft.arc_power_tier=Power Tier
+plannh.settings.galacticraft.arc_power_tier=Arc Power Tier
+plannh.settings.galacticraft.arc_power_tier.desc=Tier of the arc furnace. Tier 2 smelts in 66 ticks in place of 100.
 plannh.settings.twilightforest.cinder_log_count=Cinder Logs
+plannh.settings.twilightforest.cinder_log_count.desc=Cinder logs around the furnace. From 3 logs, more logs smelt faster. Above 10 logs, ores and logs give extra output.
 
 ## Settings - Forestry
-plannh.settings.forestry_rf_per_tick=For. RF/t
 plannh.settings.bee_speed=Bee Speed
+plannh.settings.bee_speed.desc=Speed allele of the bee. A faster bee has a higher chance for each product.
 plannh.settings.bee_lifespan=Bee Lifespan
+plannh.settings.bee_lifespan.desc=Lifespan allele of the bee. A longer life gives more work cycles for each queen.
 plannh.settings.bee_frame_1=Frame 1
+plannh.settings.bee_frame_1.desc=Frames in the housing. The modifiers of the frames add up.
 plannh.settings.bee_frame_2=Frame 2
 plannh.settings.bee_frame_3=Frame 3
 plannh.settings.bee_alveary_stimulator_1_board_type=Stimulator 1
+plannh.settings.bee_alveary_stimulator_1_board_type.desc=Circuit board of the stimulator. The board type sets the number of circuit sockets.
 plannh.settings.bee_alveary_stimulator_2_board_type=Stimulator 2
+plannh.settings.bee_alveary_stimulator_2_board_type.desc=Circuit board of the stimulator. The board type sets the number of circuit sockets.
 plannh.settings.bee_alveary_stimulator_3_board_type=Stimulator 3
+plannh.settings.bee_alveary_stimulator_3_board_type.desc=Circuit board of the stimulator. The board type sets the number of circuit sockets.
 plannh.settings.bee_alveary_stimulator_1_circuit_1=Circuit 1.1
 plannh.settings.bee_alveary_stimulator_1_circuit_2=Circuit 1.2
 plannh.settings.bee_alveary_stimulator_1_circuit_3=Circuit 1.3
@@ -76,16 +92,15 @@ plannh.settings.bee_alveary_stimulator_3_circuit_3=Circuit 3.3
 plannh.settings.bee_alveary_stimulator_3_circuit_4=Circuit 3.4
 plannh.settings.bee_no_stimulator=None
 plannh.settings.bee_magic_production_aura=Production Booster
+plannh.settings.bee_magic_production_aura.desc=A production booster next to the apiary. The booster uses 1 charge per tick.
 plannh.settings.bee_magic_lifespan_aura=Lifespan Booster
+plannh.settings.bee_magic_lifespan_aura.desc=A lifespan booster next to the apiary. The booster uses 1 charge per tick.
 plannh.settings.bee_no_frame=None
 plannh.settings.gendustry_apiary_upgrade_1=Upgrade 1
+plannh.settings.gendustry_apiary_upgrade_1.desc=Upgrades in the industrial apiary. The upgrades change production, lifespan and the power per tick.
 plannh.settings.gendustry_apiary_upgrade_2=Upgrade 2
 plannh.settings.gendustry_apiary_upgrade_3=Upgrade 3
 plannh.settings.gendustry_apiary_upgrade_4=Upgrade 4
-plannh.settings.gendustry_apiary_upgrade_1_count=Upgrade 1 Count
-plannh.settings.gendustry_apiary_upgrade_2_count=Upgrade 2 Count
-plannh.settings.gendustry_apiary_upgrade_3_count=Upgrade 3 Count
-plannh.settings.gendustry_apiary_upgrade_4_count=Upgrade 4 Count
 plannh.gui.gendustry.upgrades=Apiary Upgrades
 plannh.gui.gendustry.installed=Installed
 plannh.settings.choice_hint=Click to cycle, right-click to cycle back
@@ -138,12 +153,15 @@ plannh.gui.bees.circuit_effects=Circuit effects
 
 ## Settings - Ender IO
 plannh.settings.eio_capacitor=Capacitor
+plannh.settings.eio_capacitor.desc=Capacitor in the machine. A better capacitor makes the machine faster.
 
 ## Settings - BloodMagic
-plannh.settings.lp_per_tick=BM LP/t
+plannh.settings.lp_per_tick=LP/t
+plannh.settings.lp_per_tick.desc=LP that the altar puts into the craft per tick. The duration is the LP cost divided by this rate.
 
 ## Settings - Cofh core
 plannh.settings.rf_per_tick=RF/t
+plannh.settings.rf_per_tick.desc=RF used per tick. The default is the limit of the capacitor. The duration is the RF cost divided by this rate.
 
 ## Settings - Steam
 plannh.settings.steam_eut_discount=Steam EU%

@@ -2,6 +2,8 @@ package com.sbancuz.plannh.gui.node;
 
 import java.util.List;
 
+import net.minecraft.util.StatCollector;
+
 import com.cleanroommc.modularui.api.GuiAxis;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.IWidget;
@@ -14,6 +16,7 @@ import com.sbancuz.plannh.gui.common.FlowchartFlow;
 import com.sbancuz.plannh.gui.common.FlowchartTextWidget;
 import com.sbancuz.plannh.gui.common.MiddleClickReset;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
+import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
 public class SettingsFold extends NodeFold {
 
@@ -61,13 +64,14 @@ public class SettingsFold extends NodeFold {
         scheduleResize();
     }
 
-    /** Add the row of {@code def} with the editor. The row's tooltip has the reset rows. */
+    /** Add the row of {@code def}. The row has the editor, and a tooltip with the description and the reset rows. */
     private <T> void addSetting(final MachineConfig cfg, final RecipeContext ctx, final SettingDef<T> def) {
         final IWidget editor = def.settingsWidget(cfg, ctx, change -> {
             commitEdit(change);
             markStale();
         });
         final List<? extends SettingDef<?>> edited = def.editedSettings();
+        final String descriptionKey = "plannh.settings." + def.getKey() + ".desc";
         final SettingsRow row = new SettingsRow(node, cfg, edited, () -> {
             commitEdit(() -> edited.forEach(cfg::reset));
             markStale();
@@ -77,7 +81,11 @@ public class SettingsFold extends NodeFold {
             .marginBottom(ROW_GAP)
             .coverChildrenHeight()
             .childPadding(2)
-            .tooltipBuilder(TooltipBuilder.build(out -> out.resetHint(row.isExplicit())))
+            .tooltipBuilder(TooltipBuilder.build(out -> {
+                if (StatCollector.canTranslate(descriptionKey))
+                    out.line(TooltipTheme.BODY.style(IKey.lang(descriptionKey)));
+                out.resetHint(row.isExplicit());
+            }))
             .tooltipAutoUpdate(true);
 
         final String label = def.getEditorLabel();
