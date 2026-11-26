@@ -6,13 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 
 import org.junit.jupiter.api.Test;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.serialization.Serializer;
 import com.sbancuz.plannh.data.setting.Settings;
@@ -54,28 +51,6 @@ public final class MachineConfigProfileTest {
             final MachineConfig loaded = Serializer.GSON.fromJson(Serializer.GSON.toJson(config), MachineConfig.class);
             loaded.setProfile(SECOND);
             loaded.selectProfile(FIRST);
-            edits.assertOn(loaded);
-        }
-    }
-
-    @Test
-    public void aSaveWithoutProfileConfigsLoadsTheEditsIntoTheSavedProfile() {
-        for (final Edits edits : cases()) {
-            final MachineConfig config = new MachineConfig(FIRST);
-            edits.apply(config);
-
-            // a save before per-profile configs has the fields of `ProfileConfig` on the machine config
-            final JsonObject saved = Serializer.GSON.toJsonTree(config)
-                .getAsJsonObject();
-            final JsonObject profileConfig = saved.remove("profileConfigs")
-                .getAsJsonObject()
-                .getAsJsonObject(FIRST.id());
-            for (final Map.Entry<String, JsonElement> field : profileConfig.entrySet()) {
-                saved.add(field.getKey(), field.getValue());
-            }
-
-            final MachineConfig loaded = Serializer.GSON.fromJson(saved, MachineConfig.class);
-            loaded.setProfile(FIRST);
             edits.assertOn(loaded);
         }
     }

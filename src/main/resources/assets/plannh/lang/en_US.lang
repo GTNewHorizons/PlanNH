@@ -238,6 +238,7 @@ plannh.error.import=Could not import the graph. The plan was not changed. See th
 plannh.error.export=Could not export or share the graph. See the log for details.
 plannh.error.debug_save=The plan was saved, but its diagnostic copy could not be written. See the log for details.
 plannh.error.connection=Could not create the connection. See the log for details.
+plannh.error.newer_schema=A newer version of PlanNH saved this chart (schema %s). This version reads schema %s and older.
 plannh.error.history=Could not restore undo/redo history. See the log for details.
 plannh.warning.unavailable_nodes=Loaded with %s unavailable recipes. Their nodes and connections were preserved but are excluded from all results.
 plannh.warning.malformed_entries=Removed %s malformed entries from the plan.

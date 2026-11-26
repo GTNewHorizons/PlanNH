@@ -1,0 +1,88 @@
+{
+  "nodes": [
+    {
+      "inputConfigurations": {},
+      "machineName": "missing",
+      "recipeId": {
+        "handlerName": "test",
+        "ingredients": []
+      },
+      "machineConfig": {
+        "settings": {
+          "machines": 3
+        },
+        "profileId": "test",
+        "copies": {
+          "copies": 1
+        },
+        "targetKind": "NONE",
+        "inputChance": {
+          "0": 0.25
+        },
+        "outputChance": {
+          "1": 0.75
+        }
+      },
+      "id": "00000000-0000-0000-0000-000000000001",
+      "x": 7,
+      "y": 11,
+      "header": "Node",
+      "type": "node",
+      "summaryFiltered": false
+    }
+  ],
+  "edges": [],
+  "notes": [],
+  "groups": [
+    {
+      "width": 300,
+      "height": 200,
+      "color": 2136769261,
+      "coverChildren": false,
+      "children": {
+        "00000000-0000-0000-0000-000000000002": {
+          "inputConfigurations": {},
+          "machineName": "missing",
+          "recipeId": {
+            "handlerName": "test",
+            "ingredients": []
+          },
+          "machineConfig": {
+            "settings": {
+              "machines": 5
+            },
+            "profileId": "test",
+            "copies": {
+              "copies": 1
+            },
+            "targetKind": "NONE",
+            "inputChance": {
+              "0": 0.5
+            },
+            "outputChance": {
+              "1": 0.125
+            }
+          },
+          "id": "00000000-0000-0000-0000-000000000002",
+          "x": 7,
+          "y": 11,
+          "header": "Node",
+          "type": "node",
+          "summaryFiltered": false
+        }
+      },
+      "id": "00000000-0000-0000-0000-000000000003",
+      "x": 0,
+      "y": 0,
+      "header": "Group",
+      "type": "group",
+      "summaryFiltered": false
+    }
+  ],
+  "name": "v0 fixture",
+  "zoom": 1.0,
+  "panX": 0.0,
+  "panY": 0.0,
+  "snapToGrid": false,
+  "balanceMode": "AUTO"
+}

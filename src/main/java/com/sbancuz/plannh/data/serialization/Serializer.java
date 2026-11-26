@@ -30,6 +30,9 @@ import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.data.flowchart.balancer.ChoiceKey;
 import com.sbancuz.plannh.data.flowchart.balancer.PortRef;
+import com.sbancuz.plannh.data.serialization.schema.Schema;
+import com.sbancuz.plannh.data.serialization.schema.SchemaException;
+import com.sbancuz.plannh.data.serialization.schema.SchemaStep;
 
 import codechicken.nei.recipe.Recipe;
 import it.unimi.dsi.fastutil.ints.IntIntPair;
@@ -55,10 +58,12 @@ public final class Serializer {
     @Nonnull
     public static String encodeGraph(final Graph graph) {
         try {
+            final JsonObject tree = GSON.toJsonTree(graph, Graph.class)
+                .getAsJsonObject();
             final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
             try (final GZIPOutputStream gzip = new GZIPOutputStream(bytes);
                 final OutputStreamWriter writer = new OutputStreamWriter(gzip, StandardCharsets.UTF_8)) {
-                GSON.toJson(graph, Graph.class, writer);
+                GSON.toJson(Schema.writeVersion(tree), writer);
             }
             return Base64.getEncoder()
                 .encodeToString(bytes.toByteArray());
@@ -74,8 +79,12 @@ public final class Serializer {
                 .decode(data);
             try (final GZIPInputStream gzip = new GZIPInputStream(new ByteArrayInputStream(bytes));
                 final InputStreamReader reader = new InputStreamReader(gzip, StandardCharsets.UTF_8)) {
-                return GSON.fromJson(reader, Graph.class);
+                final JsonObject tree = GSON.fromJson(reader, JsonObject.class);
+                return GSON.fromJson(Schema.upgrade(tree, SchemaStep::upgradeGraph), Graph.class);
             }
+        } catch (final SchemaException newer) {
+            PlanAPI.showMessage("plannh.error.newer_schema", newer.getSavedVersion(), Schema.CURRENT_VERSION);
+            return null;
         } catch (final Exception | LinkageError failure) {
             PlanNH.LOG.warn("Failed to decode flowchart: {}", failure.getMessage());
             return null;
@@ -97,11 +106,13 @@ public final class Serializer {
             .getAsJsonObject();
         final JsonArray graphs = new JsonArray();
         for (final Graph graph : plan.getGraphs()) {
-            if (graph != null)
-                graphs.add(debug ? GSON.toJsonTree(graph, Graph.class) : new JsonPrimitive(encodeGraph(graph)));
+            if (graph == null) continue;
+            final JsonObject tree = GSON.toJsonTree(graph, Graph.class)
+                .getAsJsonObject();
+            graphs.add(debug ? Schema.writeVersion(tree) : new JsonPrimitive(encodeGraph(graph)));
         }
         root.add("graphs", graphs);
-        return GSON.toJson(root);
+        return GSON.toJson(Schema.writeVersion(root));
     }
 
     @Nullable
@@ -113,12 +124,13 @@ public final class Serializer {
                 || !root.get("graphs")
                     .isJsonArray())
                 return null;
-            final Plan plan = GSON.fromJson(root, Plan.class);
+            final Plan plan = GSON.fromJson(Schema.upgrade(root, SchemaStep::upgradePlan), Plan.class);
             if (plan.getSummary() == null) plan.setSummary(new Summary());
             for (final JsonElement entry : root.getAsJsonArray("graphs")) {
                 Graph graph = null;
                 try {
-                    if (entry.isJsonObject()) graph = GSON.fromJson(entry, Graph.class);
+                    if (entry.isJsonObject()) graph = GSON
+                        .fromJson(Schema.upgrade(entry.getAsJsonObject(), SchemaStep::upgradeGraph), Graph.class);
                     else if (entry.isJsonPrimitive() && entry.getAsJsonPrimitive()
                         .isString()) {
                             graph = decodeGraph(entry.getAsString());
@@ -129,6 +141,9 @@ public final class Serializer {
                     .add(graph);
             }
             return plan;
+        } catch (final SchemaException newer) {
+            PlanAPI.showMessage("plannh.error.newer_schema", newer.getSavedVersion(), Schema.CURRENT_VERSION);
+            return null;
         } catch (final Exception | LinkageError failure) {
             PlanNH.LOG.warn("Failed to decode plan: {}", failure.getMessage());
             return null;
