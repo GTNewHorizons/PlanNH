@@ -2,6 +2,10 @@ package com.sbancuz.plannh.gui.node;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.Supplier;
+
+import javax.annotation.Nullable;
 
 import net.minecraft.util.StatCollector;
 
@@ -11,6 +15,7 @@ import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.value.BoolValue;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.CycleButtonWidget;
+import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
@@ -29,6 +34,8 @@ public class SettingsFold extends NodeFold {
 
     private static final LangScope SETTINGS = LangScope.ROOT.child("gui.node.settings");
     private static final LangScope OVERRIDES = SETTINGS.child("overrides");
+    // the copied settings stay while the client runs, so the player can paste on a node of another chart too
+    private static @Nullable MachineConfig copiedSettings;
     private static final int OVERRIDES_TOGGLE = 12;
 
     private final Node data;
@@ -83,8 +90,9 @@ public class SettingsFold extends NodeFold {
         }
 
         if (!overrides.isEmpty()) addOverrides(cfg, ctx, overrides);
-        if (edited.stream()
-            .anyMatch(cfg::isExplicit)) child(resetButton(cfg, edited));
+        final boolean hasExplicit = edited.stream()
+            .anyMatch(cfg::isExplicit);
+        child(createActionRow(cfg, edited, hasExplicit));
 
         scheduleResize();
     }
@@ -164,20 +172,59 @@ public class SettingsFold extends NodeFold {
         }
     }
 
-    /** Return the button for a reset of each setting of {@code edited}. The reset is one undo step. */
-    private IWidget resetButton(final MachineConfig cfg, final List<SettingDef<?>> edited) {
+    /**
+     * Return the row of the buttons below the settings. The player copies and pastes between machines of one profile.
+     * After a paste, the machine count of this machine is unchanged. A paste and a reset are one undo step each. The
+     * reset button is in the row while a setting of {@code edited} is explicit.
+     */
+    private IWidget createActionRow(final MachineConfig cfg, final List<SettingDef<?>> edited,
+        final boolean hasExplicit) {
+        final Runnable copy = () -> {
+            copiedSettings = new MachineConfig(cfg);
+            markStale();
+        };
+        final Runnable paste = () -> {
+            final MachineConfig copied = copiedSettings;
+            if (!(copied != null && Objects.equals(copied.getProfile(), cfg.getProfile()))) return;
+            commitEdit(() -> cfg.copySettingsFrom(copied));
+            markStale();
+        };
+        final Runnable reset = () -> {
+            commitEdit(() -> edited.forEach(cfg::reset));
+            markStale();
+        };
+
+        final Flow row = FlowchartFlow.row(node)
+            .name("settings.actions")
+            .fullWidth()
+            .coverChildrenHeight()
+            .childPadding(2);
+        row.child(createActionButton("copy", () -> "copy.hint", copy));
+        row.child(createActionButton("paste", () -> readPasteHint(cfg), paste));
+        if (!hasExplicit) return row;
+        return row.child(createActionButton("reset", () -> "reset.hint", reset));
+    }
+
+    private IWidget createActionButton(final String name, final Supplier<String> hintName, final Runnable click) {
         final int height = 12;
-        return new ButtonWidget<>().name("settings.reset")
-            .widthRel(1f)
+        return new ButtonWidget<>().name("settings.action")
+            .expanded()
             .height(height)
-            .overlay(SETTINGS.lang("reset"))
+            .overlay(SETTINGS.lang(name))
             .onMousePressed(clicked -> {
                 if (clicked != 0) return false;
-                commitEdit(() -> edited.forEach(cfg::reset));
-                markStale();
+                click.run();
                 return true;
             })
-            .tooltipBuilder(TooltipBuilder.build(SETTINGS, out -> out.text("reset.hint")));
+            .tooltipBuilder(TooltipBuilder.build(SETTINGS, out -> out.text(hintName.get())))
+            .tooltipAutoUpdate(true);
+    }
+
+    private static String readPasteHint(final MachineConfig cfg) {
+        final MachineConfig copied = copiedSettings;
+        if (copied == null) return "paste.empty";
+        final boolean sameProfile = Objects.equals(copied.getProfile(), cfg.getProfile());
+        return sameProfile ? "paste.hint" : "paste.other";
     }
 
     /** A row of the settings fold that a middle-click resets. */

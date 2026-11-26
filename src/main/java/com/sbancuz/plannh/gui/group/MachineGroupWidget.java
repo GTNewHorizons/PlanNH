@@ -169,7 +169,8 @@ public class MachineGroupWidget extends GroupWidget<MachineGroup> {
             .balance() != null) out.entry("load", TooltipTheme.VALUE, GuiHelper.multiple(copyLoad()));
         else out.text("load.unbalanced");
         writeCapacity(out).separator()
-            .text("machine.shared");
+            .text("machine.shared")
+            .text("machine.join");
     }
 
     private TooltipBuilder writeCapacity(final TooltipBuilder out) {

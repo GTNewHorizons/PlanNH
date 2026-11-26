@@ -333,7 +333,13 @@ plannh.gui.node.settings.overrides=Overrides
 plannh.gui.node.settings.overrides.hint=PlanNH computes these values from the recipe. Set a value when the recipe is wrong.
 plannh.gui.node.settings.overrides.hide_hint=Click to fold these rows away
 plannh.gui.node.settings.overrides.show_hint=Click to show the rows
-plannh.gui.node.settings.reset=Reset settings
+plannh.gui.node.settings.reset=Reset
+plannh.gui.node.settings.copy=Copy
+plannh.gui.node.settings.copy.hint=Copy the settings of this machine.
+plannh.gui.node.settings.paste=Paste
+plannh.gui.node.settings.paste.hint=Paste the copied settings. This machine keeps its machine count and port chances.
+plannh.gui.node.settings.paste.empty=Copy the settings of a machine first.
+plannh.gui.node.settings.paste.other=The copied settings are for another machine.
 plannh.gui.node.settings.reset.hint=Set each row marked * back to the default of the machine. Undo brings the values back.
 
 ## GUI - Groups
@@ -341,6 +347,7 @@ plannh.gui.group.add_machine_group=Add Machine Group
 plannh.gui.group.machine.title=Machine group
 plannh.gui.group.machine.empty=No recipes yet
 plannh.gui.group.machine.shared=Recipes share machine settings and their loads add up
+plannh.gui.group.machine.join=A recipe that joins takes the settings of the first recipe, and keeps its own machine count
 plannh.gui.group.machine_capacity=Maximum machines
 plannh.gui.group.capacity.increase=Increase maximum by 1
 plannh.gui.group.capacity.decrease=Decrease maximum by 1
