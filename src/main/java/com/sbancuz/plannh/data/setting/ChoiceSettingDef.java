@@ -7,6 +7,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.item.ItemStack;
 
 import com.cleanroommc.modularui.api.MCHelper;
@@ -15,6 +17,7 @@ import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.drawable.text.TextRenderer;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.sbancuz.plannh.data.MachineConfig;
+import com.sbancuz.plannh.data.NodeBadge;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.gui.setting.ItemChoiceWidget;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
@@ -74,6 +77,21 @@ public class ChoiceSettingDef<T> extends SettingDef<T> {
         if (!(value instanceof ItemStack stack)) return 0;
         final int maximum = maximumCount(cfg, ctx);
         return maximum < 1 ? 0 : Math.clamp(stack.stackSize, minimumCount(cfg, ctx), maximum);
+    }
+
+    /**
+     * Return the selected item while this setting is visible. A counted choice has the count as the code, and a count
+     * of 0 doesn't have a badge.
+     */
+    public @Nullable NodeBadge readBadge(final MachineConfig cfg, final RecipeContext ctx) {
+        final boolean visible = cfg.getProfile()
+            .visibleSettings(cfg, ctx)
+            .anyMatch(this::equals);
+        if (!(visible && cfg.value(this, ctx) instanceof ItemStack stack)) return null;
+        if (!counted) return new NodeBadge(stack, "");
+
+        final int count = count(cfg, ctx);
+        return count > 0 ? new NodeBadge(stack, Integer.toString(count)) : null;
     }
 
     public void setCount(final MachineConfig cfg, final RecipeContext ctx, final int count) {

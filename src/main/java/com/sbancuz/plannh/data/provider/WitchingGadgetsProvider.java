@@ -66,6 +66,7 @@ public final class WitchingGadgetsProvider implements PropertyProvider {
         .setting(Settings.MACHINES)
         .setting(Settings.TICK_MODIFIER)
         .setting(BELLOWS, 0, 4)
+        .badge(BELLOWS::readBadge)
         .effect(blastEffect().applyParallelism())
         .outputMultiplier(
             (_, cfg, ctx,

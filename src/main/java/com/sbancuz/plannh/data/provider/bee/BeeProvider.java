@@ -22,6 +22,7 @@ import com.mojang.authlib.GameProfile;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
+import com.sbancuz.plannh.data.NodeBadge;
 import com.sbancuz.plannh.data.ProfileFactory;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.effect.EffectResult;
@@ -95,7 +96,10 @@ public class BeeProvider implements PropertyProvider {
             .icon((_, _) -> GuiTextures.PROCESSOR)
             .asFactory(
                 (builder, housing) -> builder
-                    .configureIf(housing.frameSlots() > 0, b -> b.setting(BeeSettings.FRAMES.getFirst()))
+                    .configureIf(
+                        housing.frameSlots() > 0,
+                        b -> b.setting(BeeSettings.FRAMES.getFirst())
+                            .badge((cfg, ctx) -> readFrameBadge(housing, cfg, ctx)))
                     .effect((cfg, ctx) -> calculate(housing, cfg, ctx))
                     .applyParallelism()
                     .totalCost(
@@ -103,6 +107,16 @@ public class BeeProvider implements PropertyProvider {
                         CoFHCompat.RF_PER_T,
                         (result, cfg, ctx) -> (Number) result.properties()
                             .get(CoFHCompat.RF_COST)));
+    }
+
+    /** Return the frame of the first filled slot of the housing, or {@code null} when every slot is empty. */
+    private static @Nullable NodeBadge readFrameBadge(final Housing housing, final MachineConfig cfg,
+        final RecipeContext ctx) {
+        for (int i = 0; i < housing.frameSlots(); i++) {
+            final ItemStack frame = cfg.value(BeeSettings.FRAMES.get(i), ctx);
+            if (frame != null) return new NodeBadge(frame, "");
+        }
+        return null;
     }
 
     protected final MachineProfile.Builder housingBuilder(final String id, final Housing housing) {

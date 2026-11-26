@@ -41,6 +41,7 @@ public final class TwilightForestProvider implements PropertyProvider {
     private final MachineProfile profile = MachineProfile.builder("twilightforest:cinder_furnace")
         .setting(Settings.MACHINES)
         .setting(CINDER_LOG_COUNT, 0, NEARBY_BLOCKS)
+        .badge(CINDER_LOG_COUNT::readBadge)
         .setting(Settings.TICK_MODIFIER)
         .outputMultiplier(
             (_, cfg, ctx, index) -> isBonusRecipe(ctx) ? expectedOutputMultiplier(CINDER_LOG_COUNT.count(cfg, ctx))
