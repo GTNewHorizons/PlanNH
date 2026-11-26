@@ -328,6 +328,9 @@ plannh.gui.node.machine=Machine
 
 ## GUI - Node settings
 plannh.gui.node.settings=Machine settings
+plannh.gui.node.settings.changed=*
+plannh.gui.node.settings.reset=Reset settings
+plannh.gui.node.settings.reset.hint=Set each row marked * back to the default of the machine. Undo brings the values back.
 
 ## GUI - Groups
 plannh.gui.group.add_machine_group=Add Machine Group

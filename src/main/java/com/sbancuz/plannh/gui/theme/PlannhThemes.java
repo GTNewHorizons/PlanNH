@@ -72,15 +72,16 @@ public final class PlannhThemes {
 
     // ── Cards: node, note, group ──
     public static final WidgetThemeKey<WidgetTheme>
-        CARD        = ROOT.createSubKey("card"),
-        CARD_MUTED  = CARD.createSubKey("cardMuted"),
-        CARD_INPUT  = CARD.createSubKey("cardInput"),
-        CARD_OUTPUT = CARD.createSubKey("cardOutput"),
-        CARD_INFO   = CARD.createSubKey("cardInfo"),
-        CARD_POWER  = CARD.createSubKey("cardPower"),
-        CARD_BADGE  = CARD.createSubKey("cardBadge"),
-        NOTE        = CARD.createSubKey("note"),
-        NOTE_HEADER = NOTE.createSubKey("noteHeader");
+        CARD         = ROOT.createSubKey("card"),
+        CARD_MUTED   = CARD.createSubKey("cardMuted"),
+        CARD_INPUT   = CARD.createSubKey("cardInput"),
+        CARD_OUTPUT  = CARD.createSubKey("cardOutput"),
+        CARD_INFO    = CARD.createSubKey("cardInfo"),
+        CARD_POWER   = CARD.createSubKey("cardPower"),
+        CARD_BADGE   = CARD.createSubKey("cardBadge"),
+        CARD_CHANGED = CARD.createSubKey("cardChanged"),
+        NOTE         = CARD.createSubKey("note"),
+        NOTE_HEADER  = NOTE.createSubKey("noteHeader");
 
     // ── Canvas ──
     public static final WidgetThemeKey<WidgetTheme> CANVAS = ROOT.createSubKey("canvas");
@@ -208,6 +209,7 @@ public final class PlannhThemes {
             .textColor(CARD_OUTPUT, PlannhColors.CARD_OUTPUT.getColor())
             .textColor(CARD_INFO, PlannhColors.CARD_INFO.getColor())
             .textColor(CARD_POWER, PlannhColors.CARD_POWER.getColor())
+            .textColor(CARD_CHANGED, PlannhColors.CARD_CHANGED.getColor())
             .textColor(CARD_BADGE, PlannhColors.TEXT.getColor())
             .textShadow(CARD_BADGE, true)
             .background(NOTE, new DrawableStack(noteAccentFrame, cardFrame))

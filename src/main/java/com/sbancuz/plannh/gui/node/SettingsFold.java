@@ -1,5 +1,6 @@
 package com.sbancuz.plannh.gui.node;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.util.StatCollector;
@@ -7,18 +8,23 @@ import net.minecraft.util.StatCollector;
 import com.cleanroommc.modularui.api.GuiAxis;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.IWidget;
+import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.setting.SettingDef;
+import com.sbancuz.plannh.gui.LangScope;
 import com.sbancuz.plannh.gui.common.FlowchartFlow;
 import com.sbancuz.plannh.gui.common.FlowchartTextWidget;
 import com.sbancuz.plannh.gui.common.MiddleClickReset;
+import com.sbancuz.plannh.gui.theme.PlannhThemes;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
 public class SettingsFold extends NodeFold {
+
+    private static final LangScope SETTINGS = LangScope.ROOT.child("gui.node.settings");
 
     private final Node data;
     private MachineConfig savedConfig;
@@ -57,14 +63,25 @@ public class SettingsFold extends NodeFold {
 
         final MachineConfig cfg = data.getMachineConfig();
         final RecipeContext ctx = data.recipeContext();
-        cfg.getProfile()
+        final List<? extends SettingDef<?>> visible = cfg.getProfile()
             .visibleSettings(cfg, ctx)
-            .forEach(def -> addSetting(cfg, ctx, def));
+            .toList();
+        visible.forEach(def -> addSetting(cfg, ctx, def));
+
+        final List<SettingDef<?>> edited = new ArrayList<>();
+        for (final SettingDef<?> def : visible) {
+            edited.addAll(def.editedSettings());
+        }
+        if (edited.stream()
+            .anyMatch(cfg::isExplicit)) child(resetButton(cfg, edited));
 
         scheduleResize();
     }
 
-    /** Add the row of {@code def}. The row has the editor, and a tooltip with the description and the reset rows. */
+    /**
+     * Add the row of {@code def}. The row has a marker while a setting of the row is explicit, the editor, and a
+     * tooltip with the description and the reset rows.
+     */
     private <T> void addSetting(final MachineConfig cfg, final RecipeContext ctx, final SettingDef<T> def) {
         final IWidget editor = def.settingsWidget(cfg, ctx, change -> {
             commitEdit(change);
@@ -88,12 +105,31 @@ public class SettingsFold extends NodeFold {
             }))
             .tooltipAutoUpdate(true);
 
+        if (row.isExplicit()) row.child(
+            new FlowchartTextWidget(SETTINGS.lang("changed"), node).name("settings.row.changed")
+                .widgetTheme(PlannhThemes.CARD_CHANGED));
         final String label = def.getEditorLabel();
         if (!def.isFullWidthEditor() || !label.isEmpty()) row.child(
             new FlowchartTextWidget(IKey.str(label), node).name("settings.row.label")
                 .expanded());
         row.child(editor);
         child(row);
+    }
+
+    /** Return the button for a reset of each setting of {@code edited}. The reset is one undo step. */
+    private IWidget resetButton(final MachineConfig cfg, final List<SettingDef<?>> edited) {
+        final int height = 12;
+        return new ButtonWidget<>().name("settings.reset")
+            .widthRel(1f)
+            .height(height)
+            .overlay(SETTINGS.lang("reset"))
+            .onMousePressed(clicked -> {
+                if (clicked != 0) return false;
+                commitEdit(() -> edited.forEach(cfg::reset));
+                markStale();
+                return true;
+            })
+            .tooltipBuilder(TooltipBuilder.build(SETTINGS, out -> out.text("reset.hint")));
     }
 
     /** A row of the settings fold that a middle-click resets. */

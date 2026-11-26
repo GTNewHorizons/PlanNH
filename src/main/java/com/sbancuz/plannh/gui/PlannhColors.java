@@ -41,7 +41,8 @@ public final class PlannhColors {
         CARD_INPUT      = C.rgb("card_input",      "0xA00000"),
         CARD_OUTPUT     = C.rgb("card_output",     "0x006E00"),
         CARD_INFO       = C.rgb("card_info",       "0x2A4F9E"),
-        CARD_POWER      = C.rgb("card_power",      "0x8A6400");
+        CARD_POWER      = C.rgb("card_power",      "0x8A6400"),
+        CARD_CHANGED    = C.rgb("card_changed",    "0x8A2BAE");
 
     // ── Notes ──
     public static final ColorResource

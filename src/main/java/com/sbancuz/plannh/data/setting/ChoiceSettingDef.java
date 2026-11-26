@@ -99,7 +99,9 @@ public class ChoiceSettingDef<T> extends SettingDef<T> {
 
     public void setCount(final MachineConfig cfg, final RecipeContext ctx, final int count) {
         if (count <= 0 && minimumCount(cfg, ctx) == 0) {
-            cfg.set(this, null);
+            // a count of 0 is the default when the default of the profile is null
+            cfg.reset(this);
+            if (cfg.value(this, ctx) != null) cfg.set(this, null);
             return;
         }
         final int maximum = maximumCount(cfg, ctx);
