@@ -5,6 +5,10 @@ import java.util.Objects;
 import java.util.Set;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.StatCollector;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.drawable.GuiTextures;
@@ -13,6 +17,7 @@ import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
+import com.sbancuz.plannh.data.NodeBadge;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.flowchart.Port;
@@ -29,6 +34,8 @@ import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.FurnaceRecipeHandler;
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
+import gregtech.api.enums.GTValues;
+import gregtech.api.enums.HeatingCoilLevel;
 import gregtech.api.enums.ItemList;
 import gregtech.api.recipe.RecipeMap;
 import gregtech.api.recipe.RecipeMaps;
@@ -37,6 +44,7 @@ import gregtech.api.recipe.maps.FuelBackend;
 import gregtech.api.recipe.maps.LargeBoilerFuelBackend;
 import gregtech.api.util.GTRecipe;
 import gregtech.api.util.GTRecipeConstants;
+import gregtech.api.util.GTUtility;
 import gregtech.api.util.recipe.Sievert;
 import gregtech.nei.GTNEIDefaultHandler;
 import gregtech.nei.GTNEIDefaultHandler.CachedDefaultRecipe;
@@ -182,6 +190,23 @@ public class GTProvider implements PropertyProvider {
                                 v -> (int) Math
                                     .pow(2, (int) Math.floor(Math.log(8.0 * Math.min(v, 8637)) / Math.log(1.7)))))))
         .icon(this::icon)
+        .badge((cfg, ctx) -> {
+            final MachineProfile profile1 = cfg.getProfile();
+            final long eut = ctx.getOrDefault(EU_PER_TICK, 0L);
+            if (eut <= 0) return null;
+
+            final Settings.Voltage voltage = profile1.value(Settings.VOLTAGE, cfg, ctx);
+            // `Settings.Voltage` has OFF before ULV, GT tier 0
+            final int tier = voltage == Settings.Voltage.OFF ? GTUtility.getTier(eut) : voltage.ordinal() - 1;
+            final String tierName = StatCollector
+                .translateToLocalFormatted("plannh.gui.node.badge.tier", GTValues.TIER_COLORS[tier], GTValues.VN[tier]);
+            final ItemStack coil = readCoil(cfg, ctx);
+            if (voltage == Settings.Voltage.OFF) return new NodeBadge(coil, tierName);
+
+            final int amps = profile1.value(Settings.AMP, cfg, ctx);
+            final String power = StatCollector.translateToLocalFormatted("plannh.gui.node.badge.power", tierName, amps);
+            return new NodeBadge(coil, power);
+        })
         .provider(this)
         .build();
 
@@ -189,6 +214,48 @@ public class GTProvider implements PropertyProvider {
         final com.sbancuz.plannh.data.setting.SettingDef<T> def) {
         final RecipeMap<?> map = ctx.getOrDefault(RECIPE_MAP, null);
         return map != null && routes.contains(map.unlocalizedName) ? value : def.getDefaultValue();
+    }
+
+    private static final List<ItemList> COILS = List.of(
+        ItemList.Casing_Coil_Cupronickel,
+        ItemList.Casing_Coil_Kanthal,
+        ItemList.Casing_Coil_Nichrome,
+        ItemList.Casing_Coil_TungstenSteel,
+        ItemList.Casing_Coil_HSSG,
+        ItemList.Casing_Coil_HSSS,
+        ItemList.Casing_Coil_Naquadah,
+        ItemList.Casing_Coil_NaquadahAlloy,
+        ItemList.Casing_Coil_Trinium,
+        ItemList.Casing_Coil_ElectrumFlux,
+        ItemList.Casing_Coil_AwakenedDraconium,
+        ItemList.Casing_Coil_Infinity,
+        ItemList.Casing_Coil_Hypogen,
+        ItemList.Casing_Coil_Eternal);
+
+    /**
+     * Return the coil of {@link Settings#MACHINE_HEAT} when the machine heat is set, else the first coil that reaches
+     * the recipe's {@link #COIL_HEAT}. Return {@code null} for a recipe without heat.
+     */
+    private static @Nullable ItemStack readCoil(final MachineConfig config, final RecipeContext ctx) {
+        final int machineHeat = config.getProfile()
+            .value(Settings.MACHINE_HEAT, config, ctx);
+        final int recipeHeat = ctx.getOrDefault(COIL_HEAT, 0);
+        if (machineHeat <= 0 && recipeHeat <= 0) return null;
+
+        // GT adds 100 K of heat per voltage tier above MV to the heat of the coil. A machine heat is at or above the
+        // heat of the machine's coil, so take the last coil at or under the machine heat
+        int tier = 0;
+        while (tier + 1 < COILS.size()) {
+            final long nextHeat = HeatingCoilLevel.getFromTier((byte) (tier + 1))
+                .getHeat();
+            final long heat = HeatingCoilLevel.getFromTier((byte) tier)
+                .getHeat();
+            final boolean reached = machineHeat > 0 ? nextHeat > machineHeat : heat >= recipeHeat;
+            if (reached) break;
+            tier++;
+        }
+        return COILS.get(tier)
+            .get(1L);
     }
 
     @Override

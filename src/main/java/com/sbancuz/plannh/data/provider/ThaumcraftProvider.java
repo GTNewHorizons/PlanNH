@@ -188,6 +188,7 @@ public class ThaumcraftProvider implements PropertyProvider {
             .applyParallelism())
         .setting(BELLOWS, 0, 3)
         .setting(BOOST_SOURCE)
+        .badge(BELLOWS::readBadge)
         .inputMultiplier(ThaumcraftProvider::infernalInputMultiplier)
         .outputMultiplier(this::infernalBonusMultiplier)
         .icon(

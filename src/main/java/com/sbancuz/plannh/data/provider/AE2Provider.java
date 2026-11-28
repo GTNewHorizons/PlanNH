@@ -85,6 +85,7 @@ public final class AE2Provider implements PropertyProvider {
     private final ProfileFactory<InscriberModel> INSCRIBER_FACTORY = MachineProfile.template()
         .setting(Settings.MACHINES)
         .setting(Settings.TICK_MODIFIER)
+        .badge(ACCELERATION_CARDS::readBadge)
         .provider(this)
         .asFactory(
             (builder, model) -> builder.setting(ACCELERATION_CARDS, 0, model.maxCards())
@@ -127,6 +128,7 @@ public final class AE2Provider implements PropertyProvider {
         .setting(Settings.MACHINES)
         .setting(Settings.TICK_MODIFIER)
         .setting(ACCELERATION_CARDS, 0, 5)
+        .badge(ACCELERATION_CARDS::readBadge)
         .effect(Effects.duration((cfg, ctx) -> {
             final int cards = ACCELERATION_CARDS.count(cfg, ctx);
             final int speed = TileMolecularAssembler.SPEED[cards];
