@@ -12,6 +12,7 @@ import javax.annotation.Nullable;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.sbancuz.plannh.data.flowchart.Port;
+import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.GuiHelper.RateUnit;
 import com.sbancuz.plannh.gui.common.FlowchartFlow;
 import com.sbancuz.plannh.gui.common.FlowchartTextWidget;
@@ -97,7 +98,10 @@ public final class RateTarget implements TargetKind {
             final Port<?> port = outputs.get(output);
             final String amount = port.getType()
                 .formatAmount(target.getValue());
-            out.detail(port.getDisplayName(), TooltipTheme.Role.RATE, TooltipBuilder.rate(amount, RateUnit.SECONDS));
+            out.detail(
+                IKey.str(port.getDisplayName()),
+                TooltipTheme.RATE,
+                GuiHelper.formatRate(amount, RateUnit.SECONDS));
         }
     }
 

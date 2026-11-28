@@ -19,7 +19,6 @@ import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.setting.ChoiceSettingDef;
 import com.sbancuz.plannh.data.setting.SettingDef;
-import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
@@ -139,19 +138,16 @@ public final class AlvearyStimulators {
         final ICircuit circuit = ChipsetManager.circuitRegistry.getCircuit(uid);
         if (!(circuit instanceof StimulatorCircuit stimulator)) return;
 
-        out.entry(IKey.lang("plannh.gui.bees.circuit"), TooltipTheme.Role.IDENTITY, circuitDisplay(uid));
-        out.entry(
-            IKey.lang("plannh.bees.stimulator_energy"),
-            TooltipTheme.Role.POWER,
-            IKey.lang("plannh.bees.mj_per_cycle", stimulator.getPowerUsage()));
-
-        if (GuiHelper.shiftHeld()) {
-            final List<String> effects = new ArrayList<>();
-            stimulator.addTooltip(effects);
-            out.group(
-                "plannh.gui.bees.circuit_effects",
-                rows -> { for (final String line : effects) rows.row(IKey.str(line)); });
-        } else out.langRow("plannh.bees.details_hint");
+        final IKey energy = IKey.lang("plannh.bees.mj_per_cycle", stimulator.getPowerUsage());
+        out.entry(IKey.lang("plannh.gui.bees.circuit"), TooltipTheme.VALUE, circuitDisplay(uid))
+            .entry(IKey.lang("plannh.bees.stimulator_energy"), TooltipTheme.POWER, energy)
+            .shiftDetail(detail -> {
+                final List<String> effects = new ArrayList<>();
+                stimulator.addTooltip(effects);
+                detail.group(
+                    IKey.lang("plannh.gui.bees.circuit_effects"),
+                    rows -> { for (final String line : effects) rows.line(IKey.str(line)); });
+            });
     }
 
     private static StimulatorCircuit selectedCircuit(final String uid) {

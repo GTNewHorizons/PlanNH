@@ -9,8 +9,6 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 
-import com.cleanroommc.modularui.api.drawable.IKey;
-import com.cleanroommc.modularui.screen.RichTooltip;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.properties.ResourceProperty;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
@@ -29,16 +27,11 @@ public final class MagicResources {
     public static final ResourceProperty<Amount> NETWORK_VIS = type(
         "thaumcraft.network_vis",
         new Amount("thaumcraft:ignis", "Ignis", 0xFF5555, 0),
-        (tooltip, _) -> tooltip.addLine(IKey.lang("plannh.resources.unit.centivis")));
+        (out, _) -> out.text("resources.unit.centivis"));
     public static final ResourceProperty<Amount> AURA_CHARGE = type(
         "magicbees.aura_charge",
         new Amount("magicbees:aura", "Aura", 0xAA55FF, 0),
-        (tooltip, value) -> {
-            TooltipBuilder.create(tooltip)
-                .langRow("plannh.bees.aura_port", value.name)
-                .flush();
-            tooltip.addLine(IKey.lang("plannh.resources.unit.aura"));
-        });
+        (out, value) -> out.text("bees.aura_port", value.name));
 
     @Nonnull
     public static Port<Amount> port(final ResourceProperty<Amount> type, final String id, final String name,
@@ -62,7 +55,7 @@ public final class MagicResources {
     }
 
     private static ResourceProperty<Amount> type(final String key, final Amount defaultValue,
-        final BiConsumer<RichTooltip, Amount> tooltip) {
+        final BiConsumer<TooltipBuilder, Amount> tooltip) {
         return ResourceProperty.<Amount>builder(key, defaultValue)
             .displayFormatter(value -> value.name)
             .amountExtractor(value -> value.amount)

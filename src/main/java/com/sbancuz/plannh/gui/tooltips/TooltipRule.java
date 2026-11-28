@@ -7,15 +7,20 @@ import com.cleanroommc.modularui.api.drawable.ITextLine;
 import com.cleanroommc.modularui.screen.viewport.GuiContext;
 
 /**
- * The divider between two groups in a tooltip
+ * The divider between two groups in a tooltip, as wide as the tooltip.
  */
 public final class TooltipRule implements ITextLine {
 
-    private static final String STYLE = String.valueOf(EnumChatFormatting.GRAY) + EnumChatFormatting.STRIKETHROUGH;
+    public static final TooltipRule INSTANCE = new TooltipRule();
+
+    private static final String STYLE = TooltipTheme.DIVIDER.prefix() + EnumChatFormatting.STRIKETHROUGH;
     private static final String DASH = "-";
 
-    /** Shorter than any tooltip worth drawing, and one dash is still a rule. */
-    private static final int MIN_DASHES = 1;
+    // `draw()` rebuilds the dashes only when the width of the tooltip changes
+    private int dashedWidth = -1;
+    private String dashes = "";
+
+    private TooltipRule() {}
 
     @Override
     public int getWidth() {
@@ -30,10 +35,12 @@ public final class TooltipRule implements ITextLine {
     @Override
     public void draw(final GuiContext context, final FontRenderer fr, final float x, final float y, final int color,
         final boolean shadow, final int availableWidth, final int availableHeight) {
-        final int per = fr.getStringWidth(STYLE + DASH);
-        if (per <= 0) return;
-        final int dashes = Math.max(MIN_DASHES, (int) (availableWidth / per));
-        fr.drawString(STYLE + DASH.repeat(dashes), (int) x, (int) y, color, shadow);
+        if (availableWidth != dashedWidth) {
+            final int per = Math.max(1, fr.getStringWidth(STYLE + DASH));
+            dashes = STYLE + DASH.repeat(Math.max(1, availableWidth / per));
+            dashedWidth = availableWidth;
+        }
+        fr.drawString(dashes, (int) x, (int) y, color, shadow);
     }
 
     @Override

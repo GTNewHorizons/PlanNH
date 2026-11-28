@@ -1,6 +1,6 @@
 package com.sbancuz.plannh.gui;
 
-import net.minecraft.util.EnumChatFormatting;
+import java.util.Locale;
 
 import com.cleanroommc.modularui.api.GuiAxis;
 import com.cleanroommc.modularui.api.IPanelHandler;
@@ -32,6 +32,7 @@ import com.sbancuz.plannh.nei.config.KeybindsConfig.Shortcut;
 /** The graph controls that sit above a {@link CanvasWidget}. */
 public final class FlowchartToolbar extends Flow {
 
+    private static final LangScope TOOLBAR = LangScope.ROOT.child("gui.toolbar");
     private static final int BUTTON_SIZE = FlowchartBounds.BUTTON_SIZE;
 
     public FlowchartToolbar(final CanvasWidget canvas) {
@@ -118,59 +119,47 @@ public final class FlowchartToolbar extends Flow {
             return IKey.str(direction < 0 ? "-" : "+")
                 .color(direction < 0 ? PlannhColors.NEGATIVE::getColor : PlannhColors.POSITIVE::getColor);
         }))
-            .tooltipBuilder(tooltip -> {
+            .tooltipBuilder(TooltipBuilder.build(TOOLBAR, out -> {
                 final boolean shift = GuiHelper.shiftHeld();
                 final String action = shift ? (direction < 0 ? "delete" : "add")
                     : (direction < 0 ? "previous" : "next");
-                tooltip.addLine(IKey.lang("plannh.gui.toolbar.graph." + action + ".title"));
-                tooltip.addLine(
-                    IKey.lang(
-                        direction < 0 ? "plannh.gui.toolbar.graph.delete.shift" : "plannh.gui.toolbar.graph.add.shift")
-                        .style(TooltipTheme.Role.TUNABLE.code()));
-                if (shift && direction < 0) {
-                    tooltip.addLine(
-                        IKey.lang(
-                            Plan.getInstance()
-                                .getGraphs()
-                                .size() <= 1 ? "plannh.gui.toolbar.graph.delete.last"
-                                    : "plannh.gui.toolbar.graph.delete.warning")
-                            .style(EnumChatFormatting.RED));
-                }
-            })
+                out.title("graph." + action + ".title")
+                    .hint(direction < 0 ? "graph.delete.shift" : "graph.add.shift");
+                if (!(shift && direction < 0)) return;
+
+                final boolean last = Plan.getInstance()
+                    .getGraphs()
+                    .size() <= 1;
+                out.line(TooltipTheme.WARNING, TOOLBAR.lang(last ? "graph.delete.last" : "graph.delete.warning"));
+            }))
             .tooltipAutoUpdate(true);
     }
 
-    /** The undo and redo buttons, with each NEI binding of a button that has a key in the button's tooltip. */
+    /** The undo and redo buttons. A button's tooltip has the NEI bindings of the button that have a key. */
     private static Flow historyGroup(final CanvasWidget canvas) {
         return Flow.row()
             .name("screen.toolbar.history")
             .coverChildren()
             .childPadding(2)
-            .child(leftButton("edit.undo", GuiIcon.UNDO, canvas::undoGraph).tooltipBuilder(tooltip -> {
-                tooltip.addLine(IKey.lang("plannh.gui.toolbar.undo.title"));
-                final String binding = Shortcut.UNDO.keyName();
-                if (binding != null) tooltip.addLine(
-                    IKey.lang("plannh.gui.toolbar.shortcut", binding)
-                        .style(TooltipTheme.Role.TUNABLE.code()));
-            }))
-            .child(leftButton("edit.redo", GuiIcon.REDO, canvas::redoGraph).tooltipBuilder(tooltip -> {
-                tooltip.addLine(IKey.lang("plannh.gui.toolbar.redo.title"));
-                final String binding = Shortcut.REDO.keyName();
-                if (binding != null) tooltip.addLine(
-                    IKey.lang("plannh.gui.toolbar.shortcut", binding)
-                        .style(TooltipTheme.Role.TUNABLE.code()));
-                final String alternate = Shortcut.REDO_ALT.keyName();
-                if (alternate != null) tooltip.addLine(
-                    IKey.lang("plannh.gui.toolbar.alternate", alternate)
-                        .style(TooltipTheme.Role.TUNABLE.code()));
-            }));
+            .child(
+                leftButton("edit.undo", GuiIcon.UNDO, canvas::undoGraph)
+                    .tooltipBuilder(TooltipBuilder.build(TOOLBAR, out -> {
+                        out.title("undo.title");
+                        final String binding = Shortcut.UNDO.keyName();
+                        if (binding != null) out.hint("shortcut", binding);
+                    })))
+            .child(
+                leftButton("edit.redo", GuiIcon.REDO, canvas::redoGraph)
+                    .tooltipBuilder(TooltipBuilder.build(TOOLBAR, out -> {
+                        out.title("redo.title");
+                        final String binding = Shortcut.REDO.keyName();
+                        if (binding != null) out.hint("shortcut", binding);
+                        final String alternate = Shortcut.REDO_ALT.keyName();
+                        if (alternate != null) out.hint("alternate", alternate);
+                    })));
     }
 
-    /**
-     * Auto layout, snap to grid, the port display and the balance mode.
-     *
-     * @throws IllegalStateException for a balance mode with no tooltip text
-     */
+    /** Auto layout, snap to grid, the port display and the balance mode. */
     private static Flow layoutGroup(final CanvasWidget canvas) {
         final ToggleButton snap = new ToggleButton();
         snap.name("edit.snapToGrid")
@@ -218,47 +207,27 @@ public final class FlowchartToolbar extends Flow {
             .stateOverlay(
                 BalanceMode.AUTO,
                 IKey.lang("plannh.gui.toolbar.balance.label", IKey.lang("plannh.gui.toolbar.balance.auto")))
-            .tooltipBuilder(tooltip -> {
+            .tooltipBuilder(TooltipBuilder.build(TOOLBAR, out -> {
                 final BalanceMode active = canvas.getGraph()
                     .getBalanceMode();
-                final TooltipBuilder out = TooltipBuilder.create(tooltip)
-                    .row(
-                        IKey.lang("plannh.gui.toolbar.balance.title")
-                            .style(TooltipTheme.Role.LABEL.code()));
+                out.title("balance.title");
                 for (final BalanceMode mode : BalanceMode.values()) {
-                    out.marker(active == mode ? ">" : " ", mode.displayName(), active == mode);
+                    out.marker(IKey.str(mode.displayName()), active == mode);
                 }
 
-                final String explanationKey;
-                final String pinHintKey;
-                switch (active) {
-                    case NONE -> {
-                        explanationKey = "plannh.gui.toolbar.balance.mode.none";
-                        pinHintKey = "plannh.gui.toolbar.balance.pins.none";
-                    }
-                    case INPUT -> {
-                        explanationKey = "plannh.gui.toolbar.balance.mode.input";
-                        pinHintKey = "plannh.gui.toolbar.balance.pins.fixed";
-                    }
-                    case OUTPUT -> {
-                        explanationKey = "plannh.gui.toolbar.balance.mode.output";
-                        pinHintKey = "plannh.gui.toolbar.balance.pins.fixed";
-                    }
-                    case AUTO -> {
-                        explanationKey = "plannh.gui.toolbar.balance.mode.auto";
-                        pinHintKey = "plannh.gui.toolbar.balance.pins.auto";
-                    }
-                    default -> throw new IllegalStateException("Unknown balance mode: " + active);
-                }
+                final String pins = switch (active) {
+                    case NONE -> "balance.pins.none";
+                    case INPUT, OUTPUT -> "balance.pins.fixed";
+                    case AUTO -> "balance.pins.auto";
+                };
                 out.separator()
-                    .langRow(explanationKey)
-                    .langRow(pinHintKey)
+                    .text(
+                        "balance.mode." + active.name()
+                            .toLowerCase(Locale.ROOT))
+                    .text(pins)
                     .separator()
-                    .row(
-                        IKey.lang("plannh.gui.toolbar.balance.cycle")
-                            .style(TooltipTheme.Role.TUNABLE.code()))
-                    .flush();
-            })
+                    .hint("balance.cycle");
+            }))
             .tooltipAutoUpdate(true);
 
         return Flow.row()
@@ -288,24 +257,16 @@ public final class FlowchartToolbar extends Flow {
             .value(new EnumValue.Dynamic<>(Summary.PortDisplay.class, summary::getPortDisplay, summary::setPortDisplay))
             .stateOverlay(Summary.PortDisplay.RECIPE, recipe)
             .stateOverlay(Summary.PortDisplay.RATE, rate)
-            .tooltipBuilder(tooltip -> {
+            .tooltipBuilder(TooltipBuilder.build(TOOLBAR, out -> {
                 final Summary.PortDisplay active = summary.getPortDisplay();
-                final TooltipBuilder out = TooltipBuilder.create(tooltip)
-                    .row(
-                        IKey.lang("plannh.gui.toolbar.port_display.title")
-                            .style(TooltipTheme.Role.LABEL.code()));
+                out.title("port_display.title");
                 for (final Summary.PortDisplay display : Summary.PortDisplay.values()) {
-                    final String name = IKey.lang("plannh.gui.toolbar.port_display." + display.name())
-                        .get();
-                    out.marker(active == display ? ">" : " ", name, active == display);
+                    out.marker(TOOLBAR.lang("port_display." + display.name()), active == display);
                 }
                 final String binding = Shortcut.PORT_DISPLAY.keyName();
                 if (binding != null) out.separator()
-                    .row(
-                        IKey.lang("plannh.gui.toolbar.shortcut", binding)
-                            .style(TooltipTheme.Role.TUNABLE.code()));
-                out.flush();
-            })
+                    .hint("shortcut", binding);
+            }))
             .tooltipAutoUpdate(true);
     }
 
@@ -337,15 +298,12 @@ public final class FlowchartToolbar extends Flow {
         });
 
         // Shift switches the action to the GuideNH export, so the title follows it
-        final IKey shiftHint = IKey.lang("plannh.gui.toolbar.share.shift");
-        shiftHint.style(TooltipTheme.Role.TUNABLE.code());
         share.tooltipAutoUpdate(true);
-        share.tooltipBuilder(tooltip -> {
-            final boolean guideNH = GuiHelper.shiftHeld();
-            tooltip.addLine(
-                IKey.lang(guideNH ? "plannh.gui.toolbar.share.guidenh.title" : "plannh.gui.toolbar.share.title"));
-            tooltip.addLine(shiftHint);
-        });
+        share.tooltipBuilder(
+            TooltipBuilder.build(
+                TOOLBAR,
+                out -> out.title(GuiHelper.shiftHeld() ? "share.guidenh.title" : "share.title")
+                    .hint("share.shift")));
 
         return Flow.row()
             .name("screen.toolbar.share")
@@ -432,10 +390,10 @@ public final class FlowchartToolbar extends Flow {
                         new TextWidget<>(IKey.lang("plannh.gui.toolbar.graph.delete.confirm", graph.getName()))
                             .widgetTheme(PlannhThemes.TEXT)
                             .fullWidth()
-                            .textAlign(Alignment.Center))
+                            .textAlign(Alignment.CenterLeft))
                     .child(
                         new TextWidget<>(IKey.lang("plannh.gui.toolbar.graph.delete.irreversible")).fullWidth()
-                            .textAlign(Alignment.Center)
+                            .textAlign(Alignment.CenterLeft)
                             .widgetTheme(PlannhThemes.TEXT_NEGATIVE))
                     .child(
                         Flow.row()

@@ -5,7 +5,6 @@ import java.util.List;
 import javax.annotation.Nullable;
 
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.EnumChatFormatting;
 import net.minecraftforge.fluids.FluidStack;
 
 import com.sbancuz.plannh.data.effect.EffectResult;
@@ -101,8 +100,7 @@ public final class PortSlot {
         final String rate = display == PortDisplay.RATE ? formatRate(balance, unit) : null;
         rateScale = rate == null ? 1 : countScale(rate);
         rateTarget = rate == null ? null : markTarget(effect);
-        final EnumChatFormatting colour = rateTarget == null ? null : rateTarget.role.code();
-        rateText = colour == null ? rate : colour + rate;
+        rateText = rateTarget == null ? rate : rateTarget.role.prefix() + rate;
         rateItem = rate == null ? null : itemWithoutAmount(stack.item);
         badges = chanceBadges(effect);
     }
@@ -198,16 +196,16 @@ public final class PortSlot {
     public enum TargetMark {
 
         /** The target of {@link RateTarget#binding}. The output makes this rate at the solved machine count. */
-        MET(TooltipTheme.Role.ACCENT, "plannh.gui.node.port.target.met"),
+        MET(TooltipTheme.GOOD, "plannh.gui.node.port.target.met"),
         /** The output overshoots this target. The machine count for another target of the machine is higher. */
-        OVERSHOT(TooltipTheme.Role.TUNABLE, "plannh.gui.node.port.target.overshot");
+        OVERSHOT(TooltipTheme.CAUTION, "plannh.gui.node.port.target.overshot");
 
         @Getter
-        private final TooltipTheme.Role role;
+        private final TooltipTheme role;
         @Getter
         private final String langKey;
 
-        TargetMark(final TooltipTheme.Role role, final String langKey) {
+        TargetMark(final TooltipTheme role, final String langKey) {
             this.role = role;
             this.langKey = langKey;
         }

@@ -15,6 +15,7 @@ import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.sbancuz.plannh.gui.PlannhColors;
+import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 
 import lombok.Getter;
 
@@ -46,7 +47,7 @@ public class ItemWidget<W extends ItemWidget<W>> extends ButtonWidget<W> {
         this.source = source;
         disableThemeBackground(true);
         refreshItem();
-        tooltipBuilder(tooltip -> { if (shownItem != null) tooltip.addFromItem(shownItem); });
+        tooltipBuilder(TooltipBuilder.build(out -> { if (shownItem != null) out.item(shownItem); }));
     }
 
     @Override

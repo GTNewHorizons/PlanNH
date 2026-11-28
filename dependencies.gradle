@@ -71,6 +71,8 @@ dependencies {
     compileOnly("com.github.GTNewHorizons:Applied-Energistics-2-Unofficial:rv3-beta-1104-GTNH:dev")
     compileOnly("com.github.GTNewHorizons:twilightforest:2.7.47:dev")
     compileOnly("com.github.GTNewHorizons:ProjectRed:4.12.51-GTNH:dev")
+    compileOnly("com.github.slprime:ChromaticTooltips:1.1.0-GTNH:dev")
+    compileOnly("com.github.slprime:ChromaticTooltipsCompat:1.1.6-GTNH:dev") { transitive = false }
 
     // Development runtime only; optional mods are not published as dependencies.
     runtimeOnlyNonPublishable("com.github.GTNewHorizons:EnderIO:2.10.55:dev")
@@ -105,6 +107,8 @@ dependencies {
     runtimeOnlyNonPublishable("com.github.GTNewHorizons:Applied-Energistics-2-Unofficial:rv3-beta-1104-GTNH:dev")
     runtimeOnlyNonPublishable("com.github.GTNewHorizons:twilightforest:2.7.47:dev")
     runtimeOnlyNonPublishable("com.github.GTNewHorizons:ProjectRed:4.12.51-GTNH:dev")
+    runtimeOnlyNonPublishable("com.github.slprime:ChromaticTooltips:1.1.0-GTNH:dev")
+    runtimeOnlyNonPublishable("com.github.slprime:ChromaticTooltipsCompat:1.1.6-GTNH:dev") { transitive = false }
 
     runtimeOnlyNonPublishable('com.github.GTNewHorizons:Angelica:2.2.46:dev') { transitive = false }
 

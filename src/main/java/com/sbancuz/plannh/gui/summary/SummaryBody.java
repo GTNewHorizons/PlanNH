@@ -112,7 +112,7 @@ class SummaryBody extends SummaryFlow {
         if (!isRateSection() || rowsMode != Summary.Mode.THROUGHPUT) {
             return " x";
         }
-        return StatCollector.translateToLocal(rowsUnit.suffixKey());
+        return StatCollector.translateToLocal(rowsUnit.suffixKey);
     }
 
     private boolean isRateSection() {

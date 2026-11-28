@@ -88,26 +88,23 @@ plannh.settings.gendustry_apiary_upgrade_3_count=Upgrade 3 Count
 plannh.settings.gendustry_apiary_upgrade_4_count=Upgrade 4 Count
 plannh.gui.gendustry.upgrades=Apiary Upgrades
 plannh.gui.gendustry.installed=Installed
-plannh.settings.choice_hint=Left/Right-click to cycle; middle-click to reset
-plannh.settings.item_drop_hint=Drop from NEI to select
-plannh.settings.item_choice_hint=Click to choose; middle-click to reset
+plannh.settings.choice_hint=Click to cycle, right-click to cycle back
+plannh.settings.item_choice_hint=Click or drop from NEI to choose, middle-click to reset
 plannh.settings.item_choice_invalid=Unavailable with these settings
 plannh.settings.middle_reset_hint=Middle-click to reset
 plannh.settings.item_count_scroll=Scroll to change count
 plannh.settings.choice_auto=Recipe default
 plannh.settings.choice_manual=Custom value
-plannh.bees.genetic_speed=Genetic Speed
-plannh.bees.base_lifespan=Base Lifespan
+plannh.bees.genetic_speed=Genetic speed
+plannh.bees.base_lifespan=Base lifespan
 plannh.bees.work_cycles=%s work cycles
 plannh.bees.calculation=Production
 plannh.bees.requirements=Requirements
-plannh.bees.details_hint=Hold Shift for details
 plannh.bees.lifetime_model=One operation = queen lifetime + rebreeding
 plannh.bees.supplied_conditions=Assumes stable breeding and all production conditions met
 plannh.bees.unmodeled_effects=Excludes world effects and bonus flower products
 plannh.bees.aura_on=Enabled
 plannh.bees.aura_off=Disabled
-plannh.bees.aura_toggle=Click to toggle booster
 plannh.bees.aura_booster_source=Requires a Vis or Mana Apiary Booster within 6 blocks
 plannh.bees.aura_cost=Booster fuel costs are not included
 plannh.bees.aura_production=Production Bonus
@@ -116,28 +113,28 @@ plannh.bees.aura_port=Booster charge: %s (not an item)
 plannh.bees.aura_renewal=Consumes 1 charge/t after the initial aura expires
 plannh.bees.aura_steady_state=Includes rebreeding; excludes startup and idle time
 plannh.bees.aura_provider_limit=Boosters may not sustain this rate
-plannh.bees.stimulator_energy=Energy per Work Cycle
+plannh.bees.stimulator_energy=Energy per work cycle
 plannh.bees.mj_per_cycle=%s MJ/work cycle
 plannh.gui.bees.frames=Frames
 plannh.gui.bees.frame_hint=Click or drop from NEI to choose a frame
 plannh.gui.bees.frame_slot=Frame
 plannh.gui.bees.frame_empty=No frame
-plannh.gui.bees.frame_reset=Middle-click to clear frame
+plannh.gui.bees.frame_reset=Middle-click to clear the frame
 plannh.gui.bees.frame_maintenance=Assumes fresh frames; replacement costs excluded
 plannh.gui.bees.frame_order=Frames apply in slot order, then boards; bonus caps apply
 plannh.gui.bees.board_hint=Click to choose a board
 plannh.gui.bees.board_drop=Drop a board to replace, or a tube to fill an empty socket
-plannh.gui.bees.board_reset=Middle-click to reset board and circuits
+plannh.gui.bees.board_reset=Middle-click to reset the board and its circuits
 plannh.gui.bees.board_powered=Assumes continuous power
 plannh.gui.bees.board_caps=Bonus caps apply per board
 plannh.gui.bees.stimulator=Stimulator
 plannh.gui.bees.sockets=Circuits
-plannh.gui.bees.total_stimulator_energy=Total Stimulator Energy
+plannh.gui.bees.total_stimulator_energy=Total stimulator energy
 plannh.gui.bees.tube_hint=Click or drop from NEI to choose a circuit
-plannh.gui.bees.tube_reset=Middle-click to clear circuit
+plannh.gui.bees.tube_reset=Middle-click to clear the circuit
 plannh.gui.bees.circuit=Circuit
 plannh.gui.bees.circuit_empty=No circuit
-plannh.gui.bees.circuit_effects=Circuit Effects
+plannh.gui.bees.circuit_effects=Circuit effects
 
 ## Settings - Ender IO
 plannh.settings.eio_capacitor=Capacitor
@@ -158,13 +155,10 @@ plannh.resources.essentia=Essentia
 plannh.resources.stored_vis=Stored Vis
 plannh.resources.network_vis=Network Vis
 plannh.resources.aura_charge=Aura Charge
-plannh.resources.unit.centivis=centivis
-plannh.resources.unit.aura=aura
+plannh.resources.unit.centivis=Amounts are in centivis
 plannh.properties.thaumcraft.essentia_units=Essentia Units
 plannh.properties.thaumcraft.stored_vis_units=Stored Vis Units
 plannh.gui.node.port.inactive=Not required with these settings
-plannh.gui.node.port.base_amount=Base Amount
-plannh.gui.node.port.per_operation=Per Operation
 ## Properties - General
 plannh.properties.duration_ticks=Duration
 plannh.properties.num_components=Components
@@ -275,13 +269,11 @@ plannh.gui.node.throughput.idle.not_needed=not needed
 plannh.gui.node.throughput.idle.not_needed.why=The targets don't need this machine.
 plannh.gui.node.throughput.idle.not_needed.fix=Connect an output to a planned machine.
 plannh.gui.node.throughput.settings=Settings
-plannh.gui.node.throughput.shift_hint=Hold §f§l[LSHIFT]§7 for every unit and setting
 ## Throughput fold, the rows of rates behind it
 
 ## GUI - Node port
 ## The rate under a port, and the rows that take it apart
 plannh.gui.node.port.rate=Rate
-plannh.gui.node.port.per_unit=Per unit
 plannh.gui.node.port.chance=Chance
 plannh.gui.node.port.percent=%%
 plannh.gui.node.port.target=Target
@@ -289,8 +281,7 @@ plannh.gui.node.port.target.met=On target
 plannh.gui.node.port.target.overshot=Overshoots target
 plannh.gui.node.badge.tier=%s%s§r
 plannh.gui.node.badge.power=%s %sA
-plannh.gui.node.port.shift_hint=Hold §f§l[LSHIFT]§7 for the rate in every unit
-plannh.gui.node.port.configure_hint=Right-Click to Configure
+plannh.gui.node.port.configure_hint=Right-click to configure
 
 ## GUI - Node balancer target
 ## Target selector, at the head of the target fold
@@ -300,39 +291,30 @@ plannh.gui.node.target.next=Next target
 ## Target fold
 plannh.gui.node.target.title=Held by
 plannh.gui.node.target.rows=Target rows
-plannh.gui.node.target.rows.hide_hint=Click to fold these rows away
-plannh.gui.node.target.rows.show_hint=Click to show the rows again
 plannh.gui.node.target.none_hint=No target selected, so the balance picks this machine's count
 plannh.gui.node.target.copies=Copies
 plannh.gui.node.target.solved=The balance asks for
 plannh.gui.node.target.rates.hint=Right-click an output to ask for a rate
-plannh.gui.node.target.unsupported=%s honours no target; switch the chart's balance mode to pin machines
+plannh.gui.node.target.unsupported=The balance mode %s doesn't use targets. Switch the chart's balance mode to pin machines
 plannh.gui.node.target.extent=Extent pins are handed to a solve by the caller, not set on a machine
 
 ## GUI - Node properties
 ## The fold, and the recipe's own figures behind it
 plannh.gui.node.properties=Machine properties
-plannh.gui.node.properties.hide_hint=Click to fold these rows away
-plannh.gui.node.properties.show_hint=Click to show the rows again
 plannh.gui.node.properties.none_hint=This recipe carries no properties to show
 
 ## GUI - Node extractor
 ## The switcher on the node's option row, over how this recipe is read
 plannh.gui.node.machine=Machine
-plannh.gui.node.extractor.prev=Previous extractor
-plannh.gui.node.extractor.next=Next extractor
-plannh.gui.node.extractor.choose=Click to choose an extractor
 
 ## GUI - Node settings
 plannh.gui.node.settings=Machine settings
-plannh.gui.node.settings.hide_hint=Click to fold these rows away
-plannh.gui.node.settings.show_hint=Click to show the rows again
 
 ## GUI - Groups
 plannh.gui.group.add_machine_group=Add Machine Group
 plannh.gui.group.machine.title=Machine group
 plannh.gui.group.machine.empty=No recipes yet
-plannh.gui.group.machine.shared=Recipes share machine settings and their loads add up.
+plannh.gui.group.machine.shared=Recipes share machine settings and their loads add up
 plannh.gui.group.machine_capacity=Maximum machines
 plannh.gui.group.capacity.increase=Increase maximum by 1
 plannh.gui.group.capacity.decrease=Decrease maximum by 1
@@ -340,10 +322,9 @@ plannh.gui.group.load=Combined load
 plannh.gui.group.load.unbalanced=No solved load yet
 
 ## GUI - Balancer
-plannh.gui.balancer_mode=Mode: %s
-plannh.gui.balancer_mode.none=Normal
-plannh.gui.balancer_mode.input=Fixed Machines (input)
-plannh.gui.balancer_mode.output=Fixed Machines (output)
+plannh.gui.balancer_mode.none=Off
+plannh.gui.balancer_mode.input=Fixed machines (input)
+plannh.gui.balancer_mode.output=Fixed machines (output)
 plannh.gui.balancer_mode.auto=Auto
 
 ## GUI - Balancer messages
@@ -445,24 +426,22 @@ plannh.summary.title.messages=Solver Messages
 plannh.summary.title.help=Help
 plannh.summary.sections.hint=Show or hide summary sections
 plannh.summary.mode.title=Summary mode
-plannh.summary.mode.switch_hint=Click to switch
 plannh.summary.mode.cycles=Cycles
 plannh.summary.mode.throughput=Throughput
-plannh.summary.mode.cycles.hint=Show resource amounts per cycle.
-plannh.summary.mode.throughput.hint=Show resource rates.
+plannh.summary.mode.cycles.hint=Show resource amounts per cycle
+plannh.summary.mode.throughput.hint=Show resource rates
 plannh.summary.rate.title=Throughput unit
 plannh.summary.rate.tick=Per tick
 plannh.summary.rate.second=Per second
 plannh.summary.rate.minute=Per minute
 plannh.summary.rate.hour=Per hour
 plannh.summary.rate.day=Per day
-plannh.summary.scope.clear_hint=Use the clear-all button to show the entire chart.
+plannh.summary.scope.clear_hint=Use the clear-all button to show the entire chart
 plannh.summary.scope.filter.action=Add to summary filter
 plannh.summary.scope.filter.remove=Remove from summary filter
-plannh.summary.scope.filter.ctrl_hint=Ctrl-click to add/remove this node/group.
 plannh.summary.scope.clear=Clear all summary filters
-plannh.summary.totals.cycles=Ops: %s Time: %d t (%ss/cycle)
-plannh.summary.totals.throughput=Ops: %s Cycle: %ss
+plannh.summary.totals.cycles=Ops: %s Time: %s (%s/cycle)
+plannh.summary.totals.throughput=Ops: %s Cycle: %s
 plannh.summary.help.zoom=[Scroll] zoom
 plannh.summary.help.move=[LMB drag] move node
 plannh.summary.help.nei=[%s/%s] open NEI
@@ -472,22 +451,19 @@ plannh.summary.help.unbound=unbound
 plannh.summary.tooltip.scope=Showing
 plannh.summary.tooltip.scope.chart=Entire chart
 plannh.summary.tooltip.measure.amount=Amount
-plannh.summary.tooltip.measure.workload=Workload
+plannh.summary.tooltip.measure.load=Load
+plannh.summary.tooltip.measure.rate=Rate
 plannh.summary.tooltip.measure.per_cycle=Per cycle
-plannh.summary.tooltip.totals.title=Measured workload totals
-plannh.summary.tooltip.totals.operations=Combined workload
+plannh.summary.tooltip.totals.title=Load totals
+plannh.summary.tooltip.totals.operations=Combined load
 plannh.summary.tooltip.totals.duration=Cycle duration
 plannh.summary.tooltip.choice.status=Status
 plannh.summary.tooltip.choice.active=Active choice
 plannh.summary.tooltip.choice.alternative=Available alternative
 plannh.summary.tooltip.choice.reason=Alternative reason
-plannh.summary.tooltip.choice.default=The solver's preferred answer for the entire chart.
-plannh.summary.tooltip.choice.click.active=This chart-wide choice is already active.
-plannh.summary.tooltip.choice.click.alternative=Click to use this chart-wide alternative.
-plannh.summary.tooltip.text.severity=Severity
-plannh.summary.tooltip.text.error=Error
-plannh.summary.tooltip.text.warn=Warning
-plannh.summary.tooltip.text.info=Info
+plannh.summary.tooltip.choice.default=The solver's preferred answer for the entire chart
+plannh.summary.tooltip.choice.click.active=This chart-wide choice is already active
+plannh.summary.tooltip.choice.click.alternative=Click to use this chart-wide alternative
 
 ## GUI - Time units
 plannh.gui.rate.tick=t
@@ -500,10 +476,32 @@ plannh.gui.rate.second.suffix=/s
 plannh.gui.rate.minute.suffix=/m
 plannh.gui.rate.hour.suffix=/h
 plannh.gui.rate.day.suffix=/d
+plannh.gui.rate.tick.duration=%st
+plannh.gui.rate.second.duration=%ss
+plannh.gui.rate.minute.duration=%sm
+plannh.gui.rate.hour.duration=%sh
+plannh.gui.rate.day.duration=%sd
+plannh.gui.rate.tick.amount=%s/t
+plannh.gui.rate.second.amount=%s/s
+plannh.gui.rate.minute.amount=%s/m
+plannh.gui.rate.hour.amount=%s/h
+plannh.gui.rate.day.amount=%s/d
 
 ## GUI - Numbers
 ## How a count of something is written, beside the thing it counts
 plannh.gui.number.multiple=×%s
+plannh.gui.number.ratio=%s / %s
+plannh.gui.number.unlimited=∞
+
+## GUI - Tooltips
+plannh.gui.tooltip.shift_hint=Hold Shift for details
+plannh.gui.tooltip.per_unit=Per unit
+plannh.gui.tooltip.duration=%s (%s)
+plannh.gui.widget.delete=Delete
+plannh.gui.edge.remove_hint=Click to remove this arrow
+plannh.gui.group.cover_children=Fit the group to its contents
+plannh.gui.group.color=Choose the group's color
+plannh.nei.open_flowchart=Open or close the flowchart
 
 ## Unsupported pack screen
 ## FML shows this screen at startup in place of the main menu, when a mod is older than PlanNH supports
@@ -516,13 +514,13 @@ plannh.gui.toolbar.balance.label=Balance: %s
 plannh.gui.toolbar.graph.previous.title=Previous graph
 plannh.gui.toolbar.graph.next.title=Next graph
 plannh.gui.toolbar.graph.add.title=Add graph
-plannh.gui.toolbar.graph.add.shift=Shift + left-click: add a graph
+plannh.gui.toolbar.graph.add.shift=Shift-click to add a graph
 plannh.gui.toolbar.graph.delete.title=Delete graph
-plannh.gui.toolbar.graph.delete.shift=Shift + left-click: delete this graph
-plannh.gui.toolbar.graph.delete.last=The last graph cannot be deleted.
-plannh.gui.toolbar.graph.delete.warning=Warning: this permanently removes the active graph.
+plannh.gui.toolbar.graph.delete.shift=Shift-click to delete this graph
+plannh.gui.toolbar.graph.delete.last=The last graph cannot be deleted
+plannh.gui.toolbar.graph.delete.warning=Warning: this permanently removes the active graph
 plannh.gui.toolbar.graph.delete.confirm=Delete graph "%s"?
-plannh.gui.toolbar.graph.delete.irreversible=This cannot be undone.
+plannh.gui.toolbar.graph.delete.irreversible=This cannot be undone
 plannh.gui.toolbar.graph.delete.button=Delete
 
 plannh.gui.toolbar.undo.title=Undo edit
@@ -537,24 +535,24 @@ plannh.gui.toolbar.port_display.RECIPE=Recipe amount per craft
 plannh.gui.toolbar.port_display.RATE=Rate, in the summary's unit
 
 plannh.gui.toolbar.balance.title=Balance mode
-plannh.gui.toolbar.balance.cycle=Left-click: next / Right-click: previous
+plannh.gui.toolbar.balance.cycle=Click for the next mode, right-click for the previous one
 plannh.gui.toolbar.balance.off=Off
 plannh.gui.toolbar.balance.input=In
 plannh.gui.toolbar.balance.output=Out
 plannh.gui.toolbar.balance.auto=Auto
-plannh.gui.toolbar.balance.mode.none=Displays configured machine counts without balancing.
-plannh.gui.toolbar.balance.mode.input=Uses whole machines; connected inputs are consumed exactly.
-plannh.gui.toolbar.balance.mode.output=Uses whole machines; connected output demand is supplied exactly.
-plannh.gui.toolbar.balance.mode.auto=Balances connected recipes and loops with fractional machine counts.
-plannh.gui.toolbar.balance.pins.none=No machine count or rate target is required.
-plannh.gui.toolbar.balance.pins.fixed=Fix at least one machine count; rate targets are ignored.
-plannh.gui.toolbar.balance.pins.auto=Fix a machine count or set a target rate to start balancing.
+plannh.gui.toolbar.balance.mode.none=Displays configured machine counts without balancing
+plannh.gui.toolbar.balance.mode.input=Uses whole machines; connected inputs are consumed exactly
+plannh.gui.toolbar.balance.mode.output=Uses whole machines; connected output demand is supplied exactly
+plannh.gui.toolbar.balance.mode.auto=Balances connected recipes and loops with fractional machine counts
+plannh.gui.toolbar.balance.pins.none=No machine count or rate target is required
+plannh.gui.toolbar.balance.pins.fixed=Fix at least one machine count; rate targets are ignored
+plannh.gui.toolbar.balance.pins.auto=Fix a machine count or set a target rate to start balancing
 
 plannh.gui.toolbar.add.group.title=Add group
 plannh.gui.toolbar.add.note.title=Add note
 
 plannh.gui.toolbar.share.title=Share graph
 plannh.gui.toolbar.share.guidenh.title=Copy graph as GuideNH Markdown
-plannh.gui.toolbar.share.shift=Shift + left-click: copy for GuideNH
+plannh.gui.toolbar.share.shift=Shift-click to copy for GuideNH
 plannh.gui.toolbar.copy.title=Copy graph
 plannh.gui.toolbar.import.title=Import graph

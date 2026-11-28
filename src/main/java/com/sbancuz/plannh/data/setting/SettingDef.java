@@ -8,6 +8,7 @@ import javax.annotation.Nullable;
 
 import net.minecraft.util.StatCollector;
 
+import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
@@ -39,11 +40,11 @@ public abstract class SettingDef<T> implements JsonSerializer<Object>, JsonDeser
     }
 
     public Consumer<TooltipBuilder> tooltip(final T value) {
-        return out -> out.entry(getLabel(), valueRole(), String.valueOf(value));
+        return out -> out.entry(IKey.str(getLabel()), valueRole(), String.valueOf(value));
     }
 
-    protected TooltipTheme.Role valueRole() {
-        return TooltipTheme.Role.IDENTITY;
+    protected TooltipTheme valueRole() {
+        return TooltipTheme.VALUE;
     }
 
     /**

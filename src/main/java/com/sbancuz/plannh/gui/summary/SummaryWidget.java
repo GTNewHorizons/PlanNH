@@ -1,6 +1,6 @@
 package com.sbancuz.plannh.gui.summary;
 
-import java.util.stream.Collectors;
+import java.util.List;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -34,6 +34,7 @@ import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.FlowchartList;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.GuiIcon;
+import com.sbancuz.plannh.gui.LangScope;
 import com.sbancuz.plannh.gui.drawable.FilterOff;
 import com.sbancuz.plannh.gui.theme.PlannhThemes;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
@@ -47,6 +48,9 @@ import lombok.Getter;
  */
 public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDraggable {
 
+    private static final LangScope SUMMARY = LangScope.ROOT.child("summary");
+
+    private static final String LIST_SEPARATOR = ", ";
     private static final int WIDTH = 200;
     private static final int PADDING = 4;
     private static final int SECTION_GAP = 4;
@@ -137,23 +141,7 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
                         .child(
                             new TextWidget<>(IKey.lang(Summary.Section.ALL.titleKey())).widgetTheme(PlannhThemes.TEXT)
                                 .tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE)
-                                .tooltipBuilder(tooltip -> {
-                                    final var scopes = canvas.getGraph()
-                                        .allData()
-                                        .filter(GraphData::isSummaryFiltered)
-                                        .toList();
-                                    final TooltipBuilder out = TooltipBuilder.create(tooltip)
-                                        .entry(
-                                            IKey.lang("plannh.summary.tooltip.scope"),
-                                            TooltipTheme.Role.IDENTITY,
-                                            scopes.isEmpty() ? IKey.lang("plannh.summary.tooltip.scope.chart")
-                                                : IKey.str(
-                                                    scopes.stream()
-                                                        .map(GraphData::getHeader)
-                                                        .collect(Collectors.joining(", "))));
-                                    if (!scopes.isEmpty()) out.langRow("plannh.summary.scope.clear_hint");
-                                    out.flush();
-                                })
+                                .tooltipBuilder(TooltipBuilder.build(SUMMARY, this::writeScopeTooltip))
                                 .tooltipAutoUpdate(true))
                         .child(
                             SummaryFlow.row()
@@ -173,7 +161,20 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
                 .child(sectionsList));
     }
 
-    /** The rate unit, enabled in the summary's throughput mode or in the rate port display. */
+    /** Which nodes and groups the summary is filtered to, or the entire chart. */
+    private void writeScopeTooltip(final TooltipBuilder out) {
+        final List<String> scopes = canvas.getGraph()
+            .allData()
+            .filter(GraphData::isSummaryFiltered)
+            .map(GraphData::getHeader)
+            .toList();
+        final IKey shown = scopes.isEmpty() ? SUMMARY.lang("tooltip.scope.chart")
+            : IKey.str(String.join(LIST_SEPARATOR, scopes));
+        out.entry("tooltip.scope", TooltipTheme.VALUE, shown);
+        if (!scopes.isEmpty()) out.hint("scope.clear_hint");
+    }
+
+    /** The rate unit. The toggle is enabled in the summary's throughput mode or in the rate port display. */
     private static CycleButtonWidget rateToggle() {
         final Summary summary = Plan.getInstance()
             .getSummary();
@@ -181,23 +182,12 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
             .name("summary.rate")
             .stateCount(GuiHelper.RateUnit.VALUES.length)
             .tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE)
-            .tooltipBuilder(tooltip -> {
-                final TooltipBuilder out = TooltipBuilder.create(tooltip)
-                    .row(
-                        IKey.lang("plannh.summary.rate.title")
-                            .style(TooltipTheme.Role.LABEL.code()));
+            .tooltipBuilder(TooltipBuilder.build(SUMMARY, out -> {
+                out.title("rate.title");
                 for (final GuiHelper.RateUnit unit : GuiHelper.RateUnit.VALUES) {
-                    final boolean active = summary.getRateUnit() == unit;
-                    out.marker(
-                        active ? ">" : " ",
-                        IKey.lang("plannh.summary.rate." + unit.name)
-                            .get(),
-                        active);
+                    out.marker(SUMMARY.lang("rate." + unit.name), summary.getRateUnit() == unit);
                 }
-                out.separator()
-                    .langRow("plannh.summary.mode.switch_hint")
-                    .flush();
-            })
+            }))
             .tooltipAutoUpdate(true)
             .value(new EnumValue.Dynamic<>(GuiHelper.RateUnit.class, summary::getRateUnit, summary::setRateUnit))
             .setEnabledIf(
@@ -220,27 +210,14 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
             .name("summary.mode")
             .stateCount(Summary.Mode.values().length)
             .tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE)
-            .tooltipBuilder(
-                tooltip -> TooltipBuilder.create(tooltip)
-                    .row(
-                        IKey.lang("plannh.summary.mode.title")
-                            .style(TooltipTheme.Role.LABEL.code()))
-                    .marker(
-                        summary.getMode() == Summary.Mode.CYCLES ? ">" : " ",
-                        IKey.lang("plannh.summary.mode.cycles")
-                            .get(),
-                        summary.getMode() == Summary.Mode.CYCLES)
-                    .marker(
-                        summary.getMode() == Summary.Mode.THROUGHPUT ? ">" : " ",
-                        IKey.lang("plannh.summary.mode.throughput")
-                            .get(),
-                        summary.getMode() == Summary.Mode.THROUGHPUT)
+            .tooltipBuilder(TooltipBuilder.build(SUMMARY, out -> {
+                final boolean inCycles = summary.getMode() == Summary.Mode.CYCLES;
+                out.title("mode.title")
+                    .marker(SUMMARY.lang("mode.cycles"), inCycles)
+                    .marker(SUMMARY.lang("mode.throughput"), !inCycles)
                     .separator()
-                    .langRow(
-                        summary.getMode() == Summary.Mode.CYCLES ? "plannh.summary.mode.cycles.hint"
-                            : "plannh.summary.mode.throughput.hint")
-                    .langRow("plannh.summary.mode.switch_hint")
-                    .flush())
+                    .text(inCycles ? "mode.cycles.hint" : "mode.throughput.hint");
+            }))
             .tooltipAutoUpdate(true)
             .value(new EnumValue.Dynamic<>(Summary.Mode.class, summary::getMode, val -> {
                 summary.setMode(val);
@@ -256,10 +233,7 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
             .overlay(
                 new FilterOff().asIcon()
                     .size(SummaryHeader.ICON_SIZE))
-            .tooltipBuilder(
-                tooltip -> TooltipBuilder.create(tooltip)
-                    .langRow("plannh.summary.scope.clear")
-                    .flush())
+            .tooltipBuilder(TooltipBuilder.build(SUMMARY, out -> out.title("scope.clear")))
             .setEnabledIf(
                 _ -> canvas.getGraph()
                     .allData()
@@ -279,10 +253,7 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
             .name("summary.sections")
             .overlay(icon)
             .tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE)
-            .tooltipBuilder(
-                tooltip -> TooltipBuilder.create(tooltip)
-                    .langRow("plannh.summary.sections.hint")
-                    .flush())
+            .tooltipBuilder(TooltipBuilder.build(SUMMARY, out -> out.title("sections.hint")))
             .onMousePressed(mouseButton -> {
                 if (mouseButton != 0) return false;
                 final Area button = sectionsButton.getArea();
