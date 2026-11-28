@@ -49,7 +49,8 @@ public final class ModelBuilder {
         // Never longer than what the whole solve has left. The floor matters as much as the
         // ceiling: a model handed a millisecond aborts into whatever point it is holding.
         final long limit = Math
-            .clamp(numerics.effort(numerics.stageTimeLimitMillis), numerics.minModelMillis, ctx.budget.remaining());
+            .clamp(ctx.budget.remaining(), numerics.minModelMillis, numerics.effort(numerics.stageTimeLimitMillis));
+
         m.options.time_abort = limit;
         m.options.time_suffice = limit;
         // One branch-and-bound worker, so the node order is a property of the model, not of thread

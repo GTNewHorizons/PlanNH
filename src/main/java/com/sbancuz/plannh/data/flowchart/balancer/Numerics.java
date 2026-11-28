@@ -78,6 +78,6 @@ public final class Numerics {
      * scaled.
      */
     public long effort(final long tuned) {
-        return Math.max(1, tuned * SolverConfig.effort() / 100);
+        return Math.max(minModelMillis, tuned * SolverConfig.effort() / 100);
     }
 }
