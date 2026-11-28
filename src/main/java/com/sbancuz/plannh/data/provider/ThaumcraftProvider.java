@@ -163,7 +163,8 @@ public class ThaumcraftProvider implements PropertyProvider {
             "thaumcraft:crucible",
             Effects.durationFromConfigOrProperty()
                 .applyParallelism())
-        .setting(Settings.DURATION_TICKS)
+        .override(Settings.DURATION_TICKS)
+        .derive(Settings.DURATION_TICKS, (cfg, ctx) -> ctx.getOrDefault(RecipePropertyAPI.DURATION_TICKS, 0))
         .icon(
             (_, _) -> ConfigBlocks.blockMetalDevice == null ? GuiTextures.BUBBLE
                 : new ItemDrawable(ConfigBlocks.blockMetalDevice, 0))

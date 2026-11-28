@@ -59,7 +59,8 @@ public final class MachineProfile {
         NodeBadge apply(MachineConfig cfg, RecipeContext ctx);
     }
 
-    public record Entry(SettingDef<?> def, BiPredicate<MachineConfig, RecipeContext> visible) {
+    /** PlanNH computes an {@code override} setting from the recipe or another setting. */
+    public record Entry(SettingDef<?> def, BiPredicate<MachineConfig, RecipeContext> visible, boolean override) {
 
         public boolean isVisible(final MachineConfig cfg, final RecipeContext ctx) {
             return visible.test(cfg, ctx);
@@ -67,7 +68,7 @@ public final class MachineProfile {
     }
 
     public static Entry entry(final SettingDef<?> def) {
-        return new Entry(def, (_, _) -> true);
+        return new Entry(def, (_, _) -> true, false);
     }
 
     private final String id;
@@ -283,7 +284,17 @@ public final class MachineProfile {
         }
 
         public B setting(final SettingDef<?> def, final BiPredicate<MachineConfig, RecipeContext> visible) {
-            settings.add(new Entry(def, visible));
+            settings.add(new Entry(def, visible, false));
+            return self();
+        }
+
+        public B override(final SettingDef<?> def) {
+            return override(def, (_, _) -> true);
+        }
+
+        /** Add a setting that PlanNH computes, and that the player sets only when the recipe is wrong. */
+        public B override(final SettingDef<?> def, final BiPredicate<MachineConfig, RecipeContext> visible) {
+            settings.add(new Entry(def, visible, true));
             return self();
         }
 
@@ -465,8 +476,12 @@ public final class MachineProfile {
 
     @Nonnull
     public Stream<? extends SettingDef<?>> visibleSettings(final MachineConfig cfg, final RecipeContext ctx) {
+        return visibleEntries(cfg, ctx).map(Entry::def);
+    }
+
+    @Nonnull
+    public Stream<Entry> visibleEntries(final MachineConfig cfg, final RecipeContext ctx) {
         return settings.stream()
-            .filter(e -> e.isVisible(cfg, ctx))
-            .map(Entry::def);
+            .filter(e -> e.isVisible(cfg, ctx));
     }
 }
