@@ -6,10 +6,11 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.item.ItemStack;
 
 import com.cleanroommc.modularui.drawable.GuiTextures;
-import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
@@ -41,8 +42,13 @@ public final class ItemSelectionGrid extends SelectionGrid {
         this(choices, maxColumns, maxRows, accepts, null, select);
     }
 
+    /**
+     * A grid of {@code choices}. A choice's tooltip has the item's rows, then the rows of {@code contextTooltip}, then
+     * a row when {@code accepts} rejects the item. {@code select} gets a copy with a stack size of 1 on a left or right
+     * click, and {@code null} on a middle click.
+     */
     public ItemSelectionGrid(final List<ItemStack> choices, final int maxColumns, final int maxRows,
-        final Predicate<ItemStack> accepts, final BiConsumer<RichTooltip, ItemStack> contextTooltip,
+        final Predicate<ItemStack> accepts, @Nullable final BiConsumer<RichTooltip, ItemStack> contextTooltip,
         final Consumer<ItemStack> select) {
         name("item.selection.grid");
         final List<ButtonWidget<?>> buttons = new ArrayList<>();
@@ -50,17 +56,12 @@ public final class ItemSelectionGrid extends SelectionGrid {
             if (stack == null || stack.getItem() == null) continue;
             final ItemStack choice = stack.copy();
             choice.stackSize = 1;
-            final ItemStack display = choice.copy();
             buttons.add(
-                new ButtonWidget<>().name("item.selection.item")
+                new ItemWidget<>(choice).name("item.selection.item")
                     .size(SLOT)
                     .padding(1)
                     .background(GuiTextures.SLOT_ITEM)
-                    .overlay(
-                        new ItemDrawable(display).asIcon()
-                            .size(SLOT - 2))
                     .tooltipBuilder(richTooltip -> {
-                        richTooltip.addFromItem(display);
                         if (contextTooltip != null) contextTooltip.accept(richTooltip, choice);
                         if (!accepts.test(choice)) TooltipBuilder.create(richTooltip)
                             .langRow("plannh.settings.item_choice_invalid")

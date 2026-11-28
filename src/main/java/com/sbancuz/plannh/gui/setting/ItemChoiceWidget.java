@@ -11,80 +11,51 @@ import java.util.function.Supplier;
 import net.minecraft.item.ItemStack;
 
 import com.cleanroommc.modularui.api.UpOrDown;
-import com.cleanroommc.modularui.api.drawable.IKey;
-import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.GuiTextures;
-import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.cleanroommc.modularui.integration.recipeviewer.RecipeViewerGhostIngredientSlot;
 import com.cleanroommc.modularui.integration.recipeviewer.RecipeViewerIngredientProvider;
 import com.cleanroommc.modularui.screen.RichTooltip;
-import com.cleanroommc.modularui.utils.Alignment;
-import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.sbancuz.plannh.data.setting.ChoiceSettingDef;
-import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.common.ItemSelectionGrid;
+import com.sbancuz.plannh.gui.common.ItemWidget;
 import com.sbancuz.plannh.gui.common.SelectionPicker;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 
 /** Client-only item selection: NEI drops edit the plan, never an inventory or server-side slot. */
-public final class ItemChoiceWidget extends ButtonWidget<ItemChoiceWidget>
+public final class ItemChoiceWidget extends ItemWidget<ItemChoiceWidget>
     implements RecipeViewerGhostIngredientSlot<ItemStack>, RecipeViewerIngredientProvider {
 
-    private final Supplier<ItemStack> selection;
     private final Predicate<ItemStack> accepts;
     private final Consumer<ItemStack> select;
     private final Consumer<Runnable> edit;
     private Supplier<List<ItemStack>> choices;
     private Runnable reset;
-    private final ItemDrawable item = new ItemDrawable();
-    private ItemStack displayedSelection;
     private SelectionPicker picker;
     private String hint = "plannh.settings.item_drop_hint";
-    private boolean shiftHeld;
     private BiConsumer<RichTooltip, ItemStack> pickerTooltip;
     private IntConsumer scrollHandler;
     private final IntUnaryOperator selectionCount;
 
+    /**
+     * A slot with the item of {@code selection}. A selected item gets a count in the range of {@code anchor}, or 1 when
+     * {@code anchor} doesn't have a count. Each change of the selection runs inside {@code edit}.
+     */
     public ItemChoiceWidget(final ChoiceSettingDef<?> anchor, final Supplier<ItemStack> selection,
         final Predicate<ItemStack> accepts, final Consumer<ItemStack> select, final Consumer<Runnable> edit) {
-        this.selection = selection;
+        super(selection);
         this.accepts = accepts;
         this.select = select;
         this.edit = edit;
         selectionCount = count -> anchor.isCounted()
             ? Math.clamp(count, Math.max(1, anchor.getMinCount()), anchor.getMaxCount())
             : 1;
-        updateItemStack();
         name("settings.item_choice");
         size(18).padding(1)
             .background(GuiTextures.SLOT_ITEM)
-            .overlay(
-                item.asIcon()
-                    .size(16),
-                IKey.dynamic(
-                    () -> item.getItem() != null && item.getItem().stackSize != 1
-                        ? Integer.toString(item.getItem().stackSize)
-                        : "")
-                    .alignment(Alignment.BottomRight)
-                    .color(PlannhColors.TEXT::getColor)
-                    .shadow(true)
-                    .asIcon()
-                    .size(16))
-            .onUpdateListener(_ -> {
-                updateItemStack();
-                final boolean currentShift = Interactable.hasShiftDown();
-                if (currentShift != shiftHeld) {
-                    shiftHeld = currentShift;
-                    markTooltipDirty();
-                }
-            })
-            .tooltipBuilder(tooltip -> {
-                final ItemStack selected = item.getItem();
-                if (selected != null) tooltip.addFromItem(selected);
-                TooltipBuilder.create(tooltip)
+            .tooltipBuilder(
+                tooltip -> TooltipBuilder.create(tooltip)
                     .langRow(hint)
-                    .flush();
-            })
+                    .flush())
             .tooltipAutoUpdate(true);
     }
 
@@ -92,14 +63,6 @@ public final class ItemChoiceWidget extends ButtonWidget<ItemChoiceWidget>
         this.hint = hint;
         markTooltipDirty();
         return this;
-    }
-
-    private void updateItemStack() {
-        final ItemStack selected = selection.get();
-        if (ItemStack.areItemStacksEqual(displayedSelection, selected)) return;
-        displayedSelection = selected == null ? null : selected.copy();
-        item.setItem(selected == null ? null : selected.copy());
-        markTooltipDirty();
     }
 
     public ItemChoiceWidget picker(final Supplier<List<ItemStack>> choices, final Runnable reset) {
@@ -191,7 +154,6 @@ public final class ItemChoiceWidget extends ButtonWidget<ItemChoiceWidget>
 
     @Override
     public ItemStack getStackForRecipeViewer() {
-        updateItemStack();
-        return item.getItem();
+        return getShownItem();
     }
 }
