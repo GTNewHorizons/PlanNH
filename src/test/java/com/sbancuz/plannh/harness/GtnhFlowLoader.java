@@ -168,8 +168,7 @@ public final class GtnhFlowLoader {
                             .equals(ingredient)) {
                             node.getMachineConfig()
                                 .getRates()
-                                .rates()
-                                .put(out, rate);
+                                .setRate(out, rate);
                             node.getMachineConfig()
                                 .setTargetKind(Pin.TARGET_RATE);
                             pins.add(new FixturePin("target", machineIndex, node.getMachineName(), ingredient, rate, out));
@@ -210,12 +209,11 @@ public final class GtnhFlowLoader {
     public static void clearTargetPins(final LoadedChart chart) {
         for (final FixturePin pin : chart.pins()) {
             if (!"target".equals(pin.kind())) continue;
-            chart.machines()
-                .get(pin.machineIndex())
-                .getMachineConfig()
+            final Node machine = chart.machines()
+                .get(pin.machineIndex());
+            machine.getMachineConfig()
                 .getRates()
-                .rates()
-                .clear();
+                .setRate(pin.outputIndex(), 0);
         }
     }
 

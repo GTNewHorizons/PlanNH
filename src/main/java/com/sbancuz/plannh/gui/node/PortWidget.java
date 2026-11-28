@@ -35,11 +35,13 @@ import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
 import com.sbancuz.plannh.data.flowchart.resource.LongFluidStack;
 import com.sbancuz.plannh.data.flowchart.resource.LongItemStack;
+import com.sbancuz.plannh.data.setting.RateTarget;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.GuiHelper.RateUnit;
 import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.common.ItemSelectionGrid;
+import com.sbancuz.plannh.gui.common.PickerContent;
 import com.sbancuz.plannh.gui.common.SelectionPicker;
 import com.sbancuz.plannh.gui.edge.ArrowWidget;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
@@ -47,6 +49,7 @@ import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 import com.sbancuz.plannh.mixins.PositionedStackAccessor;
 
 import codechicken.nei.KeyManager;
+import codechicken.nei.NEIClientUtils;
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.GuiCraftingRecipe;
 import codechicken.nei.recipe.GuiUsageRecipe;
@@ -93,6 +96,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     private SelectionPicker picker;
     private boolean inactiveDemand;
 
+    /** The widget over stack {@code index.secondInt()} of port {@code index.firstInt()} of {@code parent}. */
     public PortWidget(NodeWidget parent, IntIntPair index, boolean isInput, PortType portType, int yShift,
         Map<IntIntPair, PortWidget> siblingPortWidgets) {
         this.parent = parent;
@@ -170,14 +174,21 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
 
     @Override
     public @NotNull Result onMousePressed(int mouseButton) {
-        if (mouseButton == 1 && configurable()) {
-            if (picker == null) picker = new SelectionPicker(
-                this,
-                () -> new ItemSelectionGrid(List.of(stack.items), this::selectConfiguration));
+        if (mouseButton == 1 && (portType != PortType.CATALYST || configurable())) {
+            if (picker == null) picker = new SelectionPicker(this, this::createPicker);
             picker.toggle();
             return Result.SUCCESS;
         }
         return Result.ACCEPT;
+    }
+
+    /** A port that is not consumed gets only the grid of alternatives: no chance and no target apply. */
+    private PickerContent createPicker() {
+        final ItemSelectionGrid alternatives = configurable()
+            ? new ItemSelectionGrid(List.of(stack.items), this::selectConfiguration)
+            : null;
+        if (portType == PortType.CATALYST) return alternatives;
+        return new PortPanel(parent, this, alternatives);
     }
 
     @SuppressWarnings("unchecked")
@@ -235,54 +246,56 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         else tooltip.addLine(IKey.str(port.getDisplayName()));
 
         final TooltipBuilder out = TooltipBuilder.create(tooltip);
-        if (configurable()) out.langRow(LANG + "configure_hint");
+        if (portType != PortType.CATALYST || configurable()) out.langRow("plannh.gui.node.port.configure_hint");
         if (inactiveDemand) out.langRow(LANG + "inactive");
 
-        final Balancer.NodeBalance balance = parent.balance();
-        writeThroughput(out, balance, tooltipEffect);
+        writeThroughput(out, parent.balance(), tooltipEffect);
         out.flush();
         port.getType()
             .addTooltip(tooltip, port.getValue());
     }
 
+    /** The rate, chance and target rows of the tooltip, and with shift the rate in every unit. */
     private void writeThroughput(final TooltipBuilder out, final @Nullable Balancer.NodeBalance balance,
-        final @Nullable EffectResult throughputEffect) {
-        final double perCycle = perCycle(balance);
-        if (perCycle <= 0) return;
-
-        writeThroughput(out, node, port, input, index.leftInt(), perCycle, balance.durationPerOp(), throughputEffect);
-    }
-
-    public static void writeThroughput(final TooltipBuilder out, final Node node, final Port<?> port,
-        final boolean input, final int portIndex, final double perCycle, final int duration) {
-        writeThroughput(out, node, port, input, portIndex, perCycle, duration, node.computeEffect());
-    }
-
-    private static void writeThroughput(final TooltipBuilder out, final Node node, final Port<?> port,
-        final boolean input, final int portIndex, final double perCycle, final int duration,
         final @Nullable EffectResult effect) {
-        if (effect == null) return;
-        final double bonus = input ? effect.inputMultiplier(portIndex) : effect.outputMultiplier(portIndex);
+        if (effect == null || portType == PortType.CATALYST) return;
+        final int portIndex = index.leftInt();
+        final double perCycle = perCycle(balance);
+        final RateUnit unit = rateUnit();
 
-        // A rule between this and what came before it - unless it is the first thing in the tooltip,
-        // where a rule would be a heading over nothing.
+        // a separator before these rows, unless the tooltip is empty so far
         if (!out.isEmpty()) out.separator();
-        out.entry(
-            IKey.lang(LANG + "rate"),
+        if (perCycle > 0) out.entry(
+            IKey.lang("plannh.gui.node.port.rate"),
             TooltipTheme.Role.RATE,
-            IKey.str(rateText(port, perCycle, duration, rateUnit())));
+            IKey.str(rateText(perCycle, balance.durationPerOp(), unit)));
+        final float chance = (float) effect.multiplier(input, portIndex);
         out.entry(
-            IKey.lang(input ? LANG + "consumption" : LANG + "productivity"),
+            IKey.lang("plannh.gui.node.port.chance"),
             TooltipTheme.Role.TUNABLE,
-            TooltipBuilder.multiple(bonus));
+            NEIClientUtils.formatChance(chance));
 
+        final RateTarget rates = node.getMachineConfig()
+            .getRates();
+        final double target = input || !parent.isRateTargeted() ? 0 : rates.rate(portIndex);
+        if (target > 0) {
+            final String amount = port.getType()
+                .formatAmount(target * unit.secondsPerUnit);
+            out.entry(
+                IKey.lang("plannh.gui.node.port.target"),
+                TooltipTheme.Role.RATE,
+                TooltipBuilder.rate(amount, unit));
+        }
+
+        if (perCycle <= 0) return;
         if (GuiHelper.shiftHeld()) {
-            out.group(LANG + "per_unit", rows -> {
-                for (final RateUnit unit : RateUnit.VALUES) {
-                    rows.entry(IKey.EMPTY, TooltipTheme.Role.RATE, IKey.str(rateText(port, perCycle, duration, unit)));
+            out.group("plannh.gui.node.port.per_unit", rows -> {
+                for (final RateUnit each : RateUnit.VALUES) {
+                    final String text = rateText(perCycle, balance.durationPerOp(), each);
+                    rows.entry(IKey.EMPTY, TooltipTheme.Role.RATE, IKey.str(text));
                 }
             });
-        } else out.langRow(LANG + "shift_hint");
+        } else out.langRow("plannh.gui.node.port.shift_hint");
     }
 
     private double perCycle(final @Nullable Balancer.NodeBalance balance) {
@@ -292,8 +305,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         return perCycle == null ? 0 : perCycle;
     }
 
-    /** This port's rate in the given unit, as the corner, the row and the tooltip all state it. */
-    static String rateText(final Port<?> port, final double perCycle, final int duration, final RateUnit unit) {
+    private String rateText(final double perCycle, final int duration, final RateUnit unit) {
         return TooltipBuilder.rate(
             port.getType()
                 .formatAmount(GuiHelper.rate(perCycle, duration, unit)),
@@ -309,11 +321,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     private boolean configuredInactiveDemand() {
         if (!input || portType != PortType.INPUT) return false;
         final EffectResult current = currentEffect();
-        return current != null && isInactiveDemand(portType, current.inputMultiplier(index.leftInt()));
-    }
-
-    static boolean isInactiveDemand(final PortType portType, final double multiplier) {
-        return portType == PortType.INPUT && multiplier == 0d;
+        return current != null && current.multiplier(true, index.leftInt()) == 0d;
     }
 
     private @Nullable EffectResult currentEffect() {

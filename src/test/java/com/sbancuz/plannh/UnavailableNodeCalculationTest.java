@@ -40,8 +40,7 @@ class UnavailableNodeCalculationTest {
         final Node unavailable = node("unavailable", List.of("wire"), List.of(), 99);
         unavailable.getMachineConfig()
             .getRates()
-            .rates()
-            .put(0, 500d);
+            .setRate(0, 500d);
         unavailable.getMachineConfig()
             .setTargetKind(Pin.TARGET_RATE);
         markUnavailable(unavailable);

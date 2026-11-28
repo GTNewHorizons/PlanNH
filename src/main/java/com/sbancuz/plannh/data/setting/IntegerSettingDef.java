@@ -5,9 +5,9 @@ import java.util.function.Consumer;
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.drawable.text.TextRenderer;
 import com.cleanroommc.modularui.value.IntValue;
-import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.RecipeContext;
+import com.sbancuz.plannh.gui.common.ResetTextFieldWidget;
 import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
 import lombok.Getter;
@@ -47,7 +47,7 @@ public class IntegerSettingDef extends SettingDef<Integer> {
             .minimum(this);
         final int maximum = cfg.getProfile()
             .maximum(this);
-        return new TextFieldWidget().name("settings.int")
+        return new ResetTextFieldWidget().name("settings.int")
             .width(fieldWidth(minimum, maximum))
             .value(
                 new IntValue.Dynamic(

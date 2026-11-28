@@ -8,7 +8,7 @@ import com.cleanroommc.modularui.widget.scroll.VerticalScrollData;
 import com.cleanroommc.modularui.widgets.layout.Grid;
 
 /** Compact, uniformly sized choices shared by item and extractor pickers. */
-public class SelectionGrid extends Grid {
+public class SelectionGrid extends Grid implements PickerContent {
 
     public static final int SLOT = 18;
     public static final int COLUMNS = 9;
@@ -40,10 +40,12 @@ public class SelectionGrid extends Grid {
         return this;
     }
 
+    @Override
     public int pickerWidth() {
         return pickerWidth;
     }
 
+    @Override
     public int pickerHeight() {
         return pickerHeight;
     }

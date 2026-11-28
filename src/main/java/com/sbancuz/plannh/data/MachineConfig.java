@@ -3,7 +3,6 @@ package com.sbancuz.plannh.data;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
 import javax.annotation.Nonnull;
@@ -12,7 +11,7 @@ import javax.annotation.Nullable;
 import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.flowchart.balancer.Pin;
 import com.sbancuz.plannh.data.setting.CopyCountTarget;
-import com.sbancuz.plannh.data.setting.OutputRateTarget;
+import com.sbancuz.plannh.data.setting.RateTarget;
 import com.sbancuz.plannh.data.setting.SettingDef;
 import com.sbancuz.plannh.data.setting.Settings;
 
@@ -30,10 +29,12 @@ public class MachineConfig {
     private String profileId;
 
     private final CopyCountTarget copies = new CopyCountTarget();
-    private final OutputRateTarget rates = new OutputRateTarget();
+    private final RateTarget rates = new RateTarget();
     private Pin targetKind = Pin.NONE;
-    private final Map<Integer, Double> inputConsumption = new HashMap<>();
-    private final Map<Integer, Double> outputProductivity = new HashMap<>();
+    @Getter(AccessLevel.NONE)
+    private final Map<Integer, Double> inputChance = new HashMap<>();
+    @Getter(AccessLevel.NONE)
+    private final Map<Integer, Double> outputChance = new HashMap<>();
 
     /** Used by Gson so omitted fields retain their defaults. */
     private MachineConfig() {}
@@ -53,11 +54,10 @@ public class MachineConfig {
         profileId = source.profileId;
         settings.putAll(source.settings);
         copies.setCopies(source.copies.copies());
-        rates.rates()
-            .putAll(source.rates.rates());
+        rates.copyFrom(source.rates);
         targetKind = source.targetKind;
-        inputConsumption.putAll(source.inputConsumption);
-        outputProductivity.putAll(source.outputProductivity);
+        inputChance.putAll(source.inputChance);
+        outputChance.putAll(source.outputChance);
     }
 
     public boolean isCopiesTargeted() {
@@ -107,8 +107,8 @@ public class MachineConfig {
     public void selectProfile(final MachineProfile newProfile) {
         if (!Objects.equals(profile, newProfile)) {
             settings.clear();
-            inputConsumption.clear();
-            outputProductivity.clear();
+            inputChance.clear();
+            outputChance.clear();
         }
         setProfile(newProfile);
     }
@@ -127,21 +127,13 @@ public class MachineConfig {
         targetKind = kind;
     }
 
-    public double inputMultiplier(final int inputIndex, final DoubleSupplier fallback) {
-        final Double value = inputConsumption.get(inputIndex);
-        return value == null ? fallback.getAsDouble() : value;
+    public @Nullable Double chanceOverride(final boolean input, final int index) {
+        return (input ? inputChance : outputChance).get(index);
     }
 
-    public void inputMultiplier(final int index, final double value) {
-        inputConsumption.put(index, value);
-    }
-
-    public double outputMultiplier(final int outputIndex, final DoubleSupplier fallback) {
-        final Double value = outputProductivity.get(outputIndex);
-        return value == null ? fallback.getAsDouble() : value;
-    }
-
-    public void outputMultiplier(final int index, final double value) {
-        outputProductivity.put(index, value);
+    public void overrideChance(final boolean input, final int index, @Nullable final Double chance) {
+        final Map<Integer, Double> overrides = input ? inputChance : outputChance;
+        if (chance == null) overrides.remove(index);
+        else overrides.put(index, chance);
     }
 }

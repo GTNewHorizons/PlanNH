@@ -25,6 +25,7 @@ import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
+import com.sbancuz.plannh.data.flowchart.balancer.Pin;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.common.CloseButtonWidget;
@@ -45,7 +46,6 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
 
     private static final String SETTINGS_LANG = "plannh.gui.node.settings";
     private static final String TARGET_LANG = "plannh.gui.node.target.rows";
-    private static final String THROUGHPUT_LANG = "plannh.gui.node.throughput.rows";
     private static final String PROPERTIES_LANG = "plannh.gui.node.properties";
 
     /** Compact square toggles for the node's configuration folds. */
@@ -54,11 +54,9 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
     private final RecipeAreaWidget recipeAreaWidget;
     private final CycleButtonWidget settingsFold;
     private final CycleButtonWidget targetFold;
-    private final CycleButtonWidget throughputFold;
     private final CycleButtonWidget propertiesFold;
     private boolean lastSettingsOpen;
     private boolean lastTargetOpen;
-    private boolean lastThroughputOpen;
     private boolean lastPropertiesOpen;
     private long effectVersion = Long.MIN_VALUE;
     private EffectResult effect;
@@ -73,6 +71,7 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
         .adaptable(3)
         .build();
 
+    /** The card of {@code data}: the header, the recipe area, the fold toggles and the folds. */
     public NodeWidget(CanvasWidget canvas, Node data) {
         super(canvas, data);
         canvas.getNodeWidgets()
@@ -120,11 +119,6 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
         mainColumn.child(recipeAreaWidget);
 
         if (data.isAvailable()) {
-            throughputFold = fold(
-                GuiTextures.PROCESSOR,
-                THROUGHPUT_LANG,
-                data::isThroughputOpen,
-                data::setThroughputOpen);
             propertiesFold = fold(GuiTextures.FILE, PROPERTIES_LANG, data::isPropertiesOpen, data::setPropertiesOpen);
             targetFold = fold(GuiTextures.GRAPH, TARGET_LANG, data::isTargetOpen, data::setTargetOpen);
             settingsFold = fold(GuiTextures.GEAR, SETTINGS_LANG, data::isSettingsOpen, data::setSettingsOpen);
@@ -143,7 +137,6 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
                     .name("node.options.folds")
                     .coverChildren()
                     .childPadding(4)
-                    .child(throughputFold)
                     .child(propertiesFold)
                     .child(targetFold)
                     .child(settingsFold))
@@ -151,12 +144,10 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
             mainColumn.child(optionRow);
             mainColumn.child(new ThroughputInfoWidget(this));
             mainColumn.child(
-                new ConfigurationAreaWidget().child(new ThroughputFold(this))
-                    .child(new PropertiesFold(this))
+                new ConfigurationAreaWidget().child(new PropertiesFold(this))
                     .child(new TargetFold(this))
                     .child(new SettingsFold(this)));
         } else {
-            throughputFold = null;
             propertiesFold = null;
             targetFold = null;
             settingsFold = null;
@@ -217,12 +208,6 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
         if (settings != lastSettingsOpen) {
             lastSettingsOpen = settings;
             if (settingsFold != null) settingsFold.markTooltipDirty();
-        }
-
-        final boolean throughput = data.isThroughputOpen();
-        if (throughput != lastThroughputOpen) {
-            lastThroughputOpen = throughput;
-            if (throughputFold != null) throughputFold.markTooltipDirty();
         }
 
         final boolean properties = data.isPropertiesOpen();
@@ -291,5 +276,16 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
     public BalanceMode balanceMode() {
         return canvas.getGraph()
             .getBalanceMode();
+    }
+
+    /**
+     * Whether this machine's rate targets are in force: Rate is the selected target, and the pins of
+     * {@link #balanceMode} have {@link Pin#TARGET_RATE}.
+     */
+    public boolean isRateTargeted() {
+        final Pin targetKind = data.getMachineConfig()
+            .getTargetKind();
+        return targetKind == Pin.TARGET_RATE && balanceMode().pins()
+            .contains(Pin.TARGET_RATE);
     }
 }

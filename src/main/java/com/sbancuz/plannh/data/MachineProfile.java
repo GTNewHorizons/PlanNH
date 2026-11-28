@@ -15,6 +15,7 @@ import java.util.function.ToIntBiFunction;
 import java.util.stream.Stream;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
@@ -24,6 +25,7 @@ import com.sbancuz.plannh.data.effect.EffectComputer;
 import com.sbancuz.plannh.data.effect.EffectFunction;
 import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.effect.Effects;
+import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.setting.ChoiceSettingDef;
@@ -133,22 +135,13 @@ public final class MachineProfile {
         return bounds == null ? def.getMaxCount() : bounds[1];
     }
 
-    /** Evaluates a single-port query; consumers reading multiple values should reuse {@link #computeEffect}. */
-    public double inputMultiplier(final MachineConfig cfg, final RecipeContext ctx, final int index) {
-        return cfg.inputMultiplier(index, () -> {
-            final EffectResult result = computeEffect(cfg, ctx);
-            return result.inputMultiplier(index, () -> inputMultiplier.apply(result, cfg, ctx, index));
-        });
-    }
-
-    /** Evaluates a single-port query; consumers reading multiple values should reuse {@link #computeEffect}. */
-    public double outputMultiplier(final MachineConfig cfg, final RecipeContext ctx, final int index) {
-        return cfg.outputMultiplier(index, () -> {
-            final EffectResult result = computeEffect(cfg, ctx);
-            return result.outputMultiplier(index, () -> outputMultiplier.apply(result, cfg, ctx, index));
-        });
-    }
-
+    /**
+     * Evaluate one recipe on this machine: duration, energy, and the multiplier of every port. A port's multiplier is
+     * the port's chance per craft: the user's chance when set, else the recipe chance times the profile's multiplier.
+     *
+     * @throws IllegalArgumentException for a duration over {@link Integer#MAX_VALUE} ticks, or a multiplier that is
+     *                                  negative or not finite
+     */
     public EffectResult computeEffect(final MachineConfig cfg, final RecipeContext ctx) {
         final EffectResult result = effectComputer.compute(cfg, ctx);
 
@@ -168,30 +161,26 @@ public final class MachineProfile {
         if (rateProperty != null) result.properties()
             .put(rateProperty, result.energyPerT());
 
-        // Freeze effective port rules into this evaluation; explicit user overrides always win.
-        final int inputCount = ctx.inputs()
-            .size();
-        for (int i = 0; i < inputCount; i++) {
-            final int index = i;
-            final DoubleSupplier rule = () -> inputMultiplier.apply(result, cfg, ctx, index);
-            final double multiplier = cfg.inputMultiplier(index, () -> result.inputMultiplier(index, rule));
-            if (!Double.isFinite(multiplier) || multiplier < 0)
-                throw new IllegalArgumentException("Invalid input multiplier: " + multiplier);
-            result.inputMultiplier(index, multiplier);
-        }
-
-        final int outputCount = ctx.outputs()
-            .size();
-        for (int i = 0; i < outputCount; i++) {
-            final int index = i;
-            final DoubleSupplier rule = () -> outputMultiplier.apply(result, cfg, ctx, index);
-            final double multiplier = cfg.outputMultiplier(index, () -> result.outputMultiplier(index, rule));
-            if (!Double.isFinite(multiplier) || multiplier < 0)
-                throw new IllegalArgumentException("Invalid output multiplier: " + multiplier);
-            result.outputMultiplier(index, multiplier);
+        for (final boolean input : new boolean[] { true, false }) {
+            final List<Port<?>> ports = input ? ctx.inputs() : ctx.outputs();
+            final PortMultiplier portRule = input ? inputMultiplier : outputMultiplier;
+            for (int i = 0; i < ports.size(); i++) {
+                final int index = i;
+                final DoubleSupplier rule = () -> portRule.apply(result, cfg, ctx, index);
+                final double chance = ports.get(index)
+                    .getChance() * result.multiplier(input, index, rule);
+                result.setMultiplier(input, index, resolveMultiplier(cfg.chanceOverride(input, index), chance));
+            }
         }
 
         return result;
+    }
+
+    private static double resolveMultiplier(@Nullable final Double override, final double profileMultiplier) {
+        final double multiplier = override != null ? override : profileMultiplier;
+        if (!Double.isFinite(multiplier) || multiplier < 0)
+            throw new IllegalArgumentException("Invalid port multiplier: " + multiplier);
+        return multiplier;
     }
 
     public RecipeContext getRecipeContext(final RecipeHandlerRef ref) {

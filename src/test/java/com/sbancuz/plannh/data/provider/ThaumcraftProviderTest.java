@@ -191,7 +191,7 @@ class ThaumcraftProviderTest {
         final MachineProfile profile = (MachineProfile) field.get(new ThaumcraftProvider());
         final MachineConfig cfg = new MachineConfig(profile);
         cfg.set(ThaumcraftProvider.BOOST_SOURCE, ThaumcraftProvider.FurnaceBoostSource.ESSENTIA_NOZZLE);
-        cfg.inputMultiplier(2, 0d);
+        cfg.overrideChance(true, 2, 0d);
         final MachineConfig loaded = Serializer.GSON.fromJson(Serializer.GSON.toJson(cfg), MachineConfig.class);
         loaded.setProfile(profile);
         assertEquals(
@@ -200,7 +200,7 @@ class ThaumcraftProviderTest {
                 ThaumcraftProvider.BOOST_SOURCE,
                 RecipeContext.builder()
                     .build()));
-        assertEquals(0d, loaded.inputMultiplier(2, () -> 1d));
+        assertEquals(0d, loaded.chanceOverride(true, 2));
     }
 
     private static void installCachedRecipe(final TemplateRecipeHandler handler,

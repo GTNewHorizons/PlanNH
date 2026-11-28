@@ -13,10 +13,10 @@ import com.cleanroommc.modularui.widgets.Dialog;
 public final class SelectionPicker {
 
     private final IWidget owner;
-    private final Supplier<? extends SelectionGrid> choices;
+    private final Supplier<? extends PickerContent> choices;
     private IPanelHandler handler;
 
-    public SelectionPicker(final IWidget owner, final Supplier<? extends SelectionGrid> choices) {
+    public SelectionPicker(final IWidget owner, final Supplier<? extends PickerContent> choices) {
         this.owner = owner;
         this.choices = choices;
     }
@@ -65,9 +65,9 @@ public final class SelectionPicker {
 
         private Popup() {
             super("selection.picker." + System.identityHashCode(SelectionPicker.this));
-            final SelectionGrid grid = choices.get();
-            final int width = grid.pickerWidth() + 8;
-            final int height = grid.pickerHeight() + 8;
+            final PickerContent content = choices.get();
+            final int width = content.pickerWidth() + 8;
+            final int height = content.pickerHeight() + 8;
             final var context = owner.getContext();
             final var screen = context.getScreenArea();
             size(width, height);
@@ -77,7 +77,7 @@ public final class SelectionPicker {
             pos(
                 Math.clamp(context.getAbsMouseX() - width, 0, Math.max(0, screen.width - width)),
                 Math.clamp(context.getAbsMouseY(), 0, Math.max(0, screen.height - height)));
-            child(grid);
+            child(content);
         }
 
         public boolean resetOwnerSelection() {
