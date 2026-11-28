@@ -1,6 +1,7 @@
 package com.sbancuz.plannh.data.serialization;
 
 import java.io.IOException;
+import java.util.Map;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
@@ -11,6 +12,7 @@ import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import com.sbancuz.plannh.data.MachineConfig;
+import com.sbancuz.plannh.data.ProfileConfig;
 import com.sbancuz.plannh.data.flowchart.balancer.Pin;
 
 /**
@@ -18,6 +20,8 @@ import com.sbancuz.plannh.data.flowchart.balancer.Pin;
  * fields stay reflective, while settings and target cleanup retain the compact current shape.
  */
 public final class MachineConfigAdapter implements TypeAdapterFactory {
+
+    private static final String PROFILE_CONFIGS = "profileConfigs";
 
     @Override
     public <T> TypeAdapter<T> create(final Gson gson, final TypeToken<T> type) {
@@ -42,6 +46,11 @@ public final class MachineConfigAdapter implements TypeAdapterFactory {
                 object.remove("rates");
                 if (!rates.entrySet()
                     .isEmpty()) object.add("rates", rates);
+                final JsonObject profileConfigs = object.getAsJsonObject(PROFILE_CONFIGS);
+                profileConfigs.entrySet()
+                    .removeIf(entry -> isEmptyConfig(entry.getValue()));
+                if (profileConfigs.entrySet()
+                    .isEmpty()) object.remove(PROFILE_CONFIGS);
                 final boolean serializeNulls = out.getSerializeNulls();
                 out.setSerializeNulls(true);
                 try {
@@ -56,7 +65,7 @@ public final class MachineConfigAdapter implements TypeAdapterFactory {
                 final JsonObject object = jsonElementAdapter.read(in)
                     .getAsJsonObject();
                 // Malformed optional targets leave the constructor defaults intact.
-                for (final String field : new String[] { "copies", "rates" }) {
+                for (final String field : new String[] { "copies", "rates", PROFILE_CONFIGS }) {
                     if (object.has(field) && !object.get(field)
                         .isJsonObject()) object.remove(field);
                 }
@@ -90,5 +99,18 @@ public final class MachineConfigAdapter implements TypeAdapterFactory {
                 return value;
             }
         }.nullSafe();
+    }
+
+    /** Return whether each field of a saved {@link ProfileConfig} is an empty map. */
+    private static boolean isEmptyConfig(final JsonElement config) {
+        if (!config.isJsonObject()) return true;
+        for (final Map.Entry<String, JsonElement> field : config.getAsJsonObject()
+            .entrySet()) {
+            final JsonElement value = field.getValue();
+            if (!(value.isJsonObject() && value.getAsJsonObject()
+                .entrySet()
+                .isEmpty())) return false;
+        }
+        return true;
     }
 }
