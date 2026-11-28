@@ -63,6 +63,12 @@ public final class Summary extends GraphData {
         THROUGHPUT
     }
 
+    /** The number in the count of a port slot: the recipe's amount per craft, or the solved rate. */
+    public enum PortDisplay {
+        RECIPE,
+        RATE
+    }
+
     /**
      * One row the panel can draw. Minecraft-free: only {@link #displayName()} ever localizes, so
      * recompute() (which sorts the amount-bearing {@link Measure} rows headlessly) never touches a
@@ -182,6 +188,9 @@ public final class Summary extends GraphData {
     private Mode mode = Mode.CYCLES;
     @Getter
     private GuiHelper.RateUnit rateUnit = GuiHelper.RateUnit.SECONDS;
+    @Getter
+    @Setter
+    private PortDisplay portDisplay = PortDisplay.RECIPE;
     private int[] sectionOrder = defaultSectionOrder();
 
     /**
@@ -224,7 +233,8 @@ public final class Summary extends GraphData {
                     new Line.Text("plannh.summary.help.zoom"),
                     new Line.Text("plannh.summary.help.move"),
                     new Line.Text("plannh.summary.help.nei"),
-                    new Line.Text("plannh.summary.help.add_recipe"))));
+                    new Line.Text("plannh.summary.help.add_recipe"),
+                    new Line.Text("plannh.summary.help.port_display"))));
     }
 
     @Override

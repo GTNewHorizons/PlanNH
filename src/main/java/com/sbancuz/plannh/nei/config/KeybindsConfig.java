@@ -14,6 +14,7 @@ public final class KeybindsConfig {
     public static final String UNDO_KEY = "plannh.undo";
     public static final String REDO_KEY = "plannh.redo";
     public static final String REDO_ALT_KEY = "plannh.redo_alt";
+    public static final String PORT_DISPLAY_KEY = "plannh.port_display";
 
     private KeybindsConfig() {}
 
@@ -21,6 +22,11 @@ public final class KeybindsConfig {
         API.addKeyBind(UNDO_KEY, Keyboard.KEY_Z);
         API.addKeyBind(REDO_KEY, Keyboard.KEY_Z);
         API.addKeyBind(REDO_ALT_KEY, Keyboard.KEY_Y);
+        API.addKeyBind(PORT_DISPLAY_KEY, Keyboard.KEY_T);
+    }
+
+    public static boolean isPortDisplayToggle(final int eventKeyCode) {
+        return matches(eventKeyCode, KeyManager.getKeyCode(PORT_DISPLAY_KEY), false);
     }
 
     public static boolean isUndo(final int eventKeyCode) {
@@ -60,6 +66,10 @@ public final class KeybindsConfig {
 
     public static String redoAltName() {
         return shortcutName(REDO_ALT_KEY, NEIKeyboardUtils.CTRL_HASH);
+    }
+
+    public static String portDisplayName() {
+        return shortcutName(PORT_DISPLAY_KEY, NEIKeyboardUtils.CTRL_HASH);
     }
 
     private static String shortcutName(final String ident, final int modifiers) {

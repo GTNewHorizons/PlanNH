@@ -45,7 +45,7 @@ import lombok.Getter;
 public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
 
     private static final String SETTINGS_LANG = "plannh.gui.node.settings";
-    private static final String TARGET_LANG = "plannh.gui.node.target.rows";
+    public static final String TARGET_LANG = "plannh.gui.node.target.rows";
     private static final String PROPERTIES_LANG = "plannh.gui.node.properties";
 
     /** Compact square toggles for the node's configuration folds. */

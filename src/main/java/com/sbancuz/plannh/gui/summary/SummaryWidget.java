@@ -173,6 +173,7 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
                 .child(sectionsList));
     }
 
+    /** The rate unit, enabled in the summary's throughput mode or in the rate port display. */
     private static CycleButtonWidget rateToggle() {
         final Summary summary = Plan.getInstance()
             .getSummary();
@@ -199,7 +200,9 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
             })
             .tooltipAutoUpdate(true)
             .value(new EnumValue.Dynamic<>(GuiHelper.RateUnit.class, summary::getRateUnit, summary::setRateUnit))
-            .setEnabledIf(_ -> summary.getMode() == Summary.Mode.THROUGHPUT);
+            .setEnabledIf(
+                _ -> summary.getMode() == Summary.Mode.THROUGHPUT
+                    || summary.getPortDisplay() == Summary.PortDisplay.RATE);
         for (final GuiHelper.RateUnit unit : GuiHelper.RateUnit.VALUES) {
             toggle.stateOverlay(unit, IKey.lang(unit.langKey));
         }

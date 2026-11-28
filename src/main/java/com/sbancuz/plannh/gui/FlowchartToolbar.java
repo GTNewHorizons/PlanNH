@@ -22,6 +22,7 @@ import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Plan;
+import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 import com.sbancuz.plannh.gui.theme.PlannhThemes;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
@@ -164,6 +165,11 @@ public final class FlowchartToolbar extends Flow {
             }));
     }
 
+    /**
+     * Auto layout, snap to grid, the port display and the balance mode.
+     *
+     * @throws IllegalStateException for a balance mode with no tooltip text
+     */
     private static Flow layoutGroup(final CanvasWidget canvas) {
         final ToggleButton snap = new ToggleButton();
         snap.name("edit.snapToGrid")
@@ -262,7 +268,44 @@ public final class FlowchartToolbar extends Flow {
                 leftButton("edit.autoLayout", GuiIcon.AUTO_LAYOUT, canvas::autoLayout)
                     .addTooltipLine(IKey.lang("plannh.gui.toolbar.layout.title")))
             .child(snap)
+            .child(portDisplayToggle())
             .child(balance);
+    }
+
+    /** The toggle between the recipe amount and the rate in every port slot. */
+    private static CycleButtonWidget portDisplayToggle() {
+        final Summary summary = Plan.getInstance()
+            .getSummary();
+        final IDrawable recipe = GuiIcon.CYCLES.asIcon()
+            .size(12);
+        final IDrawable rate = GuiIcon.THROUGHPUT.asIcon()
+            .size(12);
+        return new CycleButtonWidget().name("edit.portDisplay")
+            .size(BUTTON_SIZE, BUTTON_SIZE)
+            .background(GuiTextures.MC_BUTTON)
+            .hoverBackground(GuiTextures.MC_BUTTON_HOVERED)
+            .value(new EnumValue.Dynamic<>(Summary.PortDisplay.class, summary::getPortDisplay, summary::setPortDisplay))
+            .stateOverlay(Summary.PortDisplay.RECIPE, recipe)
+            .stateOverlay(Summary.PortDisplay.RATE, rate)
+            .tooltipBuilder(tooltip -> {
+                final Summary.PortDisplay active = summary.getPortDisplay();
+                final TooltipBuilder out = TooltipBuilder.create(tooltip)
+                    .row(
+                        IKey.lang("plannh.gui.toolbar.port_display.title")
+                            .style(TooltipTheme.Role.LABEL.code()));
+                for (final Summary.PortDisplay display : Summary.PortDisplay.values()) {
+                    final String name = IKey.lang("plannh.gui.toolbar.port_display." + display.name())
+                        .get();
+                    out.marker(active == display ? ">" : " ", name, active == display);
+                }
+                final String binding = KeybindsConfig.portDisplayName();
+                if (binding != null) out.separator()
+                    .row(
+                        IKey.lang("plannh.gui.toolbar.shortcut", binding)
+                            .style(TooltipTheme.Role.TUNABLE.code()));
+                out.flush();
+            })
+            .tooltipAutoUpdate(true);
     }
 
     private static Flow addGroup(final CanvasWidget canvas) {

@@ -6,6 +6,7 @@ import java.util.SortedMap;
 import java.util.UUID;
 
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.StatCollector;
 import net.minecraftforge.fluids.FluidStack;
 
 import org.jetbrains.annotations.NotNull;
@@ -92,6 +93,8 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     private final boolean input;
 
     private final NodeWidget parent;
+    @Getter
+    private final PortSlot slot;
     private final Map<IntIntPair, PortWidget> siblingPortWidgets;
     private SelectionPicker picker;
     private boolean inactiveDemand;
@@ -114,6 +117,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         port = (isInput ? node.getInputs() : node.getOutputs()).get(index.firstInt());
         stack = port.getAllStacks()
             .get(index.secondInt());
+        slot = new PortSlot(parent, this, stack);
 
         refreshInactiveState();
 
@@ -130,14 +134,17 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         tooltipBuilder(this::writeTooltip);
         tooltipAutoUpdate(true);
 
-        if (configurable()) {
-            overlay(
-                GuiTextures.GEAR.asIcon()
-                    .size(9)
-                    .alignment(Alignment.TopRight));
-        }
+        // `Badge.draw()` draws the chance badge in the top left corner. The badge is at half scale when the GUI scale
+        // is 2 or more. A gear of 6 pixels in the top right corner then leaves room for a badge of four characters
+        if (configurable()) overlay(
+            GuiTextures.GEAR.asIcon()
+                .size(6)
+                .alignment(Alignment.TopRight));
 
-        onUpdateListener(w -> { refreshInactiveState(); }, true);
+        onUpdateListener(w -> {
+            refreshInactiveState();
+            slot.refresh();
+        }, true);
     }
 
     private void selectConfiguration(@Nullable final ItemStack itemStack) {
@@ -182,7 +189,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         return Result.ACCEPT;
     }
 
-    /** A port that is not consumed gets only the grid of alternatives: no chance and no target apply. */
+    /** A port that is not consumed gets only the grid of alternatives: a chance and a target don't apply. */
     private PickerContent createPicker() {
         final ItemSelectionGrid alternatives = configurable()
             ? new ItemSelectionGrid(List.of(stack.items), this::selectConfiguration)
@@ -286,6 +293,8 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
                 TooltipTheme.Role.RATE,
                 TooltipBuilder.rate(amount, unit));
         }
+        final PortSlot.TargetMark mark = slot.getRateTarget();
+        if (mark != null) out.row(TooltipTheme.key(mark.getRole(), StatCollector.translateToLocal(mark.getLangKey())));
 
         if (perCycle <= 0) return;
         if (GuiHelper.shiftHeld()) {
@@ -298,7 +307,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         } else out.langRow("plannh.gui.node.port.shift_hint");
     }
 
-    private double perCycle(final @Nullable Balancer.NodeBalance balance) {
+    public double perCycle(final @Nullable Balancer.NodeBalance balance) {
         if (balance == null || balance.durationPerOp() <= 0) return 0;
 
         final Double perCycle = (input ? balance.effectiveInputs() : balance.effectiveOutputs()).get(index.leftInt());

@@ -5,6 +5,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.util.StatCollector;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
@@ -19,10 +21,15 @@ import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Port;
+import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
+import com.sbancuz.plannh.data.flowchart.balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
+import com.sbancuz.plannh.data.flowchart.balancer.Note;
 import com.sbancuz.plannh.data.flowchart.balancer.Pin;
+import com.sbancuz.plannh.data.flowchart.balancer.SolverMessage;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.properties.SummaryProperty;
+import com.sbancuz.plannh.data.setting.RateTarget;
 import com.sbancuz.plannh.data.setting.SettingDef;
 import com.sbancuz.plannh.data.setting.TargetKind;
 import com.sbancuz.plannh.gui.GuiHelper;
@@ -43,6 +50,7 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
     private final Flow lines;
 
     private Flow row;
+    private @Nullable Idle idle;
 
     private double lastOperations = Double.NaN;
     private int lastDuration = Integer.MIN_VALUE;
@@ -91,34 +99,28 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
         if (row != null) row.markTooltipDirty();
     }
 
-    /** Rebuild the copies and duration row when the solve's operations or duration changed. */
+    /** Rebuild the copies and duration row when the operations, the duration or the {@link Idle} reason changed. */
     private void rebuild() {
         final Node node = parent.getData();
         final Balancer.NodeBalance balance = parent.balance();
         final int duration = balance == null ? durationTicks(node, parent.effectSnapshot()) : balance.durationPerOp();
         final double operations = balance == null ? -1 : balance.operations();
+        final Idle reason = balance != null && operations <= 0 ? readIdle(node) : null;
 
-        if (operations == lastOperations && duration == lastDuration) return;
+        if (operations == lastOperations && duration == lastDuration && reason == idle) return;
         lastOperations = operations;
         lastDuration = duration;
-
-        if (balance != null && balance.operations() <= 0) {
-            lines.removeAll();
-            row = null;
-            scheduleResize();
-            return;
-        }
+        idle = reason;
 
         final IKey copies;
-        if (operations < 0) copies = IKey.lang(LANG + "unbalanced");
-        else if (operations <= 0) copies = IKey.lang(LANG + "unplanned");
+        if (balance == null) copies = IKey.lang("plannh.gui.node.throughput.unbalanced");
+        else if (idle != null) copies = IKey.lang(idle.key);
         else copies = IKey.comp(IKey.lang(LANG + "copies_needed"), TooltipBuilder.multiple(operations));
 
         lines.removeAll();
 
-        // What the balance settled on, and how long a craft takes. Which target asked for it, and
-        // whether the rows below are showing, belong to the target list - this row only states the
-        // two numbers, and carries the tooltip that explains them.
+        // the copy count or the idle reason, then the craft time. `writeTooltip` writes the details of both, and
+        // `TargetFold` has the target of the machine
         row = FlowchartFlow.row(parent)
             .name("throughput")
             .fullWidth()
@@ -136,6 +138,36 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
         scheduleResize();
     }
 
+    /** Return the reason that this machine has 0 operations after the last balance. */
+    private Idle readIdle(final Node node) {
+        final BalanceResult result = parent.getCanvas()
+            .getGraph()
+            .balance();
+        // `Balancer.balance` sets each machine to 0 operations when an AUTO solve stalls. The failure note has the
+        // reason
+        if (parent.balanceMode() == BalanceMode.AUTO && result instanceof BalanceResult.Fallback) {
+            for (final Note note : result.notes()) {
+                if (note.containsMessage(SolverMessage.NO_PIN)) return Idle.NO_TARGET;
+            }
+            return Idle.SOLVE_FAILED;
+        }
+
+        final MachineConfig cfg = node.getMachineConfig();
+        final int copies = cfg.getCopies()
+            .copies();
+        if (cfg.isCopiesTargeted() && copies <= 0) return Idle.ZERO_COPIES;
+        if (cfg.getTargetKind() != Pin.TARGET_RATE) return Idle.NOT_NEEDED;
+        if (!parent.isRateTargeted()) return Idle.RATE_IGNORED;
+
+        final RateTarget rates = cfg.getRates();
+        final int outputCount = node.getOutputs()
+            .size();
+        for (int output = 0; output < outputCount; output++) {
+            if (rates.rate(output) > 0) return Idle.NOT_NEEDED;
+        }
+        return Idle.NO_RATE;
+    }
+
     private void writeTooltip(final RichTooltip tooltip) {
         final Node node = parent.getData();
         final Balancer.NodeBalance balance = parent.balance();
@@ -145,6 +177,7 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
         final int ticks = balanced ? balance.durationPerOp() : durationTicks(node, effect);
 
         final TooltipBuilder out = TooltipBuilder.create(tooltip);
+        if (idle != null) writeIdle(out, idle);
 
         if (ticks > 0) out.duration(RecipePropertyAPI.DURATION_TICKS.displayName(), ticks, unit, GuiHelper.shiftHeld());
         else out.langRow(LANG + "unbalanced");
@@ -166,6 +199,32 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
             .langRow(LANG + "shift_hint");
 
         out.flush();
+    }
+
+    /** Write what the state of {@code reason} means, then what the player can change. */
+    private void writeIdle(final TooltipBuilder out, final Idle reason) {
+        final String copies = StatCollector.translateToLocal(Pin.FIXED_COPIES.key());
+        final String rate = StatCollector.translateToLocal(Pin.TARGET_RATE.key());
+        final String targetRows = StatCollector.translateToLocal(NodeWidget.TARGET_LANG);
+        final String copyCount = StatCollector.translateToLocal("plannh.gui.node.target.copies");
+        final String balanceMode = StatCollector.translateToLocal("plannh.gui.toolbar.balance.title");
+        final String modeName = parent.balanceMode()
+            .displayName();
+        final Object[] whyArgs = switch (reason) {
+            case RATE_IGNORED -> new Object[] { modeName, rate };
+            case NO_RATE -> new Object[] { rate };
+            case NO_TARGET, SOLVE_FAILED, ZERO_COPIES, NOT_NEEDED -> new Object[0];
+        };
+        final Object[] fixArgs = switch (reason) {
+            case NO_TARGET -> new Object[] { copies, rate, targetRows };
+            case ZERO_COPIES -> new Object[] { copyCount, targetRows };
+            case RATE_IGNORED -> new Object[] { balanceMode, BalanceMode.AUTO.displayName() };
+            case SOLVE_FAILED, NO_RATE, NOT_NEEDED -> new Object[0];
+        };
+
+        out.langRow(reason.key + ".why", whyArgs)
+            .langRow(reason.key + ".fix", fixArgs)
+            .separator();
     }
 
     private void writeTarget(final TooltipBuilder out) {
@@ -270,4 +329,23 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
             .getRateUnit();
     }
 
+    /**
+     * Each constant is a reason for 0 operations after a balance. The lang file has a row label and two tooltip rows
+     * for each constant.
+     */
+    private enum Idle {
+
+        NO_TARGET("plannh.gui.node.throughput.idle.no_target"),
+        SOLVE_FAILED("plannh.gui.node.throughput.idle.solve_failed"),
+        ZERO_COPIES("plannh.gui.node.throughput.idle.zero_copies"),
+        RATE_IGNORED("plannh.gui.node.throughput.idle.rate_ignored"),
+        NO_RATE("plannh.gui.node.throughput.idle.no_rate"),
+        NOT_NEEDED("plannh.gui.node.throughput.idle.not_needed");
+
+        private final String key;
+
+        private Idle(final String key) {
+            this.key = key;
+        }
+    }
 }
